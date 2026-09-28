@@ -1,0 +1,7 @@
+<resources>
+    <item type="id" name="navigation" />
+    <item type="id" name="auth_password" />
+    <item type="id" name="auth_key" />
+    <item type="id" name="connection_editor" />
+    <item type="id" name="auth_tailscale" />
+</resources>

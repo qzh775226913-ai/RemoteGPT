@@ -1,0 +1,23 @@
+.gradle/
+local.properties
+**/build/
+*.jks
+*.keystore
+.idea/
+.kotlin/
+**/__pycache__/
+*.py[cod]
+
+# Release/build artifacts
+/dist/
+
+# Personal settings and local environment
+.claude/settings.local.json
+.env
+.env.*
+!.env.example
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+*.swp

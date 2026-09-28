@@ -1,0 +1,65 @@
+package app.remotessh;
+
+import java.io.*;
+import java.net.*;
+import java.util.*;
+import java.util.regex.*;
+import android.graphics.*;
+
+/** Bounded binary handling; remote paths are never opened as Android local files. */
+final class MediaFiles {
+  static final long IMAGE_LIMIT = 20L * 1024 * 1024;
+  static final long DOWNLOAD_LIMIT = 100L * 1024 * 1024;
+  static final Pattern IMAGE = Pattern.compile("!\\[([^\\]]*)\\]\\(([^\\s)]+)\\)");
+
+  static void copy(InputStream in, OutputStream out, long limit) throws IOException {
+    byte[] buffer = new byte[16384];
+    long total = 0;
+    for (int n; (n = in.read(buffer)) != -1;) {
+      total += n;
+      if (total > limit) throw new IOException("文件超过大小限制");
+      out.write(buffer, 0, n);
+    }
+  }
+
+  static String remotePath(String source, String cwd) {
+    String path = source;
+    if (path.startsWith("sandbox:")) path = path.substring(8);
+    else if (path.startsWith("file:")) {
+      URI uri = URI.create(path);
+      if (uri.getAuthority() != null && !uri.getAuthority().isEmpty()) throw new IllegalArgumentException("不支持带主机名的文件链接");
+      path = uri.getPath();
+    } else if (path.matches("^[a-zA-Z][a-zA-Z0-9+.-]*:.*")) throw new IllegalArgumentException("不支持此链接类型");
+    else path = android.net.Uri.decode(path);
+    if (path == null || path.isEmpty() || path.indexOf('\0') >= 0) throw new IllegalArgumentException("无效的文件路径");
+    if (!path.startsWith("/")) {
+      if (cwd.isEmpty()) throw new IllegalArgumentException("相对链接缺少项目路径");
+      path = cwd + "/" + path;
+    }
+    return path;
+  }
+
+  static Bitmap decode(byte[] bytes) throws IOException {
+    return decode(bytes, 1600);
+  }
+
+  static Bitmap decode(byte[] bytes, int maxDimension) throws IOException {
+    BitmapFactory.Options options = new BitmapFactory.Options();
+    options.inJustDecodeBounds = true;
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+    if (options.outWidth <= 0 || options.outHeight <= 0) throw new IOException("无法解码图片");
+    options.inSampleSize = 1;
+    while (options.outWidth / options.inSampleSize > maxDimension || options.outHeight / options.inSampleSize > maxDimension) options.inSampleSize *= 2;
+    options.inJustDecodeBounds = false;
+    Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+    if (bitmap == null) throw new IOException("无法解码图片");
+    return bitmap;
+  }
+
+  static List<String> images(ChatItem item) {
+    List<String> result = new ArrayList<>(item.images);
+    Matcher matcher = IMAGE.matcher(item.text);
+    while (matcher.find() && result.size() < 12) if (!result.contains(matcher.group(2))) result.add(matcher.group(2));
+    return result;
+  }
+}
