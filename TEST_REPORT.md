@@ -1,3 +1,43 @@
+# 1.0.16 多会话验证记录
+
+用户已审核 1.0.15 排版，本版落实多会话并行，复用现有 SSH/RPC、独立托管进程、通知渠道、气泡 Activity 和流体云内容布局。
+
+执行 `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug -PsshFixture`，最终 BUILD SUCCESSFUL。109 项 Android/隔离 SSH 测试全部通过，0 失败、0 跳过；Lint 0 errors / 8 warnings。另执行 `python3 -m unittest tools/test_remote_session.py -v`，3 项全部通过。
+
+新增多会话覆盖：
+
+- A/B 使用相同 itemId 的流式输出仍正确分流；A 完成不会结束 B。
+- 后台处理期间 UI 观察者只看见当前选中会话，不渲染临时背景状态。
+- A/B 独立流体云与气泡、不同 PendingIntent 目的地、相同通知模板；普通状态无按钮。
+- 在 B 页面点击 A 通知审批，回复正确 request ID 且 B 的页面/运行状态不变。
+- 切换缓存会话保留各自草稿和 turnId；A 的延迟 turn/start 响应不会覆盖 B。
+- 重连按托管列表恢复 A/B 的运行状态，并保留原选中的 A；旧托管端兼容保存的会话 ID。
+- 杀掉模拟手机客户端后远端继续输出，重连恢复消息与待审批。
+- 恢复 A 基线期间 B 继续输出，重放结束前补发 B 的增量；随后恢复 B 获得完整基线后的日志。
+- 原有历史阅读冻结、审批防重复/过期、图片和连接回归全部通过。原测试的固定气泡快捷方式及离开会话 unsubscribe 断言已改为新的独立标识和保持订阅行为。
+
+本机部署：`~/.remote-gpt/host-pXsPdV2KKY2ozXzW9YDwABlfCmNLvCIS15KrVZ9cKAs.py`，0600，内容与 APK 资产一致。检测到现存旧实例有 active 任务，未重启；新客户端为旧端提供重放后其他会话快照补读。新建托管实例采用新版会话列表与跨会话日志补发。未变更 SSH 登录凭据或系统服务配置。
+
+测试使用 Robolectric（主要 SDK 35）和本机回环隔离 SSH 服务，未发起真实模型任务，未连接一加 15T 真机。系统控制多条流体云/气泡的实际展示上限、聚合和轮换，测试验证应用分别提交正确通知，不能代替 ColorOS 多卡片真机验收。
+
+版本 1.0.16 / versionCode 17，沿用 Debug 签名与包名 app.remotessh。交付 dist/RemoteGPT-1.0.16-debug.apk 和 dist/RemoteGPT-1.0.16-source.zip。未访问含 claude 字符目录中的内容。
+
+---
+
+# 1.0.15 验证记录（排版审核候选版）
+
+去除普通流体云卡片的查看/收起按钮，保留整卡打开对话；审批只有允许一次/拒绝，询问只有填写信息。正在提交与同步期间不显示操作按钮。正文去除重复标题与空字段，命令和最近输出分段，长输出限制字符与行数。
+
+执行 `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug`，BUILD SUCCESSFUL。102 项测试中 92 通过、0 失败、10 项 SSH 集成测试未启用而跳过；Lint 0 errors / 8 warnings。新增断言普通通知没有 actions、审批恰好两个动作、审批清除后按钮消失、正文行数受限且保留最近输出。
+
+排版示例 dist/screenshots/1.0.15/live-layout.png 由 Robolectric 原生绘图和实际 Notification extras/actions 构造内容卡片，使用示例任务数据。它是内容排版示意图，不是系统通知模板截图或 ColorOS 真机截图。最初尝试直接绘制系统 RemoteViews 时测试环境未呈现正文，因此没有采用该不完整截图。最终示例已人工查看，文字和按钮完整，无裁切。
+
+本版未实现多会话并行。评估和推荐改造路线见 MULTI_SESSION_ASSESSMENT.md；未放宽 busy 切换限制，也未修改或重启远端托管服务。用户要求先审图，此产物为审核候选版。
+
+版本 1.0.15 / versionCode 16。构建与签名配置沿用现有 Debug 证书，保持应用 ID；没有连接一加真机。本轮未查看含 claude 字符目录中的内容。
+
+---
+
 # 1.0.14 验证记录
 
 流体云改为持续显示最新思考正文、执行输出和回复片段，去除静态会话标题。新审批/询问采用高优先级渠道请求弹出，提供审批按钮或填写信息入口；同请求只提醒一次，收起运行状态后新请求可重新提醒。原有气泡、历史冻结和远端托管协议未修改。

@@ -67,7 +67,7 @@ public class LiveStatusTest {
   }
   @Test public void replayAndInputQuestionsNeverExposeApprovalButtons() {
     app.approvals.add(approval()); app.replaying = true; app.liveStatus.update();
-    assertEquals("查看对话", live().actions[0].title.toString());
+    assertTrue(live().actions == null || live().actions.length == 0);
     app.replaying = false; app.approvals.clear();
     app.approvals.add(Json.obj("id", 8, "method", "item/tool/requestUserInput", "params", Json.obj()));
     app.liveStatus.update();
@@ -108,7 +108,7 @@ public class LiveStatusTest {
       Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(300));
       reply.text += "，现在已经完成"; app.changed();
       Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(300));
-      assertEquals("最新回复\n正在修复，现在已经完成", live().extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString());
+      assertEquals("正在修复，现在已经完成", live().extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString());
       assertTrue((live().flags & Notification.FLAG_ONLY_ALERT_ONCE) != 0);
       app.items.add(new ChatItem("u2", "userMessage", "新问题")); app.liveStatus.update();
       assertFalse(LiveStatusNotifications.details(app).contains("已经完成"));
@@ -142,6 +142,23 @@ public class LiveStatusTest {
     assertTrue(live().extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString().contains("选择哪个部署环境？"));
     assertEquals("填写信息", live().actions[0].title.toString());
     assertEquals(0, live().flags & Notification.FLAG_ONLY_ALERT_ONCE);
+  }
+
+  @Test public void ordinaryProgressUsesAllSpaceWithoutRedundantActions() {
+    ChatItem command = new ChatItem("c", "commandExecution", "./gradlew test");
+    command.detail = "过时的输出\n".repeat(25) + "最新结果\n测试通过";
+    app.items.add(command); app.liveStatus.update();
+    assertTrue(live().actions == null || live().actions.length == 0);
+    String body = live().extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString();
+    assertTrue(body.endsWith("最新结果\n测试通过"));
+    assertTrue(body.split("\n").length <= 8);
+    assertNotNull(live().contentIntent);
+    app.approvals.add(approval()); app.liveStatus.update();
+    assertEquals(2, live().actions.length);
+    assertEquals("允许一次", live().actions[0].title.toString());
+    assertEquals("拒绝", live().actions[1].title.toString());
+    app.approvals.clear(); app.liveStatus.update();
+    assertTrue(live().actions == null || live().actions.length == 0);
   }
 
 }

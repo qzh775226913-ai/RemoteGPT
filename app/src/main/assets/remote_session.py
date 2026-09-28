@@ -36,6 +36,7 @@ class Peer:
         self.alive = True
         self.resuming = None
         self.replay_since = 0
+        self.pause_seq = 0
         threading.Thread(target=self.write, daemon=True).start()
 
     def send(self, value):
@@ -134,7 +135,7 @@ class Host:
                     self.initialized = True
                 return
             if method == 'remote/session':
-                peer.send(dict(id=ident, result={'lastThread': self.last_thread}))
+                peer.send(dict(id=ident, result={'lastThread': self.last_thread, 'threads': list(self.baselines), 'multiSession': True}))
                 return
             thread = params.get('threadId', '')
             if method == 'thread/resume' and thread in self.baselines:
@@ -142,13 +143,14 @@ class Host:
                 self.last_thread = thread
                 peer.resuming = thread
                 peer.replay_since = since
+                peer.pause_seq = self.db.execute('SELECT COALESCE(MAX(seq),0) FROM events').fetchone()[0]
                 peer.send(dict(id=ident, result=dict(baseline, remoteReplay=True)))
                 return
             if method == 'remote/replay':
                 if peer.resuming != thread:
                     return
                 since = peer.replay_since
-                peer.send(dict(method='remote/replayStarted', params={}))
+                peer.send(dict(method='remote/replayStarted', params={'threadId': thread}))
                 for (body,) in self.db.execute('SELECT body FROM events WHERE thread=? AND seq>? ORDER BY seq', (thread, since)):
                     event = json.loads(body)
                     # Approval requests are replayed only if still awaiting an answer.
@@ -156,7 +158,13 @@ class Host:
                         peer.send(event)
                 for request in self.approvals.values():
                     peer.send(request)
-                peer.send(dict(method='remote/replayCompleted', params={}))
+                # Other subscribed threads kept running while the client applied
+                # this baseline. Flush their journal tail before resuming delivery.
+                for (body,) in self.db.execute('SELECT body FROM events WHERE thread!=? AND seq>? ORDER BY seq', (thread, peer.pause_seq)):
+                    event = json.loads(body)
+                    if 'id' not in event:
+                        peer.send(event)
+                peer.send(dict(method='remote/replayCompleted', params={'threadId': thread}))
                 peer.resuming = None
                 return
             if method == 'thread/unsubscribe' and thread in self.baselines:

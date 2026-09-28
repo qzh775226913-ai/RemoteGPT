@@ -9,6 +9,7 @@ import org.json.JSONObject;
 /** A compact system-bubble surface; all decisions use the live application's request. */
 public final class BubbleActivity extends Activity {
   private RemoteApp app;
+  private String target = "";
   private LinearLayout body;
   private String shown = "";
   private int foreground;
@@ -16,6 +17,7 @@ public final class BubbleActivity extends Activity {
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
     app = (RemoteApp) getApplication();
+    target = app.ownsIntent(getIntent()) ? getIntent().getStringExtra("threadId") : app.threadId;
     boolean dark = (getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
         == android.content.res.Configuration.UI_MODE_NIGHT_YES;
     int mode = getSharedPreferences("MainActivity", MODE_PRIVATE).getInt("theme", 0);
@@ -36,7 +38,17 @@ public final class BubbleActivity extends Activity {
   private void button(String label, Runnable action) {
     Button button = new Button(this); button.setText(label); button.setOnClickListener(v -> action.run()); body.addView(button);
   }
+  @Override protected void onNewIntent(Intent intent) {
+    super.onNewIntent(intent); setIntent(intent);
+    if (app.ownsIntent(intent)) { target=intent.getStringExtra("threadId"); shown=""; render(); }
+  }
   private void render() {
+    if (!app.connected || (getIntent().hasExtra("profileId") && !app.ownsIntent(getIntent()))) {
+      body.removeAllViews(); text("连接已断开，请打开应用重新连接。", 16); return;
+    }
+    app.inConversation(target, this::renderConversation);
+  }
+  private void renderConversation() {
     JSONObject req = app.approvals.isEmpty() ? null : app.approvals.get(0);
     String key = app.connected + "|" + app.state + "|" + app.busy + "|" + app.threadTitle + "|" + req + "|" + app.error + "|" + app.replaying;
     if (key.equals(shown)) return;
@@ -59,11 +71,14 @@ public final class BubbleActivity extends Activity {
       } else text("请打开对话填写补充信息。", 14);
     }
     button("打开对话", () -> {
-      startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+      startActivity(app.conversationIntent(MainActivity.class, target).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
       finish();
     });
   }
   private void answer(JSONObject req, String decision) {
+    app.inConversation(target, () -> answerInConversation(req, decision));
+  }
+  private void answerInConversation(JSONObject req, String decision) {
     if (app.replaying || !app.connected || !app.approvals.contains(req)) { shown = ""; render(); return; }
     for (int n = 0; n < body.getChildCount(); n++) if (body.getChildAt(n) instanceof Button) body.getChildAt(n).setEnabled(false);
     app.answer(req, Json.obj("decision", decision));

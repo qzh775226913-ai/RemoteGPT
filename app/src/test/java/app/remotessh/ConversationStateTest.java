@@ -260,7 +260,7 @@ public class ConversationStateTest {
       assertFalse(app.readOnly);
       assertEquals("busy-thread", app.threadId);
       app.newChat();
-      waitFor(() -> sent.toString().replace("\\/", "/").contains("thread/unsubscribe"));
+      assertFalse(sent.toString().replace("\\/", "/").contains("thread/unsubscribe"));
       assertEquals("", app.threadId);
     } finally {
       client.close();

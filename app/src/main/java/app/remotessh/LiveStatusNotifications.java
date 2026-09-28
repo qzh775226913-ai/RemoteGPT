@@ -18,12 +18,28 @@ public final class LiveStatusNotifications {
   static final String PROMOTED = "android.requestPromotedOngoing";
   static final String ACTION = "app.remotessh.LIVE_ACTION";
   private final RemoteApp app;
+  private final boolean card;
+  private final int notificationId;
+  private final java.util.Map<String, LiveStatusNotifications> cards = new java.util.LinkedHashMap<>();
+  private int nextId = ID;
+  int idFor(String thread) {
+    LiveStatusNotifications value = cards.get(thread); return value == null ? -1 : value.notificationId;
+  }
   private String lastSignature = "", runToken = "", owner = "", turn = "";
   private boolean active, dismissed;
   private String postedChannel = "";
   private final java.util.Set<String> alerted = new java.util.HashSet<>();
 
-  public LiveStatusNotifications(RemoteApp app) { this.app = app; }
+  public LiveStatusNotifications(RemoteApp app) { this(app, false, ID); }
+  private LiveStatusNotifications(RemoteApp app, boolean card, int id) {
+    this.app=app; this.card=card; this.notificationId=id;
+  }
+  private LiveStatusNotifications card(String id) {
+    return cards.computeIfAbsent(id, key -> {
+      int assigned=nextId; nextId = nextId == ID ? 1001 : nextId + 2;
+      return new LiveStatusNotifications(app, true, assigned);
+    });
+  }
 
   static boolean running(RemoteApp app) {
     return app.connected && !app.threadId.isEmpty()
@@ -33,6 +49,10 @@ public final class LiveStatusNotifications {
   // Called synchronously on state changes, so a brief idle boundary between
   // queued turns cannot disappear inside the notification update throttle.
   void observe() {
+    if (!card) {
+      for (String id : app.conversationIds()) app.inConversation(id, () -> card(id).observe());
+      return;
+    }
     boolean now = running(app);
     String newOwner = (app.profile == null ? "" : app.profile.id) + ":" + app.threadId;
     if (now && (!active || !owner.equals(newOwner)
@@ -79,21 +99,40 @@ public final class LiveStatusNotifications {
       JSONObject p = Json.object(request, "params");
       if (!isApproval(request)) {
         org.json.JSONArray questions = p.optJSONArray("questions");
-        StringBuilder text = new StringBuilder("需要你回答");
+        StringBuilder text = new StringBuilder();
         if (questions != null) for (int i = 0; i < questions.length(); i++) {
           JSONObject q = questions.optJSONObject(i);
-          if (q != null) text.append("\n").append(q.optString("question", q.optString("header")));
+          if (q != null) {
+            if (text.length() > 0) text.append("\n\n");
+            text.append(q.optString("question", q.optString("header")));
+          }
         }
-        return shorten(text.toString(), 1200);
+        return text.length() == 0 ? "需要补充信息，请填写后继续。" : shorten(text.toString(), 900);
       }
-      return "需要审批\n" + shorten(p.optString("command", p.optString("grantRoot", "文件修改")), 600)
-          + "\n" + shorten(p.optString("reason"), 400) + "\n" + shorten(p.optString("cwd"), 200);
+      String command = shorten(p.optString("command", p.optString("grantRoot", "文件修改")), 500);
+      String reason = shorten(p.optString("reason"), 250);
+      String cwd = shorten(p.optString("cwd"), 140);
+      return (reason.isEmpty() ? "" : reason + "\n\n") + command
+          + (cwd.isEmpty() ? "" : "\n目录：" + cwd);
+
     }
     ChatItem item = latest(app);
     if (item == null) return "已收到消息，等待远端最新进展…";
-    if (item.type.equals("reasoning")) return "思考进展\n" + tail(item.detail.isEmpty() ? "远端正在思考…" : item.detail, 1200);
-    if (item.prose()) return (item.type.equals("plan") ? "最新计划\n" : "最新回复\n") + tail(item.text, 1200);
-    return shorten(item.text, 240) + (item.detail.isEmpty() ? "" : "\n" + tail(item.detail, 960));
+    if (item.type.equals("reasoning")) return excerpt(item.detail.isEmpty() ? "远端正在思考…" : item.detail, 600, 8);
+    if (item.prose()) return excerpt(item.text, 600, 8);
+    return shorten(item.text, 180) + (item.detail.isEmpty() ? "" : "\n\n" + excerpt(item.detail, 480, 6));
+  }
+
+  // Bound both characters and lines so terminal output uses the expanded area
+  // for recent progress instead of pushing it below a long stale log prefix.
+  private static String excerpt(String value, int chars, int lines) {
+    String text = value.replace("\r\n", "\n").replace('\r', '\n').trim();
+    int boundary = text.length();
+    for (int i = 0; i < lines; i++) {
+      boundary = text.lastIndexOf('\n', boundary - 1);
+      if (boundary < 0) return tail(text, chars);
+    }
+    return tail("…" + text.substring(boundary + 1), chars);
   }
 
   // Keep the newest streaming text visible even when an item is very long.
@@ -117,6 +156,11 @@ public final class LiveStatusNotifications {
   }
 
   public void update() {
+    if (!card) {
+      if (!app.connected) { clear(); return; }
+      for (String id : app.conversationIds()) app.inConversation(id, () -> card(id).update());
+      return;
+    }
     observe();
     NotificationManager manager = app.getSystemService(NotificationManager.class);
     boolean enabled = app.getSharedPreferences("background", Context.MODE_PRIVATE).getBoolean("liveStatus", true);
@@ -130,16 +174,16 @@ public final class LiveStatusNotifications {
     String channel = request == null ? CHANNEL : ATTENTION_CHANNEL;
     manager.createNotificationChannel(new NotificationChannel(ATTENTION_CHANNEL,
         "流体云 · 审批与询问提醒", NotificationManager.IMPORTANCE_HIGH));
-    String stage = stage(app), details = details(app);
     boolean answering = request != null && app.isAnswering(request);
+    String stage = answering ? "提交中" : stage(app), details = details(app);
     String signature = runToken + stage + details + token + app.threadTitle + answering;
     if (signature.equals(lastSignature)) return;
     lastSignature = signature;
-    Intent open = new Intent(app, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-    PendingIntent content = PendingIntent.getActivity(app, 3, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    Intent open = app.conversationIntent(MainActivity.class, app.threadId).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    PendingIntent content = PendingIntent.getActivity(app, notificationId, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     Bundle extras = new Bundle(); extras.putBoolean(PROMOTED, true);
     Notification.Builder builder = new Notification.Builder(app, channel)
-        .setSmallIcon(R.drawable.ic_launcher).setContentTitle("RemoteGPT · " + stage)
+        .setSmallIcon(R.drawable.ic_launcher).setContentTitle((app.conversationIds().size() > 1 && !app.threadTitle.isEmpty() ? shorten(app.threadTitle, 24) : "RemoteGPT") + " · " + stage)
         .setContentText(tail(details.replace('\n', ' '), 180))
         .setStyle(new Notification.BigTextStyle().bigText(details))
         .setOngoing(true).setOnlyAlertOnce(!newRequest).setShowWhen(false)
@@ -151,12 +195,12 @@ public final class LiveStatusNotifications {
       Notification.Action.Builder decline = new Notification.Action.Builder(null, "拒绝", action(token, "decline"));
       if (Build.VERSION.SDK_INT >= 31) { allow.setAuthenticationRequired(true); decline.setAuthenticationRequired(true); }
       builder.addAction(allow.build()).addAction(decline.build());
-    } else builder.addAction(new Notification.Action.Builder(null,
-        request == null ? "查看对话" : answering ? "正在提交…" : "填写信息", content).build());
-    builder.addAction(new Notification.Action.Builder(null, "收起状态", action(runToken, "hide")).build());
+    } else if (request != null && !answering) {
+      builder.addAction(new Notification.Action.Builder(null, "填写信息", content).build());
+    }
     // A channel change requires reposting; ordinary deltas only update the same card.
-    if (!postedChannel.isEmpty() && !postedChannel.equals(channel)) manager.cancel(ID);
-    manager.notify(ID, builder.build());
+    if (!postedChannel.isEmpty() && !postedChannel.equals(channel)) manager.cancel(notificationId);
+    manager.notify(notificationId, builder.build());
     postedChannel = channel;
     if (newRequest) alerted.add(token);
   }
@@ -167,18 +211,27 @@ public final class LiveStatusNotifications {
   }
 
   void handle(String token, String choice) {
+    if (!card) {
+      if (choice.equals("hide")) {
+        for (LiveStatusNotifications c : cards.values()) if (token.equals(c.runToken)) c.handle(token, choice);
+      } else handleApproval(token, choice);
+      return;
+    }
     if (choice.equals("hide")) {
       if (token.equals(runToken)) { dismissed = true; clear(); }
-    } else if (choice.equals("accept") || choice.equals("decline")) {
-      // Also check here for OEMs that do not honor Action.authenticationRequired.
-      KeyguardManager keyguard = app.getSystemService(KeyguardManager.class);
-      if (keyguard != null && keyguard.isDeviceLocked()) return;
-      app.answerNotification(token, choice);
-    }
+    } else handleApproval(token, choice);
+  }
+
+  private void handleApproval(String token, String choice) {
+    if (!choice.equals("accept") && !choice.equals("decline")) return;
+    KeyguardManager keyguard = app.getSystemService(KeyguardManager.class);
+    if (keyguard != null && keyguard.isDeviceLocked()) return;
+    app.answerNotification(token, choice);
   }
 
   void clear() {
-    app.getSystemService(NotificationManager.class).cancel(ID);
+    if (!card) { for (LiveStatusNotifications c : cards.values()) c.clear(); return; }
+    app.getSystemService(NotificationManager.class).cancel(notificationId);
     lastSignature = "";
     postedChannel = "";
   }

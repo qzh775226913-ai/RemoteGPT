@@ -25,7 +25,7 @@ public class BubbleTest {
     var notifications = Shadows.shadowOf(manager);
     Notification bubble = notifications.getNotification(2);
     assertNotNull(bubble.getBubbleMetadata());
-    assertEquals("active-conversation", bubble.getShortcutId());
+    assertEquals("conversation--thread", bubble.getShortcutId());
     assertEquals(Notification.MessagingStyle.class.getName(), bubble.extras.getString(Notification.EXTRA_TEMPLATE));
     app.approvals.add(Json.obj("id", "approval", "method", "item/commandExecution/requestApproval",
         "params", Json.obj("command", "ls /project", "threadId", "thread")));

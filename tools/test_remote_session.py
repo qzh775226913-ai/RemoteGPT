@@ -40,10 +40,14 @@ for line in sys.stdin:
     elif m == 'initialize':
         send(dict(id=r['id'], result=dict(server='fake')))
     elif m == 'thread/start':
-        send(dict(id=r['id'], result=dict(model='fake', thread=dict(id='thread-1', status=dict(type='idle'), turns=[]))))
+        send(dict(id=r['id'], result=dict(model='fake', thread=dict(id=r.get('params', {}).get('threadId', 'thread-1'), status=dict(type='idle'), turns=[]))))
     elif m == 'turn/start':
         send(dict(id=r['id'], result=dict(turn=dict(id='turn-1'))))
         threading.Thread(target=work).start()
+    elif m == 'test/events':
+        for value in r['params']['events']:
+            send(value)
+        send(dict(id=r['id'], result={}))
     elif m == 'echo':
         time.sleep(r['params'].get('delay', 0))
         send(dict(id=r['id'], result=r['params']))
@@ -153,6 +157,37 @@ class PersistentSessionTest(unittest.TestCase):
                 break
         self.assertFalse(any(e.get('id') == 'approval-1' for e in restored))
         self.assertTrue(any(e.get('method') == 'turn/completed' for e in restored))
+
+    def test_two_threads_recover_and_other_thread_events_survive_replay_barrier(self):
+        c = self.client()
+        c.request(2, 'thread/start', threadId='A')
+        c.request(3, 'thread/start', threadId='B')
+        def delta(thread, text):
+            return dict(method='item/agentMessage/delta', params=dict(threadId=thread, itemId='same', delta=text))
+        c.request(4, 'test/events', events=[delta('A', 'a1'), delta('B', 'b1')])
+        c.kill()
+        c = self.client()
+        session = c.request(2, 'remote/session')['result']
+        self.assertEqual({'A', 'B'}, set(session['threads']))
+        # Deliberately hold the baseline acknowledgement while B continues.
+        c.send(dict(id=3, method='thread/resume', params=dict(threadId='A')))
+        baseline = c.next()
+        self.assertTrue(baseline['result']['remoteReplay'])
+        c.request(4, 'test/events', events=[delta('A', 'a2'), delta('B', 'b2')])
+        c.send(dict(method='remote/replay', params=dict(threadId='A')))
+        events = []
+        while True:
+            value = c.next()
+            if value.get('method') == 'remote/replayCompleted': break
+            events.append(value)
+        self.assertEqual(['a1', 'a2', 'b2'], [e['params']['delta'] for e in events if e.get('method') == 'item/agentMessage/delta'])
+        c.request(5, 'thread/resume', threadId='B')
+        replay = []
+        while True:
+            value = c.next()
+            if value.get('method') == 'remote/replayCompleted': break
+            replay.append(value)
+        self.assertEqual(['b1', 'b2'], [e['params']['delta'] for e in replay if e.get('method') == 'item/agentMessage/delta'])
 
     def test_request_ids_from_dead_connection_cannot_resolve_new_request(self):
         c = self.client()

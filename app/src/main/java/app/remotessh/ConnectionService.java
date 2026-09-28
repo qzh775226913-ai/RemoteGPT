@@ -11,6 +11,25 @@ public final class ConnectionService extends Service {
   private RemoteApp app;
   private boolean refreshPending;
   private String lastSummary = "";
+  private final java.util.Map<String,Integer> bubbleIds = new java.util.LinkedHashMap<>();
+  private final java.util.Map<String,String> bubbleSignatures = new java.util.HashMap<>();
+  private int nextBubble = 1000;
+  private void updateBubbles() {
+    NotificationManager nm = getSystemService(NotificationManager.class);
+    if (!app.connected) { for (int id : bubbleIds.values()) nm.cancel(id); return; }
+    String selected=app.threadId;
+    for (String thread : app.conversationIds()) app.inConversation(thread, () -> {
+      int id = bubbleIds.computeIfAbsent(thread, key -> bubbleIds.isEmpty() ? 2 : (nextBubble += 2));
+      if (!thread.equals(selected) && !LiveStatusNotifications.running(app)) {
+        nm.cancel(id); bubbleSignatures.remove(thread); return;
+      }
+      String summary = summary(app);
+      String signature = summary + app.threadTitle;
+      if (signature.equals(bubbleSignatures.get(thread))) return;
+      bubbleSignatures.put(thread, signature);
+      postBubble(nm, id, summary);
+    });
+  }
   private final Runnable refresh = this::updateNotification;
   private final Runnable stateChanged = () -> {
     if (!refreshPending) { refreshPending = true; handler.postDelayed(refresh, 250); }
@@ -33,6 +52,7 @@ public final class ConnectionService extends Service {
     refreshPending = false;
     if (app == null) return;
     app.liveStatus.update();
+    updateBubbles();
     String summary = summary(app);
     String signature = summary + "|" + app.threadId + "|" + app.threadTitle;
     if (signature.equals(lastSummary)) return;
@@ -49,7 +69,13 @@ public final class ConnectionService extends Service {
         new Intent(this, ConnectionService.class).setAction("disconnect"), PendingIntent.FLAG_IMMUTABLE);
     status.addAction(new Notification.Action.Builder(null, "断开连接", stop).build());
     nm.notify(1, status.build());
-    if (!app.connected || app.threadId.isEmpty()) { nm.cancel(2); return; }
+  }
+
+  private void postBubble(NotificationManager nm, int id, String summary) {
+    PendingIntent open = PendingIntent.getActivity(this, id,
+        app.conversationIntent(MainActivity.class, app.threadId).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    String shortcutId = "conversation-" + (app.profile == null ? "" : app.profile.id) + "-" + app.threadId;
     Notification.Builder conversation = new Notification.Builder(this, "conversation")
         .setSmallIcon(R.drawable.ic_launcher).setContentTitle("RemoteGPT")
         .setContentText(summary).setStyle(new Notification.BigTextStyle().bigText(summary))
@@ -58,18 +84,18 @@ public final class ConnectionService extends Service {
       String title = app.threadTitle.isEmpty() ? "RemoteGPT 对话" : app.threadTitle;
       android.graphics.drawable.Icon icon = android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_launcher);
       Person remote = new Person.Builder().setName("RemoteGPT").setKey("remote-gpt").setBot(true).setIcon(icon).build();
-      Intent bubble = new Intent(this, BubbleActivity.class).setAction(Intent.ACTION_VIEW);
-      android.content.pm.ShortcutInfo shortcut = new android.content.pm.ShortcutInfo.Builder(this, "active-conversation")
+      Intent bubble = app.conversationIntent(BubbleActivity.class, app.threadId);
+      android.content.pm.ShortcutInfo shortcut = new android.content.pm.ShortcutInfo.Builder(this, shortcutId)
           .setShortLabel(title).setLongLived(true).setPerson(remote).setIcon(icon).setIntent(bubble).build();
       getSystemService(android.content.pm.ShortcutManager.class).pushDynamicShortcut(shortcut);
-      PendingIntent bubbleIntent = PendingIntent.getActivity(this, 2, bubble,
+      PendingIntent bubbleIntent = PendingIntent.getActivity(this, id, bubble,
           PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
-      conversation.setShortcutId("active-conversation")
+      conversation.setShortcutId(shortcutId)
           .setStyle(new Notification.MessagingStyle(new Person.Builder().setName("你").build())
               .setConversationTitle(title).addMessage(summary, System.currentTimeMillis(), remote))
           .setBubbleMetadata(new Notification.BubbleMetadata.Builder(bubbleIntent, icon).setDesiredHeight(520).build());
     }
-    nm.notify(2, conversation.build());
+    nm.notify(id, conversation.build());
   }
 
   private final Runnable renew = new Runnable() {
@@ -84,7 +110,7 @@ public final class ConnectionService extends Service {
     handler.removeCallbacks(renew);
     handler.removeCallbacks(refresh);
     if (app != null) app.stateListeners.remove(stateChanged);
-    getSystemService(NotificationManager.class).cancel(2);
+    for (int id : bubbleIds.values()) getSystemService(NotificationManager.class).cancel(id);
     if (app != null) app.liveStatus.clear();
     if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
     wakeLock = null;

@@ -84,15 +84,30 @@ public final class MainActivity extends Activity {
     super.attachBaseContext(base);
   }
 
+  private void openNotificationConversation(Intent intent) {
+    if (app.ownsIntent(intent)) {
+      String id = intent.getStringExtra("threadId");
+      if (id != null && !id.isEmpty() && !id.equals(app.threadId)) {
+        if (input != null) app.draftText=input.getText().toString();
+        app.openConversation(id);
+      }
+    }
+  }
+  @Override protected void onNewIntent(Intent intent) {
+    super.onNewIntent(intent); setIntent(intent); openNotificationConversation(intent);
+  }
+
   @Override
   public void onCreate(Bundle saved) {
     setTheme(isDark() ? R.style.AppThemeDark : R.style.AppTheme);
     super.onCreate(saved);
     app = (RemoteApp) getApplication();
+    openNotificationConversation(getIntent());
     colors();
     build();
     if (saved != null) {
-      input.setText(saved.getString("draft", ""));
+      app.draftText=saved.getString("draft", "");
+      input.setText(app.draftText);
       pendingDownload = saved.getString("download", "");
       pendingDownloadHost = saved.getString("downloadHost", "");
     }
@@ -423,6 +438,7 @@ public final class MainActivity extends Activity {
           public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
 
           public void onTextChanged(CharSequence s, int st, int before, int count) {
+            app.draftText=s.toString();
             updateSend();
           }
 
@@ -458,6 +474,7 @@ public final class MainActivity extends Activity {
   private void render() {
     if (!renderedThread.equals(app.threadId)) {
       renderedThread = app.threadId;
+      if (input != null) { input.setText(app.draftText); input.setSelection(input.length()); }
       scroll.follow();
       messageUpdatesPaused = false;
     }
@@ -1115,8 +1132,8 @@ public final class MainActivity extends Activity {
       toast("请先连接 SSH 主机");
       return;
     }
-    if (app.busy || app.attaching) {
-      toast("请先等待当前操作结束");
+    if (!app.canSwitchConversation()) {
+      toast("正在恢复会话或上传附件，请稍候");
       return;
     }
     directoryPicker =
@@ -1132,9 +1149,8 @@ public final class MainActivity extends Activity {
   }
 
   private void startNewChat() {
-    if (app.busy || app.attaching) {
-      toast("请先等待当前操作结束");
-      return;
+    if (app.connected && !app.canSwitchConversation()) {
+      toast("正在连接会话或上传附件，请稍候"); return;
     }
     if (!app.connected) {
       showDrawer();
@@ -1144,6 +1160,7 @@ public final class MainActivity extends Activity {
       openDirectoryPicker();
       return;
     }
+    app.draftText=input.getText().toString();
     app.newChat();
   }
 
@@ -1205,10 +1222,10 @@ public final class MainActivity extends Activity {
       clickable(
           item,
           () -> {
-            if (app.busy) {
-              toast("请先停止当前回复");
-              return;
+            if (!app.canSwitchConversation()) {
+              toast("正在恢复会话或上传附件，请稍候"); return;
             }
+            app.draftText = input.getText().toString();
             if (modal && drawer != null) drawer.dismiss();
             app.resume(id);
           });
@@ -1785,7 +1802,7 @@ public final class MainActivity extends Activity {
       trustDialog = null;
     }
     JSONObject req = app.approvals.isEmpty() ? null : app.approvals.get(0);
-    String id = req == null ? "" : String.valueOf(req.opt("id"));
+    String id = req == null ? "" : app.notificationApprovalToken(req);
     if (!id.equals(shownApproval) && approvalDialog != null) {
       approvalDialog.dismiss();
       approvalDialog = null;
@@ -1868,7 +1885,7 @@ public final class MainActivity extends Activity {
             .setNegativeButton(
                 "停止任务",
                 (d, w) -> {
-                  app.interrupt();
+                  app.inConversation(p.optString("threadId", app.threadId), app::interrupt);
                   approvalDialog = null;
                   shownApproval = "";
                 })

@@ -97,8 +97,8 @@ final class RemoteBrowser {
             () -> {
               if (project.isEmpty()) actions.directories();
               else {
-                if (app.busy || app.attaching) {
-                  Toast.makeText(activity, "请先等待当前操作结束", Toast.LENGTH_SHORT).show();
+                if (!app.canSwitchConversation()) {
+                  Toast.makeText(activity, "正在恢复会话或上传附件，请稍候", Toast.LENGTH_SHORT).show();
                   return;
                 }
                 if (app.useProject(project)) {
@@ -134,7 +134,7 @@ final class RemoteBrowser {
         .setItems(menuLabels(), (d, w) -> {
           if (!project.isEmpty()) {
             if (w == 0) {
-              if (app.busy || app.attaching) { Toast.makeText(ui.activity, "请先等待当前操作结束", Toast.LENGTH_SHORT).show(); return; }
+              if (!app.canSwitchConversation()) { Toast.makeText(ui.activity, "正在恢复会话或上传附件，请稍候", Toast.LENGTH_SHORT).show(); return; }
               if (app.useProject(project)) { dialog.dismiss(); actions.chat(); }
             } else if (w == 1) app.refreshThreads(false);
             else {
@@ -315,8 +315,8 @@ final class RemoteBrowser {
         String id = thread.optString("id");
         row.setOnClickListener(
             v -> {
-              if (app.busy || app.attaching) {
-                Toast.makeText(ui.activity, "请先等待当前操作结束", Toast.LENGTH_SHORT).show();
+              if (!app.canSwitchConversation()) {
+                Toast.makeText(ui.activity, "正在恢复会话或上传附件，请稍候", Toast.LENGTH_SHORT).show();
                 return;
               }
               app.resume(id);
