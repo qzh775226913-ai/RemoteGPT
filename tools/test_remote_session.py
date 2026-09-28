@@ -41,6 +41,11 @@ for line in sys.stdin:
         send(dict(id=r['id'], result=dict(server='fake')))
     elif m == 'thread/start':
         send(dict(id=r['id'], result=dict(model='fake', thread=dict(id=r.get('params', {}).get('threadId', 'thread-1'), status=dict(type='idle'), turns=[]))))
+    elif m == 'thread/unsubscribe' and r.get('params', {}).get('threadId') == 'rejected':
+        send(dict(id=r['id'], error=dict(code=-32601, message='unsubscribe unsupported')))
+    elif m == 'test/crash':
+        print('{broken json', flush=True)
+        time.sleep(30)
     elif m == 'turn/start':
         send(dict(id=r['id'], result=dict(turn=dict(id='turn-1'))))
         threading.Thread(target=work).start()
@@ -126,6 +131,19 @@ class PersistentSessionTest(unittest.TestCase):
         c.request(4, 'thread/unsubscribe', threadId='thread-1')
         self.assertNotIn('thread-1', c.request(5, 'remote/session')['result']['threads'])
 
+    def test_rejected_unsubscribe_keeps_writer_recoverable_after_reconnect(self):
+        c = self.client()
+        c.request(2, 'thread/start', threadId='rejected')
+        response = c.request(3, 'thread/unsubscribe', threadId='rejected')
+        self.assertEqual(-32601, response['error']['code'])
+        self.assertIn('rejected', c.request(4, 'remote/session')['result']['threads'])
+        c.kill()
+
+        c = self.client()
+        resumed = c.request(2, 'thread/resume', threadId='rejected')
+        self.assertTrue(resumed['result']['remoteReplay'])
+        self.assertEqual('rejected', resumed['result']['thread']['id'])
+
     def test_killed_phone_replays_stream_and_pending_approval(self):
         c = self.client()
         c.request(2, 'thread/start')
@@ -204,6 +222,25 @@ class PersistentSessionTest(unittest.TestCase):
         c = self.client()
         result = c.request(2, 'echo', value='new')
         self.assertEqual('new', result['result']['value'])
+
+    def test_broken_backend_output_does_not_leave_writer_process_group(self):
+        c = self.client()
+        server_pid = int(next(self.home.glob('.remote-gpt/*/server.pid')).read_text())
+        c.send(dict(id=2, method='test/crash', params={}))
+        deadline = time.monotonic() + 10
+        while c.proc.poll() is None and time.monotonic() < deadline:
+            time.sleep(.02)
+        self.assertIsNotNone(c.proc.poll(), 'attachment must close after backend protocol failure')
+        c.kill()
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            try:
+                os.killpg(server_pid, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(.02)
+        else:
+            self.fail('backend process group survived its host')
 
 
 if __name__ == '__main__':

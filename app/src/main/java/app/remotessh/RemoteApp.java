@@ -483,7 +483,7 @@ public final class RemoteApp extends Application {
                       Json.obj(
                           "clientInfo",
                           Json.obj(
-                              "name", "remote_ssh_android", "title", "Remote", "version", "1.0.19"),
+                              "name", "remote_ssh_android", "title", "Remote", "version", "1.0.20"),
                           "capabilities", Json.obj("experimentalApi", true)),
                       r -> completeInitialization(c, t, g));
                 });

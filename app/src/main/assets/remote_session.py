@@ -167,13 +167,13 @@ class Host:
                 peer.send(dict(method='remote/replayCompleted', params={'threadId': thread}))
                 peer.resuming = None
                 return
-            if method == 'thread/unsubscribe' and thread in self.baselines:
-                # The client releases only idle threads. Drop the replay baseline
-                # and let Codex release its writer instead of keeping it forever.
-                self.baselines.pop(thread, None)
             if method and ident is not None:
                 self.sequence += 1
-                self.pending[self.sequence] = (peer, ident, method)
+                # Keep ownership until Codex confirms unsubscribe. Dropping the
+                # baseline before the response can strand a writer in this very
+                # app-server when unsubscribe is rejected or unsupported; after
+                # reconnect, forwarding resume then reports "active writer".
+                self.pending[self.sequence] = (peer, ident, method, thread)
                 value['id'] = self.sequence
             elif not method and ident is not None:
                 if str(ident) not in self.approvals:
@@ -197,7 +197,7 @@ class Host:
                         pending = self.pending.pop(ident, None)
                         if pending is None:
                             continue
-                        peer, original, request = pending
+                        peer, original, request, request_thread = pending
                         result = value.get('result')
                         if request == 'initialize':
                             self.initializing = False
@@ -214,6 +214,8 @@ class Host:
                                     seq = self.db.execute('SELECT COALESCE(MAX(seq),0) FROM events').fetchone()[0]
                                     self.baselines[thread] = (result, seq)
                                     self.last_thread = thread
+                        if request == 'thread/unsubscribe' and 'error' not in value:
+                            self.baselines.pop(request_thread, None)
                         value['id'] = original
                         if peer is self.peer:
                             peer.send(value)
@@ -236,7 +238,21 @@ class Host:
         finally:
             if self.peer:
                 self.peer.close()
-            # Never silently replace a failed backend during an active attachment.
+            # A live descendant would keep thread writers after the host dies.
+            # Reap the whole backend session before allowing a replacement host.
+            try:
+                os.killpg(self.process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                self.process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                pass
+            try:
+                # The shell may have exited while a Codex descendant survived.
+                os.killpg(self.process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
             os._exit(1)
 
     def attach(self, sock):
