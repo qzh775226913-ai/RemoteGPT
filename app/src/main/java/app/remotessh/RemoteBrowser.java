@@ -32,6 +32,8 @@ final class RemoteBrowser {
   private final EditText search;
   private String filter = "", project = "";
 
+  private boolean centerHost = true;
+
   RemoteBrowser(Activity activity, RemoteApp app, boolean dark, Actions actions) {
     this.app = app;
     this.ui = new RemoteScreens(activity, dark);
@@ -158,6 +160,7 @@ final class RemoteBrowser {
       app.historyProject = "";
       if (app.connected) app.refreshThreads(false);
     }
+    filter = app.profile == null ? (app.vault.profiles.isEmpty() ? "" : app.vault.profiles.get(0).id) : app.profile.id;
     refresh();
   }
 
@@ -185,17 +188,6 @@ final class RemoteBrowser {
     primary.setText(project.isEmpty() ? "新项目" : "聊天");
     ((View)hosts.getParent()).setVisibility(project.isEmpty()?View.VISIBLE:View.GONE);
     hosts.removeAllViews();
-    hosts.addView(
-        ui.button(
-            "全部",
-            filter.isEmpty(),
-            () -> {
-              filter = "";
-              project = "";
-              app.historyProject = "";
-              if (app.connected) app.refreshThreads(false);
-              refresh();
-            }));
     for (Profile p : app.vault.profiles) {
       boolean active = app.connected && app.profile != null && p.id.equals(app.profile.id);
       TextView chip =
@@ -203,17 +195,28 @@ final class RemoteBrowser {
               (active ? "● " : "○ ") + p.title(),
               filter.equals(p.id),
               () -> {
+                centerHost = true;
                 filter = p.id;
                 project = "";
                 if (active) {
                   app.historyProject = "";
                   app.refreshThreads(false);
+                } else {
+                  app.historyProject = "";
+                  actions.connect(p);
                 }
                 refresh();
               });
       LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
       lp.leftMargin = ui.dp(8);
       hosts.addView(chip, lp);
+      if (centerHost && filter.equals(p.id)) {
+        centerHost = false;
+        chip.post(() -> {
+          HorizontalScrollView scroll = (HorizontalScrollView) hosts.getParent();
+          scroll.scrollTo(Math.max(0, chip.getLeft() + chip.getWidth() / 2 - scroll.getWidth() / 2), 0);
+        });
+      }
     }
     subtitle.setText(
         app.connected
@@ -239,7 +242,7 @@ final class RemoteBrowser {
       section("项目");
       int count = 0;
       for (Profile p : app.vault.profiles) {
-        if (!filter.isEmpty() && !filter.equals(p.id)) continue;
+        if (!filter.equals(p.id)) continue;
         LinkedHashSet<String> paths = new LinkedHashSet<>(p.projects);
         if (!p.cwd.isEmpty()) paths.add(p.cwd);
         for (String path : paths) {
@@ -279,7 +282,7 @@ final class RemoteBrowser {
       section("最近");
     }
     int count = 0;
-    if (app.connected && (filter.isEmpty() || filter.equals(app.profile.id)))
+    if (app.connected && filter.equals(app.profile.id))
       for (int i = 0; i < app.threads.length(); i++) {
         JSONObject thread = app.threads.optJSONObject(i);
         if (thread == null) continue;
@@ -319,7 +322,7 @@ final class RemoteBrowser {
                 Toast.makeText(ui.activity, "正在恢复会话或上传附件，请稍候", Toast.LENGTH_SHORT).show();
                 return;
               }
-              app.resume(id);
+              app.viewConversation(id);
               dialog.dismiss();
             });
         list.addView(row);

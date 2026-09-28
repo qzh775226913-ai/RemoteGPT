@@ -25,6 +25,9 @@ public final class RemoteApp extends Application {
   public String threadTitle = "", historyProject = "", lastError = "";
   private String observedError = "";
   private final Set<String> loadedThreads = new HashSet<>();
+  private final Set<String> recoveringThreads = new HashSet<>();
+  private final Set<String> statusPolling = new HashSet<>();
+  private long statusRevision;
   private final Runnable hideError =
       () -> {
         error = "";
@@ -102,6 +105,7 @@ public final class RemoteApp extends Application {
   }
 
   private void select(String id) {
+    if (!id.equals(threadId)) leaveIdleConversation();
     checkpoint();
     ConversationState target = conversations.computeIfAbsent(id, key -> {
       ConversationState c = new ConversationState(); c.threadId=key; c.model=model; c.effort=reasoningEffort; c.permission=permissionMode; return c;
@@ -129,7 +133,7 @@ public final class RemoteApp extends Application {
 
   void openConversation(String id) {
     if (!canSwitchConversation()) { pendingNavigation=id; return; }
-    resume(id);
+    viewConversation(id);
   }
 
   private void refreshOtherLegacyThreads(String restored) {
@@ -137,9 +141,7 @@ public final class RemoteApp extends Application {
     for (String id : new ArrayList<>(loadedThreads)) {
       if (id.equals(restored)) continue;
       inConversation(id, () -> request("thread/read", Json.obj("threadId", id, "includeTurns", true), r -> {
-        List<JSONObject> pending = new ArrayList<>(approvals);
         applyThread(r, id, readOnly);
-        approvals.addAll(pending); changed();
       }));
     }
   }
@@ -153,7 +155,9 @@ public final class RemoteApp extends Application {
     if (!restoreId.isEmpty()) restore.add(restoreId);
     if (ids != null) for (int i=0;i<ids.length();i++) restore.add(ids.optString(i));
     restore.addAll(getSharedPreferences("sessions", MODE_PRIVATE).getStringSet(profile.id, Collections.emptySet()));
+    restore.addAll(recoveringThreads);
     restore.remove("");
+    recoveringThreads.addAll(restore);
     if (!restoreId.isEmpty()) select(restoreId);
     restoreQueue.addAll(restore); restoreNext();
   }
@@ -161,29 +165,98 @@ public final class RemoteApp extends Application {
   private void restoreNext() {
     if (!restoringThread.isEmpty()) return;
     if (restoreQueue.isEmpty()) {
-      if (!pendingNavigation.isEmpty()) { String id=pendingNavigation; pendingNavigation=""; resume(id); }
+      if (!pendingNavigation.isEmpty()) { String id=pendingNavigation; pendingNavigation=""; viewConversation(id); }
       return;
     }
     String id = restoreQueue.removeFirst(); restoringThread=id; loadingThread=id;
     inConversation(id, () -> {
-      busy=true; request("thread/resume", Json.obj("threadId", id), r -> {
-        applyThread(r, id, false);
-        if (!r.optBoolean("remoteReplay")) { restoringThread=""; main.post(this::restoreNext); }
+      busy=true;
+      request("thread/read", Json.obj("threadId", id, "includeTurns", true), snapshot -> {
+        if (Json.object(Json.object(snapshot, "thread"), "status").optString("type").equals("active")) {
+          request("thread/resume", Json.obj("threadId", id), r -> {
+            applyThread(r, id, false);
+            if (!r.optBoolean("remoteReplay")) { restoringThread=""; main.post(this::restoreNext); }
+          });
+        } else {
+          applyThread(snapshot, id, true);
+          restoringThread="";
+          request("thread/unsubscribe", Json.obj("threadId", id), ignored -> {});
+          main.post(this::restoreNext);
+        }
       });
     });
   }
 
   public void setForeground(boolean visible) {
     foreground = visible;
+    if (!visible) leaveIdleConversation();
     main.removeCallbacks(reconnectTask);
     if (visible && retryEligible && !connected && !connecting) main.post(reconnectTask);
   }
 
+  boolean currentThreadRunning() {
+    return connected && !threadId.isEmpty() && !replaying && replayThread.isEmpty()
+        && (remoteRunning || (busy && !turnId.isEmpty()) || !approvals.isEmpty());
+  }
+
   public boolean threadRunning(JSONObject thread) {
-    ConversationState cached=conversations.get(thread.optString("id"));
-    if (connected && cached != null && (cached.busy || cached.remoteRunning)) return true;
-    return connected && (Json.object(thread, "status").optString("type").equals("active")
-        || (thread.optString("id").equals(threadId) && busy && !turnId.isEmpty()));
+    if (!connected || !replayThread.isEmpty()) return false;
+    String id = thread.optString("id");
+    if (id.equals(threadId)) return currentThreadRunning();
+    ConversationState cached = conversations.get(id);
+    if (cached != null) return !cached.replaying && (cached.remoteRunning
+        || (cached.busy && !cached.turnId.isEmpty()) || !cached.approvals.isEmpty());
+    return Json.object(thread, "status").optString("type").equals("active");
+  }
+
+  void leaveIdleConversation() {
+    if (busy || replaying || currentThreadRunning() || threadId.isEmpty()) return;
+    releaseThread(threadId);
+    readOnly = true;
+    checkpoint();
+  }
+
+  // Browsing history must not resume a writer or update its remote timestamp.
+  public void viewConversation(String id) {
+    if (!canSwitchConversation() || id.isEmpty()) return;
+    checkpoint();
+    boolean loaded = loadedThreads.contains(id);
+    select(id);
+    if (loaded) { changed(); return; }
+    busy = true; loadingThread = id; changed();
+    readThread(id, true);
+  }
+
+  JSONObject visibleApproval() {
+    if (!replayThread.isEmpty()) return null;
+    if (!replaying && !approvals.isEmpty()) return approvals.get(0);
+    checkpoint();
+    for (ConversationState c : conversations.values())
+      if (!c.replaying && !c.approvals.isEmpty()) return c.approvals.get(0);
+    return null;
+  }
+
+  // Passive threads have no subscription: recheck them even with the app in background.
+  void pollPassiveStatus() {
+    if (!connected || rpc == null) return;
+    final RpcClient client = rpc;
+    final int g = generation;
+    final long revision = statusRevision;
+    for (String id : conversationIds()) {
+      ConversationState c = conversations.get(id);
+      if (loadedThreads.contains(id) || !c.remoteRunning || !statusPolling.add(id)) continue;
+      worker.execute(() -> client.request("thread/read", Json.obj("threadId", id, "includeTurns", false))
+          .whenComplete((r, e) -> main.post(() -> {
+            if (g != generation) return;
+            statusPolling.remove(id);
+            if (e != null || revision != statusRevision || loadedThreads.contains(id)) return;
+            inConversation(id, () -> {
+              remoteRunning = Json.object(Json.object(r, "thread"), "status").optString("type").equals("active");
+              if (!remoteRunning) { busy=false; turnId=""; approvals.clear(); }
+              changed();
+            });
+          })));
+    }
   }
 
   public void pollReadOnly() {
@@ -191,12 +264,13 @@ public final class RemoteApp extends Application {
     final String id = threadId;
     final int g = generation;
     final RpcClient c = rpc;
+    final long revision = statusRevision;
     readPolling = true;
     worker.execute(() -> c.request("thread/read", Json.obj("threadId", id, "includeTurns", true))
         .whenComplete((r, e) -> main.post(() -> {
           if (g != generation) return;
           readPolling = false;
-          if (!id.equals(threadId) || !readOnly || busy) return;
+          if (!id.equals(threadId) || !readOnly || busy || revision != statusRevision) return;
           if (e == null) applyThread(r, id, true);
           else {
             state = "历史自动刷新失败，可手动重试";
@@ -211,6 +285,16 @@ public final class RemoteApp extends Application {
     super.onCreate();
     java.security.Security.removeProvider("BC");
     java.security.Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+    android.content.pm.ShortcutManager shortcuts = getSystemService(android.content.pm.ShortcutManager.class);
+    if (shortcuts != null) {
+      List<String> obsolete = new ArrayList<>();
+      if (android.os.Build.VERSION.SDK_INT >= 30)
+        for (android.content.pm.ShortcutInfo shortcut : shortcuts.getShortcuts(
+            android.content.pm.ShortcutManager.FLAG_MATCH_DYNAMIC | android.content.pm.ShortcutManager.FLAG_MATCH_CACHED))
+          obsolete.add(shortcut.getId());
+      shortcuts.removeAllDynamicShortcuts();
+      if (android.os.Build.VERSION.SDK_INT >= 30) shortcuts.removeLongLivedShortcuts(obsolete);
+    }
     liveStatus = new LiveStatusNotifications(this);
     vault = new Vault(this);
     try {
@@ -223,8 +307,11 @@ public final class RemoteApp extends Application {
   public void changed() {
     if (scopeDepth > 0) { scopeChanged=true; return; }
     checkpoint();
-    if (profile != null && connected && !loadedThreads.isEmpty())
-      getSharedPreferences("sessions", MODE_PRIVATE).edit().putStringSet(profile.id, new HashSet<>(loadedThreads)).apply();
+    if (profile != null && connected) {
+      Set<String> remembered = new HashSet<>(recoveringThreads);
+      remembered.addAll(loadedThreads);
+      getSharedPreferences("sessions", MODE_PRIVATE).edit().putStringSet(profile.id, remembered).apply();
+    }
     if (liveStatus != null) liveStatus.observe();
     List<JSONObject> pendingApprovals = allApprovals();
     approvalTokens.keySet().removeIf(req -> !pendingApprovals.contains(req));
@@ -396,7 +483,8 @@ public final class RemoteApp extends Application {
                       Json.obj(
                           "clientInfo",
                           Json.obj(
-                              "name", "remote_ssh_android", "title", "Remote", "version", "1.0.16")),
+                              "name", "remote_ssh_android", "title", "Remote", "version", "1.0.19"),
+                          "capabilities", Json.obj("experimentalApi", true)),
                       r -> completeInitialization(c, t, g));
                 });
           } catch (Exception e) {
@@ -420,6 +508,9 @@ public final class RemoteApp extends Application {
                   if (g != generation) return;
                   connecting = false;
                   connected = true;
+                  if (profile != null && profile.persistent)
+                    recoveringThreads.addAll(getSharedPreferences("sessions", MODE_PRIVATE)
+                        .getStringSet(profile.id, Collections.emptySet()));
                   state = "已连接";
                   changed();
                   refreshThreads(false);
@@ -428,7 +519,7 @@ public final class RemoteApp extends Application {
                   reconnectThread = "";
                   if (profile != null && profile.persistent) {
                     request("remote/session", new JSONObject(), session -> restoreSession(session, resumeId));
-                  } else if (!resumeId.isEmpty()) resume(resumeId);
+                  } else if (!resumeId.isEmpty()) viewConversation(resumeId);
                   request(
                       "model/list",
                       Json.obj("limit", 100),
@@ -470,6 +561,9 @@ public final class RemoteApp extends Application {
   }
 
   public void disconnect() {
+    recoveringThreads.clear();
+    statusPolling.clear();
+    statusRevision++;
     pendingImagePreview = null;
     generation++;
     approvalTokens.clear();
@@ -582,7 +676,7 @@ public final class RemoteApp extends Application {
                               if (e != null && requestThread.equals(loadingThread) && !isWriterConflict(e)) {
                                 loadingThread=""; main.post(this::restoreNext);
                               }
-                              if (e != null && requestThread.equals(restoringThread)) {
+                              if (e != null && requestThread.equals(restoringThread) && !isWriterConflict(e)) {
                                 restoringThread=""; main.post(this::restoreNext);
                               }
                             })));
@@ -595,6 +689,7 @@ public final class RemoteApp extends Application {
     } catch (JSONException ignored) {
     }
     String requestedProject = historyProject;
+    long requestedRevision = statusRevision;
     if (more && !nextCursor.isEmpty())
       try {
         p.put("cursor", nextCursor);
@@ -607,7 +702,19 @@ public final class RemoteApp extends Application {
           if (!requestedProject.equals(historyProject)) return;
           JSONArray data = r.optJSONArray("data");
           if (!more) threads = new JSONArray();
-          if (data != null) for (int i = 0; i < data.length(); i++) threads.put(data.opt(i));
+          if (data != null) for (int i = 0; i < data.length(); i++) {
+            JSONObject listed = data.optJSONObject(i);
+            threads.put(data.opt(i));
+            if (listed == null) continue;
+            String id = listed.optString("id");
+            // Subscribed events own loaded threads; fresh snapshots own passive history.
+            if (requestedRevision == statusRevision && !id.isEmpty() && !loadedThreads.contains(id) && !id.equals(loadingThread))
+              inConversation(id, () -> {
+                remoteRunning = Json.object(listed, "status").optString("type").equals("active");
+                if (!remoteRunning) { busy=false; turnId=""; approvals.clear(); }
+                threadTitle = restoredTitle(listed, id, threadTitle);
+              });
+          }
           if (profile != null) {
             boolean added = false;
             for (int i = 0; i < threads.length(); i++) {
@@ -718,6 +825,43 @@ public final class RemoteApp extends Application {
     }
   }
 
+  private static String nonempty(JSONObject object, String key) {
+    return object.isNull(key) ? "" : object.optString(key, "").trim();
+  }
+
+  private String restoredTitle(JSONObject thread, String id, String previous) {
+    String name = nonempty(thread, "name");
+    if (!name.isEmpty()) return name;
+    if (!previous.trim().isEmpty()) return previous;
+    String preview = nonempty(thread, "preview");
+    for (int i = 0; i < threads.length(); i++) {
+      JSONObject listed = threads.optJSONObject(i);
+      if (listed == null || !id.equals(listed.optString("id"))) continue;
+      name = nonempty(listed, "name");
+      if (!name.isEmpty()) return name;
+      if (preview.isEmpty()) preview = nonempty(listed, "preview");
+    }
+    return preview;
+  }
+
+  private void restoreTitleFromMessages() {
+    if (!threadTitle.trim().isEmpty()) return;
+    for (ChatItem item : items) if (item.user() && !item.text.trim().isEmpty()) {
+      String title = item.text.replaceAll("\\s+", " ").trim();
+      threadTitle = title.substring(0, Math.min(title.length(), 120));
+      return;
+    }
+  }
+
+  private void historicalError(String turn, String message) {
+    if (message.trim().isEmpty()) return;
+    String id = "historical-error-" + (turn.isEmpty() ? message : turn);
+    ChatItem item = find(id);
+    if (item == null) { item = new ChatItem(id, "historicalError", "历史任务错误"); items.add(item); }
+    item.detail = "历史记录，并非本次接续失败。\n" + message;
+    item.status = "failed";
+  }
+
   private void applyThread(JSONObject r, String id, boolean readonly) {
     JSONObject thread = Json.object(r, "thread");
     for (int n = 0; n < threads.length(); n++) {
@@ -734,14 +878,14 @@ public final class RemoteApp extends Application {
     if (!readonly && r.has("model") && !r.isNull("model")) model = r.optString("model");
     if (!readonly && r.has("reasoningEffort")) reasoningEffort = r.isNull("reasoningEffort") ? "" : r.optString("reasoningEffort");
     this.readOnly = readonly;
-    remoteRunning = readonly && Json.object(thread, "status").optString("type").equals("active");
+    remoteRunning = Json.object(thread, "status").optString("type").equals("active");
     threadId = thread.optString("id", id);
     if (!readonly) loadedThreads.add(threadId);
     else loadedThreads.remove(threadId);
-    threadTitle = thread.isNull("name") ? "" : thread.optString("name");
-    if (threadTitle.isEmpty()) threadTitle = thread.optString("preview", "");
+    recoveringThreads.remove(threadId);
+    threadTitle = restoredTitle(thread, threadId, threadTitle);
     items.clear();
-    approvals.clear();
+    if (!remoteRunning) approvals.clear();
     busy = false;
     turnId = "";
     JSONArray turns = thread.optJSONArray("turns");
@@ -755,6 +899,8 @@ public final class RemoteApp extends Application {
             JSONObject item = list.optJSONObject(k);
             if (item != null) items.add(ChatItem.from(item));
           }
+        if (turn.optJSONObject("error") != null)
+          historicalError(turn.optString("id"), Json.object(turn, "error").optString("message"));
         if (!readonly && i == turns.length() - 1
             && turn.optString("status").equals("inProgress")
             && (thread.optJSONObject("status") == null
@@ -763,6 +909,7 @@ public final class RemoteApp extends Application {
           turnId = turn.optString("id");
         }
       }
+    restoreTitleFromMessages();
     if (!readonly && Json.object(thread, "status").optString("type").equals("active")) busy = true;
     stopping = false;
     state = busy ? "正在处理…" : "已连接";
@@ -785,7 +932,11 @@ public final class RemoteApp extends Application {
         try { current.notify("remote/replay", Json.obj("threadId", restoreThread)); }
         catch (Exception e) { main.post(() -> { if (g == generation) failConnection(e, transport); }); }
       });
-    } else if (id.equals(loadingThread)) { loadingThread=""; main.post(this::restoreNext); }
+    } else if (id.equals(loadingThread)) {
+      loadingThread="";
+      if (id.equals(restoringThread)) restoringThread="";
+      main.post(this::restoreNext);
+    }
     changed();
   }
 
@@ -1129,6 +1280,9 @@ public final class RemoteApp extends Application {
   }
 
   private void event(JSONObject e) {
+    String incomingMethod = e.optString("method");
+    if (incomingMethod.equals("thread/status/changed") || incomingMethod.equals("turn/started")
+        || incomingMethod.equals("turn/completed") || incomingMethod.equals("thread/closed") || e.has("id")) statusRevision++;
     JSONObject params = Json.object(e, "params");
     String id = params.optString("threadId");
     if (e.optString("method").equals("thread/status/changed")) {
@@ -1145,7 +1299,7 @@ public final class RemoteApp extends Application {
       }
     }
     if (!id.isEmpty() && !id.equals(threadId)) {
-      if (conversations.containsKey(id) || e.has("id")) inConversation(id, () -> applyEvent(e));
+      if (conversations.containsKey(id) || e.has("id") || e.optString("method").equals("thread/status/changed")) inConversation(id, () -> applyEvent(e));
       return;
     }
     applyEvent(e);
@@ -1154,7 +1308,9 @@ public final class RemoteApp extends Application {
   private void applyEvent(JSONObject e) {
     String method = e.optString("method");
     JSONObject p = Json.object(e, "params");
-    if (method.equals("remote/replayStarted")) { replaying = true; changed(); return; }
+    if (method.equals("remote/replayStarted")) {
+      replaying = true; replayThread = threadId; changed(); return;
+    }
     if (method.equals("remote/replayCompleted")) {
       replaying = false;
       if (threadId.equals(replayThread)) replayThread="";
@@ -1170,6 +1326,9 @@ public final class RemoteApp extends Application {
       changed();
       return;
     }
+    // Older hosts replay journal events without per-event metadata. The replay
+    // barrier also covers journal tails from other conversations on this socket.
+    boolean historical = replaying || !replayThread.isEmpty();
     String eventThread = p.optString("threadId");
     if (method.equals("thread/status/changed")) {
       for (int n = 0; n < threads.length(); n++) {
@@ -1177,7 +1336,6 @@ public final class RemoteApp extends Application {
         if (listed != null && listed.optString("id").equals(eventThread))
           try { listed.put("status", p.opt("status")); } catch (JSONException ignored) {}
       }
-      changed();
     }
     if (method.equals("thread/closed")
         || (method.equals("thread/status/changed") && Json.object(p, "status").optString("type").equals("notLoaded"))) {
@@ -1200,6 +1358,9 @@ public final class RemoteApp extends Application {
           || method.equals("item/tool/requestUserInput")) {
         approvals.removeIf(a -> String.valueOf(a.opt("id")).equals(String.valueOf(e.opt("id"))));
         approvals.add(e);
+        remoteRunning = true;
+        if (!readOnly) busy = true;
+        if (p.has("turnId")) turnId = p.optString("turnId");
         changed();
       } else {
         rejectUnsupported(e);
@@ -1215,11 +1376,11 @@ public final class RemoteApp extends Application {
       return;
     }
     if (p.has("threadId") && !p.optString("threadId").equals(threadId)) return;
-    if (method.equals("thread/status/changed") && readOnly)
+    if (method.equals("thread/status/changed"))
       remoteRunning = Json.object(p, "status").optString("type").equals("active");
-    if (method.equals("thread/status/changed") && !readOnly) {
+    if (method.equals("thread/status/changed")) {
       String type = Json.object(p, "status").optString("type");
-      if (type.equals("active")) busy = true;
+      if (type.equals("active") && !readOnly) busy = true;
       else if (type.equals("idle") || type.equals("systemError")) {
         busy = false;
         stopping = false;
@@ -1229,6 +1390,7 @@ public final class RemoteApp extends Application {
       }
     } else if (method.equals("turn/started") && !readOnly) {
       busy = true;
+      remoteRunning = true;
       turnId = Json.object(p, "turn").optString("id");
       if (stopping) interrupt();
     } else if (method.equals("turn/completed")) {
@@ -1240,15 +1402,25 @@ public final class RemoteApp extends Application {
       approvals.clear();
       JSONObject turn = Json.object(p, "turn");
       state = turn.optString("status").equals("interrupted") ? "已停止" : "已连接";
-      if (turn.optJSONObject("error") != null)
-        error = Json.object(turn, "error").optString("message");
-      if (!replaying) refreshThreads(false);
-      if (!replaying && turn.optString("status").equals("completed") && !readOnly && !queuedMessage().isEmpty()) {
+      if (turn.optJSONObject("error") != null) {
+        String message = Json.object(turn, "error").optString("message");
+        if (historical) historicalError(turn.optString("id"), message);
+        else error = message;
+      }
+      if (!historical) refreshThreads(false);
+      if (!historical && turn.optString("status").equals("completed") && !readOnly && !queuedMessage().isEmpty()) {
         readyMessages.add(queueKey());
         main.post(() -> inConversation(eventThread, this::drainQueuedMessage));
       } else readyMessages.remove(queueKey());
+      String completedThread = threadId;
+      if (!historical) main.post(() -> {
+        if (!completedThread.equals(threadId) || !foreground)
+          inConversation(completedThread, this::leaveIdleConversation);
+      });
     } else if (method.equals("error")) {
-      error = Json.object(p, "error").optString("message", "远端发生错误");
+      String message = Json.object(p, "error").optString("message", "远端发生错误");
+      if (historical) historicalError(p.optString("turnId"), message);
+      else error = message;
     } else if (method.equals("item/started") || method.equals("item/completed")) {
       ChatItem incoming = ChatItem.from(Json.object(p, "item"));
       if (incoming.type.equals("reasoning")) incoming.status = method.equals("item/completed") ? "completed" : "inProgress";
@@ -1295,9 +1467,10 @@ public final class RemoteApp extends Application {
         items.add(d);
       }
       d.detail = p.optString("diff");
-    } else if (method.equals("warning") || method.equals("configWarning")) {
+    } else if ((method.equals("warning") || method.equals("configWarning")) && !historical) {
       error = p.optString("message", p.optString("summary"));
     }
+    restoreTitleFromMessages();
     changed();
   }
 }

@@ -130,11 +130,17 @@ public class MultiConversationTest {
         while(sent.toString().split("\n").length<count && System.nanoTime()<deadline){Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(5);}
         // A notification acknowledgement adds another line after each response.
         JSONObject request=null;
+        boolean readAnswered=false;
         deadline=System.nanoTime()+3_000_000_000L;
         while(request==null && System.nanoTime()<deadline){
           Shadows.shadowOf(Looper.getMainLooper()).idle();
           for(String line:sent.toString("UTF-8").split("\n")) if(!line.isEmpty()) {
             JSONObject candidate=new JSONObject(line);
+            String target = i==0?"A":"B";
+            if (!readAnswered && candidate.optString("method").equals("thread/read") && Json.object(candidate,"params").optString("threadId").equals(target)) {
+              server.write((Json.obj("id",candidate.opt("id"),"result",Json.obj("thread",Json.obj("id",target,"status",Json.obj("type","active"))))+"\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+              server.flush(); readAnswered=true;
+            }
             if(candidate.optString("method").equals("thread/resume") && Json.object(candidate,"params").optString("threadId").equals(i==0?"A":"B")) request=candidate;
           }
           Thread.sleep(5);

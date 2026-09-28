@@ -28,9 +28,11 @@ public class LiveStatusPreviewTest {
     card.setPadding(24, 12, 24, 24);
     android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
     background.setColor(Color.WHITE); background.setCornerRadius(28); card.setBackground(background);
-    label(app, card, n.extras.getCharSequence(Notification.EXTRA_TITLE).toString(), 17);
-    TextView body = new TextView(app);
-    body.setText(n.extras.getCharSequence(Notification.EXTRA_BIG_TEXT)); body.setTextSize(15);
+    TextView title = new TextView(app); title.setText(n.extras.getCharSequence(Notification.EXTRA_TITLE));
+    title.setTextSize(18); title.setSingleLine(true); title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    title.setTextColor(Color.rgb(32,36,44)); title.setPadding(24,8,24,8); card.addView(title);
+    LiveProgressTextView body = new LiveProgressTextView(app);
+    body.setProgress(n.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString());
     body.setTextColor(Color.rgb(48, 53, 63)); body.setLineSpacing(6, 1);
     body.setPadding(24, 4, 24, 16); card.addView(body);
     if (n.actions != null && n.actions.length > 0) {
@@ -53,7 +55,7 @@ public class LiveStatusPreviewTest {
     LinearLayout root = new LinearLayout(app); root.setOrientation(LinearLayout.VERTICAL);
     root.setBackgroundColor(Color.rgb(240, 242, 246)); root.setPadding(16, 8, 16, 32);
     label(app, root, "RemoteGPT · 流体云内容排版", 22);
-    label(app, root, "基于实际通知内容制作的排版示例\n非系统截图，ColorOS 外壳与高度以真机为准", 13);
+    label(app, root, "基于实际通知内容制作的排版示例\n非系统截图，系统外壳与高度以真机为准", 13);
     label(app, root, "01 运行中 · 不显示按钮", 16);
     ChatItem work = new ChatItem("c", "commandExecution", "./gradlew :app:testDebugUnitTest");
     work.detail = "已完成消息分发检查\n正在验证历史阅读位置\n90 项测试通过，继续检查通知更新…";
@@ -74,7 +76,7 @@ public class LiveStatusPreviewTest {
     Bitmap bitmap = Bitmap.createBitmap(width, root.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
     root.draw(new Canvas(bitmap));
     File folder = new File("build/screenshots"); assertTrue(folder.isDirectory() || folder.mkdirs());
-    try (FileOutputStream out = new FileOutputStream(new File(folder, "live-layout-1.0.15.png"))) {
+    try (FileOutputStream out = new FileOutputStream(new File(folder, "live-layout-1.0.17.png"))) {
       assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, out));
     }
     bitmap.recycle();

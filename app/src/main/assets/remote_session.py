@@ -168,9 +168,9 @@ class Host:
                 peer.resuming = None
                 return
             if method == 'thread/unsubscribe' and thread in self.baselines:
-                # Keep the host's subscription so detached turns remain observable.
-                peer.send(dict(id=ident, result={}))
-                return
+                # The client releases only idle threads. Drop the replay baseline
+                # and let Codex release its writer instead of keeping it forever.
+                self.baselines.pop(thread, None)
             if method and ident is not None:
                 self.sequence += 1
                 self.pending[self.sequence] = (peer, ident, method)

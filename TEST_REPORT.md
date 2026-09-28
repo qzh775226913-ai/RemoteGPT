@@ -1,3 +1,39 @@
+# 1.0.19 最终审计（2026-09-28）
+
+128 项 Android 测试全部通过，无失败/跳过；4 项 Python 托管测试通过；assembleDebug、lintDebug 成功，Lint 0 错误、8 项 SDK/资源/本地化非阻断提示。
+
+新增 FinalAuditTest 覆盖旧恢复 ID 在初始化期间保留、后台历史完成不自动发送排队消息、只读空闲清理请求、过时快照不复活任务、旧端刷新不重复审批。非持久连接重开历史改为读取，避免仅重连就更新远端时间。
+
+完整需求映射、验证证据和真机限制见 [CONVERSATION_ACCEPTANCE.md](CONVERSATION_ACCEPTANCE.md)。构建环境为 JDK 17 / Android SDK 36；SSH 使用 127.0.0.1:22228 隔离测试服务。未访问生产 SSH 或真实模型。
+
+交付 dist/RemoteGPT-1.0.19-debug.apk 和 dist/RemoteGPT-1.0.19-source.zip。APK 使用相同包名与签名，可覆盖升级。
+
+# 1.0.18 验证记录（2026-09-28）
+
+验证结果：Android 123 项测试通过，无失败、无跳过；assembleDebug / lintDebug 成功。交付 dist/RemoteGPT-1.0.18-debug.apk 和 dist/RemoteGPT-1.0.18-source.zip。
+
+根因：托管恢复会重放旧的 error 和 turn/completed；客户端此前没有区分历史错误与当前错误。托管基线的 name/preview 可能为空，applyThread 直接把它们覆盖到已知标题。
+
+修复：在整个重放边界内，旧错误存入对应会话的历史错误项，不更新 error/lastError；完成后的实时错误照常提示。快照中的轮次错误同样作为历史记录呈现。标题优先接受有效远端 name，空元数据保留已有值，缺失时依次从对应列表元数据、preview 和用户消息补全。回放用户消息时也可恢复初始空基线的标题。
+
+新增 6 项回归测试：旧额度错误的 error/failed turn 重放不告警且历史去重；实时额度错误仍告警；其他会话补发历史错误不告警；空标题保留与有效名称更新；冷恢复列表/首条消息回退且不串会话标题；空基线通过重放用户消息恢复标题。Robolectric 无 AndroidKeyStore，标题快照测试明确排除平台保存警告的干扰。
+
+本次不连接真实模型、不检查或更改用户实际额度，不操作生产服务器。使用隔离 SSH 测试夹具完成集成验证；本修复兼容已有远端托管，不需要远端重启。
+
+# 1.0.17 验证记录（2026-09-28）
+
+补充：气泡标题 18sp 单行、正文 15sp 四行，正文变化参与更新签名；最新四个视觉行保持在气泡内，普通运行去掉大按钮。流体云正文限制四行逻辑摘要；标准通知由系统控制字号与外壳，自绘排版预览不能作为厂商实测。另一个用户机型为 vivo X300 / OriginOS 6。Android 气泡依赖长生命周期会话标识，通知缓存后撤下动态桌面入口，结束后清理缓存；无真机，未验证系统缓存时序。
+
+修改覆盖桌面动态快捷方式清理、电脑直接连接和居中、移除全部筛选、历史只读访问、空闲取消订阅、后台询问弹窗，以及流体云/列表/顶部的统一状态。补充未订阅活跃会话的后台状态复查，防止被动历史状态长期滞留。
+
+结果：Android 117 项测试全部通过，无失败、无跳过；4 项 Python 托管集成测试通过；assembleDebug 与 lintDebug 成功。APK 签名与 1.0.16 一致，可覆盖升级。交付 dist/RemoteGPT-1.0.17-debug.apk 与 dist/RemoteGPT-1.0.17-source.zip。
+
+验证：JDK 17 / Android SDK 36，`./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug -PsshFixture`。SSH 使用仅绑定 127.0.0.1:22228 的隔离 Paramiko 服务与合成凭据；没有连接朋友或本机的生产 SSH 服务。另运行 `python3 -m unittest discover -s tools -p test_remote_session.py`，4 项托管集成测试通过。
+
+回归用例包括：浏览只发送 thread/read、空闲退出发送 unsubscribe、重放与读取不显示运行、完成事件覆盖陈旧 active 列表、后台状态事件同时更新列表与流体云、后台问题在 MainActivity 弹出、被动后台任务完成后清除状态、电脑按钮直接调用连接、仅显示选中电脑项目、当前电脑居中、运行后桌面动态快捷方式列表为空。人工检查原生渲染截图 selected-host-browser.png，当前电脑居中且没有“全部”。
+
+限制：ADB 无真机/模拟器，未验证厂商桌面缓存清除和流体云的实际展示，也未复现朋友服务器的安装环境。日志中的 zsh 找不到 codex / 退出码 127 表示 SSH 已执行远端命令，不能归因于 IPv6。新版托管脚本不会强制替换仍运行的旧守护进程；旧守护进程需在全部任务完成后重启，才能应用真正取消订阅的改动。后台弹窗测试使用协议夹具，不代表所有模型都会发出结构化问题。
+
 # 1.0.16 多会话验证记录
 
 用户已审核 1.0.15 排版，本版落实多会话并行，复用现有 SSH/RPC、独立托管进程、通知渠道、气泡 Activity 和流体云内容布局。

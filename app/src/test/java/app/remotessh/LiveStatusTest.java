@@ -47,7 +47,7 @@ public class LiveStatusTest {
       app.busy = false; app.turnId = ""; app.changed();
       Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(300));
       assertNull(live());
-      assertNotNull(Shadows.shadowOf(app.getSystemService(NotificationManager.class)).getNotification(2));
+      assertNull(Shadows.shadowOf(app.getSystemService(NotificationManager.class)).getNotification(2));
     } finally { service.destroy(); }
   }
   @Test public void replacingSameIdApprovalInvalidatesOldActionAndDoubleTapSendsOnce() throws Exception {
@@ -67,7 +67,7 @@ public class LiveStatusTest {
   }
   @Test public void replayAndInputQuestionsNeverExposeApprovalButtons() {
     app.approvals.add(approval()); app.replaying = true; app.liveStatus.update();
-    assertTrue(live().actions == null || live().actions.length == 0);
+    assertNull(live());
     app.replaying = false; app.approvals.clear();
     app.approvals.add(Json.obj("id", 8, "method", "item/tool/requestUserInput", "params", Json.obj()));
     app.liveStatus.update();

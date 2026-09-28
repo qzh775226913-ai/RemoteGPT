@@ -101,7 +101,7 @@ final class ConnectionFailure {
       result += "\n\n尚未进入 SSH 身份认证。请核对目标地址和端口；若同手机其他 SSH 客户端能连接同一地址，检查 Tailscale → 头像 → 按应用分流，确保 Remote（app.remotessh）未被排除，并检查系统是否禁止本应用联网。也可重新连接 Tailscale 后重试。";
     else if (phase.contains("SSH")) result += "\n\n如使用 Tailscale：确认手机 VPN 已连接、主机在线、访问规则允许目标端口。MagicDNS 解析失败可改填 100.x 地址；普通 SSH 用密码/私钥，Tailscale SSH 用免密码方式。若要求重新验证，请打开 Tailscale App 完成验证后重试。";
     if (exitStatus >= 0) result += "\n远端退出码：" + exitStatus;
-    if (exitStatus == 127) result += "\n请确认远端已安装程序，或将启动命令改为程序的绝对路径。";
+    if (exitStatus == 127) result += "\nSSH 已连接，但远端 shell 找不到启动程序；这不是 IPv6 连接失败。请在相同远端账号的终端执行 command -v codex，将输出的绝对路径填入启动命令（例如 /opt/homebrew/bin/codex app-server）。如果没有输出，需要先在该账号安装 Codex。";
     if (stderr != null && !stderr.trim().isEmpty())
       result += "\n\n远端诊断输出（警告不一定是失败原因）：\n" + stderr.trim();
     return result;

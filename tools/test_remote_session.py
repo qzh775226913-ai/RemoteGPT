@@ -119,6 +119,13 @@ class PersistentSessionTest(unittest.TestCase):
                 pass
         self.tmp.cleanup()
 
+    def test_idle_unsubscribe_removes_hosted_baseline(self):
+        c = self.client()
+        c.request(2, 'thread/start')
+        self.assertIn('thread-1', c.request(3, 'remote/session')['result']['threads'])
+        c.request(4, 'thread/unsubscribe', threadId='thread-1')
+        self.assertNotIn('thread-1', c.request(5, 'remote/session')['result']['threads'])
+
     def test_killed_phone_replays_stream_and_pending_approval(self):
         c = self.client()
         c.request(2, 'thread/start')

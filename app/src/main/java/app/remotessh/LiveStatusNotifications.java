@@ -42,8 +42,7 @@ public final class LiveStatusNotifications {
   }
 
   static boolean running(RemoteApp app) {
-    return app.connected && !app.threadId.isEmpty()
-        && (app.busy || app.remoteRunning || app.replaying || !app.approvals.isEmpty());
+    return app.currentThreadRunning();
   }
 
   // Called synchronously on state changes, so a brief idle boundary between
@@ -90,6 +89,16 @@ public final class LiveStatusNotifications {
       if (item.type.equals("webSearch")) return "搜索中";
     }
     return "运行中";
+  }
+
+  static String title(RemoteApp app) {
+    String name = app.threadTitle.replaceAll("\\s+", " ").trim();
+    return (name.isEmpty() ? "RemoteGPT" : shorten(name, 12)) + " · " + stage(app);
+  }
+
+  static String preview(RemoteApp app) {
+    // Native Live Updates own font sizes; keep their title and payload compact.
+    return excerpt(details(app).replaceAll("\n[ \t]*\n+", "\n"), 240, 4);
   }
 
   static String details(RemoteApp app) {
@@ -175,7 +184,7 @@ public final class LiveStatusNotifications {
     manager.createNotificationChannel(new NotificationChannel(ATTENTION_CHANNEL,
         "流体云 · 审批与询问提醒", NotificationManager.IMPORTANCE_HIGH));
     boolean answering = request != null && app.isAnswering(request);
-    String stage = answering ? "提交中" : stage(app), details = details(app);
+    String stage = answering ? "提交中" : stage(app), details = preview(app);
     String signature = runToken + stage + details + token + app.threadTitle + answering;
     if (signature.equals(lastSignature)) return;
     lastSignature = signature;
@@ -183,7 +192,7 @@ public final class LiveStatusNotifications {
     PendingIntent content = PendingIntent.getActivity(app, notificationId, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     Bundle extras = new Bundle(); extras.putBoolean(PROMOTED, true);
     Notification.Builder builder = new Notification.Builder(app, channel)
-        .setSmallIcon(R.drawable.ic_launcher).setContentTitle((app.conversationIds().size() > 1 && !app.threadTitle.isEmpty() ? shorten(app.threadTitle, 24) : "RemoteGPT") + " · " + stage)
+        .setSmallIcon(R.drawable.ic_launcher).setContentTitle(title(app))
         .setContentText(tail(details.replace('\n', ' '), 180))
         .setStyle(new Notification.BigTextStyle().bigText(details))
         .setOngoing(true).setOnlyAlertOnce(!newRequest).setShowWhen(false)

@@ -79,6 +79,35 @@ public class MainActivityTest {
     return null;
   }
 
+  @Test public void browserShowsOnlySelectedHostAndConnectsOnChipTap() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication();
+    app.vault.profiles.clear();
+    for (int i=0;i<9;i++) {
+      Profile p=new Profile(); p.name="电脑 " + i; p.projects.add("/projects/host-"+i);
+      app.vault.profiles.add(p);
+    }
+    app.profile=app.vault.profiles.get(5); app.connected=true;
+    final Profile[] clicked={null};
+    RemoteBrowser browser=new RemoteBrowser(activity,app,false,new RemoteBrowser.Actions(){
+      public void connect(Profile p){clicked[0]=p;}
+      public void add(){} public void settings(){} public void directories(){} public void diagnostics(){} public void chat(){}
+    });
+    browser.show();
+    android.app.Dialog dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    View panel=dialog.getWindow().getDecorView();
+    captureView(panel,"selected-host-browser");
+    shadowOf(android.os.Looper.getMainLooper()).idle();
+    assertNull(find(panel,"全部"));
+    assertNotNull(find(panel,"host-5")); assertNull(find(panel,"host-0"));
+    View selected=find(panel,"● 电脑 5"); assertNotNull(selected);
+    HorizontalScrollView hostScroll=(HorizontalScrollView) selected.getParent().getParent();
+    assertTrue(hostScroll.getScrollX()>0);
+    captureView(panel,"selected-host-browser");
+    find(panel,"○ 电脑 2").performClick();
+    assertSame(app.vault.profiles.get(2),clicked[0]);
+    browser.dismiss();
+  }
+
   @Test
   public void runningSendOpensChoiceAndShowsCancelableQueue() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication();

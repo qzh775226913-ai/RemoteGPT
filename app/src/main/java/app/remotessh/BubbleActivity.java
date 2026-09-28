@@ -26,11 +26,16 @@ public final class BubbleActivity extends Activity {
     ScrollView scroll = new ScrollView(this);
     scroll.setBackgroundColor(android.graphics.Color.parseColor(dark ? "#212121" : "#FFFFFF"));
     body = new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL);
-    int pad = (int) (20 * getResources().getDisplayMetrics().density);
-    body.setPadding(pad, pad, pad, pad); scroll.addView(body); setContentView(scroll);
+    int pad = dp(12);
+    body.setPadding(pad, dp(6), pad, dp(6)); scroll.addView(body); setContentView(scroll);
   }
   @Override protected void onStart() { super.onStart(); app.stateListeners.add(update); render(); }
   @Override protected void onStop() { app.stateListeners.remove(update); super.onStop(); }
+  private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
+  private void openConversation() {
+    startActivity(app.conversationIntent(MainActivity.class, target).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+    finish();
+  }
   private void text(String value, int size) {
     TextView view = new TextView(this); view.setText(value); view.setTextSize(size); view.setTextColor(foreground);
     view.setTextIsSelectable(true); view.setPadding(0, 8, 0, 12); body.addView(view);
@@ -50,31 +55,40 @@ public final class BubbleActivity extends Activity {
   }
   private void renderConversation() {
     JSONObject req = app.approvals.isEmpty() ? null : app.approvals.get(0);
-    String key = app.connected + "|" + app.state + "|" + app.busy + "|" + app.threadTitle + "|" + req + "|" + app.error + "|" + app.replaying;
+    String progress = LiveStatusNotifications.running(app) ? LiveStatusNotifications.preview(app) : "任务已结束";
+    String key = app.connected + "|" + progress + "|" + app.threadTitle + "|" + req + "|" + app.error + "|" + app.replaying;
     if (key.equals(shown)) return;
     shown = key; body.removeAllViews();
-    text(app.threadTitle.isEmpty() ? "RemoteGPT" : app.threadTitle, 20);
-    text(ConnectionService.summary(app), 16);
+    LinearLayout header = new LinearLayout(this);
+    header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+    TextView title = new TextView(this);
+    title.setText(app.threadTitle.isEmpty() ? "RemoteGPT" : app.threadTitle.replaceAll("\\s+", " "));
+    title.setTextSize(18); title.setTextColor(foreground);
+    title.setSingleLine(true); title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    title.setContentDescription("气泡标题");
+    header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+    TextView open = new TextView(this); open.setText("打开 ›"); open.setTextSize(12); open.setTextColor(foreground);
+    open.setPadding(dp(12), 0, 0, 0); header.addView(open);
+    header.setContentDescription("打开对话"); header.setOnClickListener(v -> openConversation());
+    body.addView(header, new LinearLayout.LayoutParams(-1, dp(32)));
+    LiveProgressTextView content = new LiveProgressTextView(this);
+    content.setTextColor(foreground); content.setProgress(progress);
+    body.addView(content, new LinearLayout.LayoutParams(-1, -2));
     if (!app.error.isEmpty()) text(app.error, 14);
     if (req != null && !app.replaying) {
-      JSONObject params = Json.object(req, "params");
-      text(params.optString("reason", "远端请求你的确认") + "\n\n"
-          + params.optString("command", params.optString("grantRoot", "文件修改 / 补充信息"))
-          + "\n" + params.optString("cwd") + "\n会话：" + params.optString("threadId"), 14);
-      if (params.has("networkApprovalContext")) text("网络访问：" + params.opt("networkApprovalContext"), 14);
-      for (ChatItem item : app.items)
-        if (item.id.equals(params.optString("itemId")) && !item.detail.isEmpty()) text(item.detail, 14);
       String method = req.optString("method");
       if (method.equals("item/commandExecution/requestApproval") || method.equals("item/fileChange/requestApproval")) {
-        button("允许一次", () -> answer(req, "accept"));
-        button("拒绝", () -> answer(req, "decline"));
-      } else text("请打开对话填写补充信息。", 14);
+        LinearLayout actions = new LinearLayout(this);
+        for (String choice : new String[]{"accept", "decline"}) {
+          Button action = new Button(this); action.setText(choice.equals("accept") ? "允许一次" : "拒绝");
+          action.setOnClickListener(v -> answer(req, choice));
+          actions.addView(action, new LinearLayout.LayoutParams(0, -2, 1));
+        }
+        body.addView(actions);
+      } else button("填写信息", this::openConversation);
     }
-    button("打开对话", () -> {
-      startActivity(app.conversationIntent(MainActivity.class, target).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
-      finish();
-    });
   }
+
   private void answer(JSONObject req, String decision) {
     app.inConversation(target, () -> answerInConversation(req, decision));
   }

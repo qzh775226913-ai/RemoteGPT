@@ -63,7 +63,7 @@ public final class MainActivity extends Activity {
   private final Runnable ticker =
       new Runnable() {
         public void run() {
-          if (app.busy && busyLabel != null && scroll != null && scroll.isFollowing())
+          if (app.currentThreadRunning() && busyLabel != null && scroll != null && scroll.isFollowing())
             busyLabel.setText(
                 (app.state.startsWith("正在停止") ? "正在停止" : "正在处理")
                     + new String[] {"·", "··", "···"}[pulse++ % 3]);
@@ -502,7 +502,7 @@ public final class MainActivity extends Activity {
     modelButton.setText(ModelOptions.displayName(app.models, app.model)
         + (app.reasoningEffort.isEmpty() ? "" : " · " + ModelOptions.label(app.reasoningEffort)));
     modelButton.setTooltipText(modelButton.getText());
-    runningIndicator.setVisibility(app.connected && (app.busy || app.remoteRunning) ? View.VISIBLE : View.GONE);
+    runningIndicator.setVisibility(app.currentThreadRunning() ? View.VISIBLE : View.GONE);
     if (scroll.isFollowing()) {
       messageUpdatesPaused = false;
       jump.setTooltipText("滚动到最新消息");
@@ -515,7 +515,7 @@ public final class MainActivity extends Activity {
       }
       empty.setVisibility(visibleItems.isEmpty() && !app.busy ? View.VISIBLE : View.GONE);
       messages.setVisibility(visibleItems.isEmpty() ? View.GONE : View.VISIBLE);
-      busyLabel.setVisibility(app.busy || app.remoteRunning ? View.VISIBLE : View.GONE);
+      busyLabel.setVisibility(app.currentThreadRunning() ? View.VISIBLE : View.GONE);
       if (app.remoteRunning && app.readOnly) busyLabel.setText("远端运行中 · 自动刷新历史");
       if (empty.getVisibility() == View.VISIBLE) renderEmpty();
       List<String> desired = new ArrayList<>();
@@ -1124,6 +1124,7 @@ public final class MainActivity extends Activity {
                     .show();
               }
             });
+    app.leaveIdleConversation();
     browser.show();
   }
 
@@ -1227,7 +1228,7 @@ public final class MainActivity extends Activity {
             }
             app.draftText = input.getText().toString();
             if (modal && drawer != null) drawer.dismiss();
-            app.resume(id);
+            app.viewConversation(id);
           });
       nav.addView(item);
     }
@@ -1373,14 +1374,8 @@ public final class MainActivity extends Activity {
   }
 
   private void connectProfile(Profile p) {
-    if (app.connected || app.connecting) {
-      new AlertDialog.Builder(this)
-          .setTitle("切换连接？")
-          .setMessage("当前 SSH 连接将断开。远端任务是否继续运行取决于远端程序。")
-          .setNegativeButton("取消", null)
-          .setPositiveButton("切换", (d, w) -> beginConnect(p))
-          .show();
-    } else beginConnect(p);
+    if ((app.connected || app.connecting) && app.profile != null && app.profile.id.equals(p.id)) return;
+    beginConnect(p);
   }
 
   private void beginConnect(Profile p) {
@@ -1801,14 +1796,14 @@ public final class MainActivity extends Activity {
       trustDialog.dismiss();
       trustDialog = null;
     }
-    JSONObject req = app.approvals.isEmpty() ? null : app.approvals.get(0);
+    JSONObject req = app.visibleApproval();
     String id = req == null ? "" : app.notificationApprovalToken(req);
     if (!id.equals(shownApproval) && approvalDialog != null) {
       approvalDialog.dismiss();
       approvalDialog = null;
       shownApproval = "";
     }
-    if (req == null || approvalDialog != null || app.replaying) return;
+    if (req == null || approvalDialog != null) return;
     shownApproval = id;
     JSONObject p = Json.object(req, "params");
     if (req.optString("method").equals("item/tool/requestUserInput")) {
