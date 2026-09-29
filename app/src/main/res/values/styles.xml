@@ -2,6 +2,7 @@
     <style name="BaseAppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:colorAccent">#171717</item>
+        <item name="android:alertDialogTheme">@style/RemoteDialog</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">#FFFFFF</item>
         <item name="android:statusBarColor">#FFFFFF</item>
@@ -12,11 +13,28 @@
     <style name="AppThemeDark" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:colorAccent">#ECECEC</item>
+        <item name="android:alertDialogTheme">@style/RemoteDialogDark</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:statusBarColor">#212121</item>
         <item name="android:navigationBarColor">#212121</item>
         <item name="android:windowBackground">#212121</item>
         <item name="android:windowActionModeOverlay">true</item>
+    </style>
+    <style name="RemoteDialog" parent="android:style/Theme.Material.Light.Dialog.Alert">
+        <item name="android:colorAccent">#171717</item>
+        <item name="android:colorBackground">#FFFFFF</item>
+        <item name="android:windowBackground">@drawable/remote_dialog_light</item>
+        <item name="android:textColorPrimary">#171717</item>
+        <item name="android:textColorSecondary">#777777</item>
+        <item name="android:colorControlActivated">#171717</item>
+    </style>
+    <style name="RemoteDialogDark" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:colorAccent">#ECECEC</item>
+        <item name="android:colorBackground">#303030</item>
+        <item name="android:windowBackground">@drawable/remote_dialog_dark</item>
+        <item name="android:textColorPrimary">#ECECEC</item>
+        <item name="android:textColorSecondary">#A6A6A6</item>
+        <item name="android:colorControlActivated">#ECECEC</item>
     </style>
     <style name="SheetAnimation">
         <item name="android:windowEnterAnimation">@anim/sheet_enter</item>
