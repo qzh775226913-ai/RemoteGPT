@@ -138,7 +138,7 @@ public class LiveStatusTest {
     app.approvals.add(Json.obj("id", 8, "method", "item/tool/requestUserInput", "params",
         Json.obj("questions", new org.json.JSONArray().put(Json.obj("question", "选择哪个部署环境？")))));
     app.liveStatus.update();
-    assertEquals("RemoteGPT · 待回答", live().extras.getCharSequence(Notification.EXTRA_TITLE).toString());
+    assertEquals("待回答", live().extras.getCharSequence(Notification.EXTRA_TITLE).toString());
     assertTrue(live().extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString().contains("选择哪个部署环境？"));
     assertEquals("填写信息", live().actions[0].title.toString());
     assertEquals(0, live().flags & Notification.FLAG_ONLY_ALERT_ONCE);
@@ -151,7 +151,7 @@ public class LiveStatusTest {
     assertTrue(live().actions == null || live().actions.length == 0);
     String body = live().extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString();
     assertTrue(body.endsWith("最新结果\n测试通过"));
-    assertTrue(body.split("\n").length <= 8);
+    assertTrue(body.split("\n").length <= 6);
     assertNotNull(live().contentIntent);
     app.approvals.add(approval()); app.liveStatus.update();
     assertEquals(2, live().actions.length);
@@ -159,6 +159,20 @@ public class LiveStatusTest {
     assertEquals("拒绝", live().actions[1].title.toString());
     app.approvals.clear(); app.liveStatus.update();
     assertTrue(live().actions == null || live().actions.length == 0);
+  }
+
+  @Test public void liveTitleStaysCompactAndBodyKeepsSixNewestLines() {
+    app.threadTitle = "这是一个很长的会话标题";
+    ChatItem command = new ChatItem("c", "commandExecution", "执行测试");
+    command.detail = "第一行\n第二行\n第三行\n第四行\n第五行\n第六行\n第七行\n最新一行";
+    app.items.add(command); app.liveStatus.update();
+    Notification notification = live();
+    assertEquals("执行中 · 这是一个很长…",
+        notification.extras.getCharSequence(Notification.EXTRA_TITLE).toString());
+    assertEquals(R.drawable.ic_notification, notification.getSmallIcon().getResId());
+    String body = notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString();
+    assertTrue(body.split("\n").length <= 6);
+    assertTrue(body.endsWith("最新一行"));
   }
 
 }

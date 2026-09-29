@@ -93,12 +93,13 @@ public final class LiveStatusNotifications {
 
   static String title(RemoteApp app) {
     String name = app.threadTitle.replaceAll("\\s+", " ").trim();
-    return (name.isEmpty() ? "RemoteGPT" : shorten(name, 12)) + " · " + stage(app);
+    String stage = stage(app);
+    return name.isEmpty() ? stage : stage + " · " + shorten(name, 6);
   }
 
   static String preview(RemoteApp app) {
     // Native Live Updates own font sizes; keep their title and payload compact.
-    return excerpt(details(app).replaceAll("\n[ \t]*\n+", "\n"), 240, 4);
+    return excerpt(details(app).replaceAll("\n[ \t]*\n+", "\n"), 360, 6);
   }
 
   static String details(RemoteApp app) {
@@ -192,7 +193,7 @@ public final class LiveStatusNotifications {
     PendingIntent content = PendingIntent.getActivity(app, notificationId, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     Bundle extras = new Bundle(); extras.putBoolean(PROMOTED, true);
     Notification.Builder builder = new Notification.Builder(app, channel)
-        .setSmallIcon(R.drawable.ic_launcher).setContentTitle(title(app))
+        .setSmallIcon(R.drawable.ic_notification).setContentTitle(title(app))
         .setContentText(tail(details.replace('\n', ' '), 180))
         .setStyle(new Notification.BigTextStyle().bigText(details))
         .setOngoing(true).setOnlyAlertOnce(!newRequest).setShowWhen(false)

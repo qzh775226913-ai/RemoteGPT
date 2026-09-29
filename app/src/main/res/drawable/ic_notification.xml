@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Monochrome counterpart of the RemoteGPT code-mark. Notification small
+         icons are alpha masks, so this resource must not contain a background. -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M8.5,5 L2.8,10.7 Q1.5,12 2.8,13.3 L8.5,19 M15.5,5 L21.2,10.7 Q22.5,12 21.2,13.3 L15.5,19 M12,4.5 L12,19.5 M9.5,17 L12,19.5 L14.5,17" />
+</vector>

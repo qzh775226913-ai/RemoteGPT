@@ -82,7 +82,7 @@ public final class ConnectionService extends Service {
         new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP),
         PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     Notification.Builder status = new Notification.Builder(this, "ssh")
-        .setSmallIcon(R.drawable.ic_launcher).setContentTitle("RemoteGPT · SSH")
+        .setSmallIcon(R.drawable.ic_notification).setContentTitle("RemoteGPT · SSH")
         .setContentText(summary).setContentIntent(open).setOnlyAlertOnce(true).setOngoing(true)
         .setVisibility(Notification.VISIBILITY_PRIVATE);
     PendingIntent stop = PendingIntent.getService(this, 1,
@@ -96,12 +96,12 @@ public final class ConnectionService extends Service {
         app.conversationIntent(MainActivity.class, app.threadId).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP),
         PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     Notification.Builder conversation = new Notification.Builder(this, "conversation")
-        .setSmallIcon(R.drawable.ic_launcher).setContentTitle(LiveStatusNotifications.title(app))
+        .setSmallIcon(R.drawable.ic_notification).setContentTitle(LiveStatusNotifications.title(app))
         .setContentText(summary).setStyle(new Notification.BigTextStyle().bigText(summary))
         .setContentIntent(open).setOnlyAlertOnce(true).setVisibility(Notification.VISIBILITY_PRIVATE);
     if (android.os.Build.VERSION.SDK_INT >= 30) {
       String title = LiveStatusNotifications.title(app);
-      android.graphics.drawable.Icon icon = android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_launcher);
+      android.graphics.drawable.Icon icon = android.graphics.drawable.Icon.createWithResource(this, R.mipmap.ic_desktop);
       Person remote = new Person.Builder().setName("RemoteGPT").setKey("remote-gpt").setBot(true).setIcon(icon).build();
       Intent bubble = app.conversationIntent(BubbleActivity.class, app.threadId);
       String shortcutId = "conversation-" + (app.profile == null ? "" : app.profile.id) + "-" + app.threadId;
@@ -177,7 +177,7 @@ public final class ConnectionService extends Service {
     startForeground(
         1,
         new Notification.Builder(this, "ssh")
-            .setSmallIcon(R.drawable.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(getString(R.string.app_name) + " · SSH")
             .setContentText("远端连接正在运行")
             .setContentIntent(open)

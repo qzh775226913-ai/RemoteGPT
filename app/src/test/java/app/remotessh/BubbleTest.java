@@ -25,6 +25,7 @@ public class BubbleTest {
     var notifications = Shadows.shadowOf(manager);
     Notification bubble = notifications.getNotification(2);
     assertNotNull(bubble.getBubbleMetadata());
+    assertEquals(R.drawable.ic_notification, bubble.getSmallIcon().getResId());
     assertEquals("conversation--thread", bubble.getShortcutId());
     Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600));
     assertTrue(app.getSystemService(android.content.pm.ShortcutManager.class).getDynamicShortcuts().isEmpty());

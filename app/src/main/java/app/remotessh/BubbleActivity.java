@@ -69,6 +69,7 @@ public final class BubbleActivity extends Activity {
     header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
     TextView open = new TextView(this); open.setText("打开 ›"); open.setTextSize(12); open.setTextColor(foreground);
     open.setPadding(dp(12), 0, 0, 0); header.addView(open);
+    PressFeedback.apply(header, foreground != android.graphics.Color.parseColor("#171717"));
     header.setContentDescription("打开对话"); header.setOnClickListener(v -> openConversation());
     body.addView(header, new LinearLayout.LayoutParams(-1, dp(32)));
     LiveProgressTextView content = new LiveProgressTextView(this);

@@ -258,8 +258,9 @@ final class RemoteBrowser {
           name.setEllipsize(TextUtils.TruncateAt.END);
           row.addView(name, new LinearLayout.LayoutParams(0, ui.dp(52), 1));
           name.setGravity(Gravity.CENTER_VERTICAL);
-          row.setOnClickListener(
-              v -> {
+          ui.clickable(
+              row,
+              () -> {
                 if (app.connected && app.profile.id.equals(p.id)) {
                   openProject(path);
                 } else {
@@ -316,8 +317,9 @@ final class RemoteBrowser {
         }
         row.addView(time);
         String id = thread.optString("id");
-        row.setOnClickListener(
-            v -> {
+        ui.clickable(
+            row,
+            () -> {
               if (!app.canSwitchConversation()) {
                 Toast.makeText(ui.activity, "正在恢复会话或上传附件，请稍候", Toast.LENGTH_SHORT).show();
                 return;

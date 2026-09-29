@@ -211,8 +211,7 @@ public final class MainActivity extends Activity {
   }
 
   private void clickable(View v, Runnable r) {
-    v.setClickable(true);
-    v.setFocusable(true);
+    PressFeedback.apply(v, bg == Color.BLACK);
     v.setOnClickListener(
         w -> {
           w.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
@@ -827,12 +826,14 @@ public final class MainActivity extends Activity {
               preview.setImageBitmap(bitmap);
               loading.setText("保存图片");
               loading.setOnClickListener(v -> saveMedia(source));
+              PressFeedback.apply(loading, bg == Color.BLACK);
               preview.setOnClickListener(v -> {
                 ImageView full = new ImageView(this);
                 full.setAdjustViewBounds(true); full.setImageBitmap(bitmap);
                 new AlertDialog.Builder(this).setView(full)
                     .setPositiveButton("保存图片", (d, w) -> saveMedia(source)).setNegativeButton("关闭", null).show();
               });
+              PressFeedback.apply(preview, bg == Color.BLACK);
             });
           } catch (Exception e) {
             app.main.post(() -> {
@@ -844,6 +845,7 @@ public final class MainActivity extends Activity {
         });
       };
       loading.setOnClickListener(v -> load.run());
+      PressFeedback.apply(loading, bg == Color.BLACK);
       load.run();
     }
   }

@@ -59,6 +59,7 @@ final class RemoteScreens {
     t.setPadding(dp(18), dp(12), dp(18), dp(12));
     t.setBackground(rounded(primary ? 0xff3983fa : panel));
     if (primary) t.setTextColor(Color.WHITE);
+    PressFeedback.apply(t, bg == Color.BLACK);
     t.setOnClickListener(v -> click.run());
     return t;
   }
@@ -67,8 +68,14 @@ final class RemoteScreens {
     IconView i = new IconView(activity, name, fg);
     i.setContentDescription(label);
     i.setBackground(rounded(panel));
+    PressFeedback.apply(i, bg == Color.BLACK);
     i.setOnClickListener(v -> click.run());
     return i;
+  }
+
+  void clickable(View view, Runnable click) {
+    PressFeedback.apply(view, bg == Color.BLACK);
+    view.setOnClickListener(v -> click.run());
   }
 
   Dialog window(LinearLayout root) {

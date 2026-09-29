@@ -240,6 +240,7 @@ public class MainActivityTest {
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     assertEquals("Model A · High", ((TextView) model).getText().toString());
     assertNotNull(model.getBackground());
+    assertTrue(model.getForeground() instanceof android.graphics.drawable.RippleDrawable);
     permission.performClick();
     dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog();
     captureView(dialog.getWindow().getDecorView(), "permission-icons");

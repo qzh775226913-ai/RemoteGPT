@@ -78,6 +78,7 @@ final class DirectoryPicker {
 
   private void loading() {
     list.removeAllViews();
+    clearStatusAction();
     status.setText("正在读取目录…");
     status.setVisibility(View.VISIBLE);
     choose.setEnabled(false);
@@ -98,8 +99,9 @@ final class DirectoryPicker {
         error -> {
           if (token != request || !dialog.isShowing()) return;
           status.setText("无法读取此路径，点按查看原因");
-          status.setOnClickListener(
-              v ->
+          ui.clickable(
+              status,
+              () ->
                   new AlertDialog.Builder(ui.activity)
                       .setTitle("浏览目录失败")
                       .setMessage(error)
@@ -114,7 +116,7 @@ final class DirectoryPicker {
     directory = result;
     pathLabel.setText(result.path);
     list.removeAllViews();
-    status.setOnClickListener(null);
+    clearStatusAction();
     status.setText(
         result.truncated
             ? "仅显示前 1000 个目录，可输入完整路径直达"
@@ -132,9 +134,16 @@ final class DirectoryPicker {
       TextView title = ui.text(name, 18);
       title.setPadding(ui.dp(8), 0, 0, 0);
       row.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-      row.setOnClickListener(v -> load(RemoteDirectory.child(result.path, name)));
+      ui.clickable(row, () -> load(RemoteDirectory.child(result.path, name)));
       list.addView(row);
     }
+  }
+
+  private void clearStatusAction() {
+    status.setOnClickListener(null);
+    status.setClickable(false);
+    status.setFocusable(false);
+    status.setForeground(null);
   }
 
   private void enterPath() {
