@@ -1228,6 +1228,9 @@ public final class RemoteApp extends Application {
     else loadedThreads.remove(threadId);
     recoveringThreads.remove(threadId);
     threadTitle = restoredTitle(thread, threadId, threadTitle);
+    Map<String, ChatItem> knownReasoning = new HashMap<>();
+    for (ChatItem item : items)
+      if (item.type.equals("reasoning") && !item.detail.trim().isEmpty()) knownReasoning.put(item.id, item);
     items.clear();
     if (!remoteRunning) approvals.clear();
     busy = false;
@@ -1241,7 +1244,16 @@ public final class RemoteApp extends Application {
         if (list != null)
           for (int k = 0; k < list.length(); k++) {
             JSONObject item = list.optJSONObject(k);
-            if (item != null) items.add(ChatItem.from(item));
+            if (item != null) {
+              ChatItem incoming = ChatItem.from(item);
+              if (incoming.type.equals("reasoning")) {
+                preserveReasoning(incoming, knownReasoning.get(incoming.id));
+                if (incoming.status.isEmpty()) incoming.status =
+                    i == turns.length() - 1 && turn.optString("status").equals("inProgress")
+                        && (thread.optJSONObject("status") == null || remoteRunning) ? "inProgress" : "completed";
+              }
+              items.add(incoming);
+            }
           }
         if (turn.optJSONObject("error") != null)
           historicalError(turn.optString("id"), Json.object(turn, "error").optString("message"));
@@ -1669,6 +1681,11 @@ public final class RemoteApp extends Application {
     return null;
   }
 
+  private void preserveReasoning(ChatItem incoming, ChatItem previous) {
+    if (incoming.type.equals("reasoning") && incoming.detail.trim().isEmpty()
+        && previous != null && previous.type.equals("reasoning")) incoming.detail = previous.detail;
+  }
+
   private void event(JSONObject e) {
     String incomingMethod = e.optString("method");
     if (incomingMethod.equals("thread/status/changed") || incomingMethod.equals("turn/started")
@@ -1791,6 +1808,20 @@ public final class RemoteApp extends Application {
       turnId = "";
       approvals.clear();
       JSONObject turn = Json.object(p, "turn");
+      // Some servers deliver the final summary only in the turn snapshot.
+      JSONArray completedItems = turn.optJSONArray("items");
+      if (completedItems != null) for (int i = 0; i < completedItems.length(); i++) {
+        JSONObject item = completedItems.optJSONObject(i);
+        if (item == null || !item.optString("type").equals("reasoning")) continue;
+        ChatItem incoming = ChatItem.from(item), previous = find(incoming.id);
+        preserveReasoning(incoming, previous);
+        incoming.status = "completed";
+        if (previous == null) items.add(incoming);
+        else items.set(items.indexOf(previous), incoming);
+      }
+      // Journal replay may complete older turns after loading an active baseline.
+      if (!historical) for (ChatItem item : items)
+        if (item.type.equals("reasoning") && item.status.equals("inProgress")) item.status = "completed";
       state = turn.optString("status").equals("interrupted") ? "已停止" : "已连接";
       if (turn.optJSONObject("error") != null) {
         String message = Json.object(turn, "error").optString("message");
@@ -1828,7 +1859,7 @@ public final class RemoteApp extends Application {
       else {
         int i = items.indexOf(old);
         if (method.equals("item/started") && incoming.text.isEmpty()) incoming.text = old.text;
-        if (incoming.type.equals("reasoning") && incoming.detail.trim().isEmpty()) incoming.detail = old.detail;
+        preserveReasoning(incoming, old);
         items.set(i, incoming);
       }
     } else if (method.equals("item/reasoning/summaryPartAdded")) {
@@ -1848,6 +1879,7 @@ public final class RemoteApp extends Application {
                     ? "plan"
                     : method.contains("reasoning") ? "reasoning" : "commandExecution";
         m = new ChatItem(id, type, type.equals("reasoning") ? "思考过程" : "");
+        if (type.equals("reasoning")) m.status = "inProgress";
         items.add(m);
       }
       if (m.prose()) m.text += p.optString("delta");

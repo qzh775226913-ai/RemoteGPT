@@ -635,6 +635,29 @@ public class MainActivityTest {
     assertEquals(PermissionMode.READ_ONLY, app.permissionMode);
   }
 
+  @Test public void emptyReasoningFinishesWithoutAnEmptyCardOrStaleWaitingDialog() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication();
+    app.profile = new Profile(); app.connected = true; app.threadId = "chat";
+    ChatItem reasoning = new ChatItem("r", "reasoning", "思考过程");
+    reasoning.status = "inProgress"; app.items.add(reasoning); app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    View card = find(content(), "›  思考过程  ›");
+    assertEquals(View.VISIBLE, ((View) card.getParent()).getVisibility());
+    card.performClick();
+    android.app.Dialog details = org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    assertNotNull(find(details.getWindow().getDecorView(), "正在等待思考摘要…"));
+    reasoning.status = "completed"; app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
+    assertEquals(View.GONE, ((View) card.getParent()).getVisibility());
+    assertNull(find(details.getWindow().getDecorView(), "正在等待思考摘要…"));
+    assertNotNull(find(details.getWindow().getDecorView(), "远端未提供此思考项的摘要。部分思考项可能没有可显示的摘要。"));
+    reasoning.detail = "远端随后返回摘要"; app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
+    assertEquals(View.VISIBLE, ((View) card.getParent()).getVisibility());
+    assertNotNull(find(details.getWindow().getDecorView(), reasoning.detail));
+    details.dismiss();
+  }
+
   @Test
   public void conversationIdentityAndUsageAreVisible() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication();

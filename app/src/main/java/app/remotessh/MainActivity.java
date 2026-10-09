@@ -557,6 +557,9 @@ public final class MainActivity extends Activity {
           rendered.put(item.id, key);
           TextView view = texts.get(item.id);
           if (view != null) {
+            // Empty reasoning items are valid protocol events, not missing replies.
+            ((View) view.getParent()).setVisibility(item.type.equals("reasoning")
+                && !item.status.equals("inProgress") && item.detail.trim().isEmpty() ? View.GONE : View.VISIBLE);
             view.setText(
                 item.prose()
                     ? (item.user() ? item.text : Markdown.render(item.text, muted, panel, this::openLink))
@@ -1057,7 +1060,7 @@ public final class MainActivity extends Activity {
 
   private String detailText(ChatItem item) {
     if (item.type.equals("reasoning")) return item.detail.trim().isEmpty()
-        ? (item.status.equals("inProgress") ? "正在等待思考摘要…" : "本轮未返回思考摘要") : item.detail;
+        ? (item.status.equals("inProgress") ? "正在等待思考摘要…" : "远端未提供此思考项的摘要。部分思考项可能没有可显示的摘要。") : item.detail;
     return item.text + (item.detail.isEmpty() ? "" : "\n\n" + item.detail);
   }
 
