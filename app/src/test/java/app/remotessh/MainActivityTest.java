@@ -59,7 +59,11 @@ public class MainActivityTest {
         View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
         View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
     v.layout(0, 0, width, height);
-    Bitmap b = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+    captureLaidOutView(v, name);
+  }
+
+  private void captureLaidOutView(View v, String name) throws Exception {
+    Bitmap b = Bitmap.createBitmap(v.getWidth(), v.getHeight(), Bitmap.Config.ARGB_8888);
     v.draw(new Canvas(b));
     File directory = new File("build/screenshots");
     assertTrue(directory.isDirectory() || directory.mkdirs());
@@ -354,6 +358,74 @@ public class MainActivityTest {
     assertTrue(visible.bottom <= activity.getResources().getDisplayMetrics().heightPixels);
   }
 
+  @Test @Config(qualifiers="w360dp-h640dp-night-xhdpi")
+  public void modelListTouchScrollReachesLastModelWithoutMovingSettings() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
+    app.model = "model-0"; app.modelsStatus = "已同步远端模型";
+    app.models = new org.json.JSONArray();
+    for (int i = 0; i < 16; i++) app.models.put(Json.obj("model", "model-" + i, "displayName", "Model " + i,
+        "defaultReasoningEffort", "high", "supportedReasoningEfforts", new org.json.JSONArray().put("low").put("medium").put("high")));
+    app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    find(content(), "选择模型与推理强度").performClick();
+    View shell = org.robolectric.shadows.ShadowDialog.getLatestDialog().getWindow().getDecorView();
+    captureView(shell, "model-scroll-before");
+    ScrollView models = (ScrollView) find(shell, "选择模型：model-0").getParent().getParent();
+    ViewParent parent = models.getParent();
+    while (!(parent instanceof ScrollView)) parent = parent.getParent();
+    ScrollView settings = (ScrollView) parent;
+    int originalSettingsY = settings.getScrollY();
+    int[] settingsLocation = new int[2], modelsLocation = new int[2];
+    settings.getLocationOnScreen(settingsLocation); models.getLocationOnScreen(modelsLocation);
+    float x = modelsLocation[0] - settingsLocation[0] + models.getWidth() / 2f;
+    float startY = modelsLocation[1] - settingsLocation[1] + models.getHeight() - 24;
+    float endY = modelsLocation[1] - settingsLocation[1] + 24;
+    for (int swipe = 0; swipe < 12 && models.canScrollVertically(1); swipe++) {
+      long start = android.os.SystemClock.uptimeMillis();
+      dispatchTouch(settings, start, start, MotionEvent.ACTION_DOWN, x, startY);
+      for (int step = 1; step <= 10; step++)
+        dispatchTouch(settings, start, start + step * 20, MotionEvent.ACTION_MOVE, x, startY + (endY - startY) * step / 10);
+      dispatchTouch(settings, start, start + 220, MotionEvent.ACTION_UP, x, endY);
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+    }
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+    models.computeScroll();
+    assertTrue("Touch swipes must scroll the model list", models.getScrollY() > 0);
+    assertFalse("The last model must be reachable", models.canScrollVertically(1));
+    assertEquals("Model gestures must not scroll the settings container", originalSettingsY, settings.getScrollY());
+    View last = find(shell, "选择模型：model-15");
+    Rect lastBounds = new Rect(); last.getDrawingRect(lastBounds);
+    models.offsetDescendantRectToMyCoords(last, lastBounds);
+    lastBounds.offset(0, -models.getScrollY());
+    assertTrue(lastBounds.top >= 0); assertTrue(lastBounds.bottom <= models.getHeight());
+    captureLaidOutView(shell, "model-scroll-last");
+    long tap = android.os.SystemClock.uptimeMillis();
+    int[] lastLocation = new int[2]; last.getLocationOnScreen(lastLocation);
+    settings.getLocationOnScreen(settingsLocation);
+    float lastY = lastLocation[1] - settingsLocation[1] + last.getHeight() / 2f;
+    dispatchTouch(settings, tap, tap, MotionEvent.ACTION_DOWN, x, lastY);
+    dispatchTouch(settings, tap, tap + 40, MotionEvent.ACTION_UP, x, lastY);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    // A new gesture outside the model list must still scroll the remaining settings.
+    long start = android.os.SystemClock.uptimeMillis();
+    dispatchTouch(settings, start, start, MotionEvent.ACTION_DOWN, x, settings.getHeight() - 12);
+    for (int step = 1; step <= 8; step++)
+      dispatchTouch(settings, start, start + step * 20, MotionEvent.ACTION_MOVE, x, settings.getHeight() - 12 - step * 20);
+    dispatchTouch(settings, start, start + 180, MotionEvent.ACTION_UP, x, settings.getHeight() - 172);
+    assertTrue("A gesture outside the list must scroll the settings", settings.getScrollY() > originalSettingsY);
+    View apply = find(shell, "完成");
+    Rect applyBounds = new Rect(); apply.getDrawingRect(applyBounds);
+    ((ViewGroup) shell).offsetDescendantRectToMyCoords(apply, applyBounds);
+    assertTrue("The fixed footer must keep its height: " + applyBounds, applyBounds.height() > 0);
+    assertTrue("The fixed footer must stay visible: " + applyBounds, applyBounds.top >= 0 && applyBounds.bottom <= shell.getHeight());
+    captureLaidOutView(shell, "model-settings-scrolled");
+    find(shell, "完成").performClick(); assertEquals("model-15", app.model);
+  }
+
+  private void dispatchTouch(View target, long downTime, long time, int action, float x, float y) {
+    MotionEvent event = MotionEvent.obtain(downTime, time, action, x, y, 0);
+    try { target.dispatchTouchEvent(event); } finally { event.recycle(); }
+  }
+
   @Test
   public void modelPanelSelectsSupportedEffortAndPermissionIconSharesRow() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
@@ -575,7 +647,7 @@ public class MainActivityTest {
   }
 
   @Test
-  @Config(qualifiers = "w411dp-h891dp-night-xhdpi")
+  @Config(qualifiers = "w320dp-h720dp-night-xhdpi")
   public void projectBrowserAndDirectoryPickerRender() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication();
     Profile profile = new Profile();
@@ -615,6 +687,22 @@ public class MainActivityTest {
     assertNotNull(find(directory, "使用此文件夹"));
     assertNotNull(find(directory, "新建项目"));
     captureView(directory, "remote-directories");
+    View create = find(directory, "新建项目"), choose = find(directory, "使用此文件夹");
+    View up = find(directory, "上一级"), enter = find(directory, "输入路径");
+    assertSame(create.getParent(), choose.getParent());
+    assertSame(up.getParent(), enter.getParent());
+    assertNotSame(up.getParent(), create.getParent());
+    assertEquals(2, ((ViewGroup) up.getParent()).getChildCount());
+    assertEquals(2, ((ViewGroup) create.getParent()).getChildCount());
+    assertEquals(create.getTop(), choose.getTop());
+    for (View button : new View[] {create, choose, up, enter}) {
+      assertEquals(1, ((TextView) button).getLineCount());
+      assertTrue(button.getWidth() > 0);
+    }
+    create.performClick();
+    android.app.AlertDialog prompt = (android.app.AlertDialog) org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    assertEquals("新建项目", shadowOf(prompt).getTitle().toString());
+    prompt.dismiss();
     dialog.dismiss();
   }
 

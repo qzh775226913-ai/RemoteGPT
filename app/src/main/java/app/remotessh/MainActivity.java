@@ -1678,10 +1678,18 @@ public final class MainActivity extends Activity {
     panelView.addView(catalogStatus);
     TextView refresh = action("刷新模型", () -> { app.refreshModels(); app.refreshModelSettings(); });
     panelView.addView(refresh);
-    ScrollView modelScroll = new ScrollView(this);
+    ScrollView modelScroll = new ModelListScrollView(this);
+    int modelListBackground = bg == Color.BLACK ? 0xff161616 : 0xfff8f8f8;
+    modelScroll.setContentDescription("可滚动的模型列表");
+    modelScroll.setBackground(rounded(modelListBackground, 16));
+    modelScroll.setClipToOutline(true);
+    modelScroll.setPadding(dp(4), dp(4), dp(4), dp(4));
+    modelScroll.setScrollBarStyle(View.SCROLLBARS_INSIDE_INSET);
     LinearLayout modelList = column(); modelScroll.addView(modelList);
     int modelCount = app.models.length() + 1;
-    panelView.addView(modelScroll, new LinearLayout.LayoutParams(-1, dp(Math.min(240, modelCount * 52))));
+    LinearLayout.LayoutParams modelScrollParams = new LinearLayout.LayoutParams(-1, dp(Math.min(240, modelCount * 52 + 8)));
+    modelScrollParams.topMargin = dp(8);
+    panelView.addView(modelScroll, modelScrollParams);
     LinearLayout effortHeader = row();
     effortHeader.setPadding(dp(4), dp(20), dp(4), dp(4));
     TextView effortTitle = text("推理强度", 13, muted);
@@ -1725,7 +1733,7 @@ public final class MainActivity extends Activity {
     redraw[0] = () -> {
       catalogStatus.setText(app.modelsStatus.isEmpty() ? "模型由远端提供；未列出新模型时请检查远端 Codex 版本和账号" : app.modelsStatus);
       refresh.setEnabled(!app.modelsLoading && app.connected);
-      modelScroll.getLayoutParams().height = dp(Math.min(240, (app.models.length() + 1) * 52));
+      modelScroll.getLayoutParams().height = dp(Math.min(240, (app.models.length() + 1) * 52 + 8));
       modelScroll.requestLayout();
       modelList.removeAllViews();
       JSONObject chosen = null;
@@ -1736,7 +1744,7 @@ public final class MainActivity extends Activity {
         if (selected[0].equals(id) || (selected[0].isEmpty() && model != null && model.optBoolean("isDefault"))) chosen = model;
         boolean checked = selected[0].equals(id);
         LinearLayout option = row(); option.setPadding(dp(14), 0, dp(10), 0);
-        option.setBackground(rounded(checked ? panel : bg, 14));
+        option.setBackground(rounded(checked ? panel : modelListBackground, 14));
         TextView label = text(model == null ? "远端默认" : ModelOptions.displayName(app.models, id), 15, fg);
         label.setMaxLines(1); label.setEllipsize(TextUtils.TruncateAt.END); label.setGravity(Gravity.CENTER_VERTICAL);
         option.addView(label, new LinearLayout.LayoutParams(0, dp(52), 1));

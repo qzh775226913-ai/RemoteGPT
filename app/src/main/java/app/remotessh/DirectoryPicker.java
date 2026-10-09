@@ -36,12 +36,12 @@ final class DirectoryPicker {
     root.addView(pathLabel);
     LinearLayout toolbar = ui.row();
     toolbar.setPadding(ui.dp(16), 0, ui.dp(16), ui.dp(12));
-    up = ui.button("上一级", false, () -> load(RemoteDirectory.parent(directory.path)));
-    toolbar.addView(up, new LinearLayout.LayoutParams(0, -2, 1));
+    up = button("上一级", false, () -> load(RemoteDirectory.parent(directory.path)));
+    LinearLayout.LayoutParams upParams = new LinearLayout.LayoutParams(0, -2, 1);
+    upParams.setMarginEnd(ui.dp(12));
+    toolbar.addView(up, upParams);
     toolbar.addView(
-        ui.button("输入路径", false, this::enterPath), new LinearLayout.LayoutParams(0, -2, 1));
-    create = ui.button("新建项目", true, this::newProject);
-    toolbar.addView(create, new LinearLayout.LayoutParams(0, -2, 1));
+        button("输入路径", false, this::enterPath), new LinearLayout.LayoutParams(0, -2, 1));
     root.addView(toolbar);
     status = ui.text("正在读取目录…", 14);
     status.setPadding(ui.dp(20), ui.dp(8), ui.dp(20), ui.dp(8));
@@ -50,10 +50,14 @@ final class DirectoryPicker {
     list = ui.column();
     scroll.addView(list);
     root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-    LinearLayout footer = ui.column();
+    LinearLayout footer = ui.row();
     footer.setPadding(ui.dp(20), ui.dp(12), ui.dp(20), ui.dp(20));
+    create = button("新建项目", false, this::newProject);
+    LinearLayout.LayoutParams createParams = new LinearLayout.LayoutParams(0, -2, 1);
+    createParams.setMarginEnd(ui.dp(12));
+    footer.addView(create, createParams);
     choose =
-        ui.button(
+        button(
             "使用此文件夹",
             true,
             () -> {
@@ -62,9 +66,17 @@ final class DirectoryPicker {
                 dialog.dismiss();
               }
             });
-    footer.addView(choose);
+    footer.addView(choose, new LinearLayout.LayoutParams(0, -2, 1));
     root.addView(footer);
     dialog.setOnDismissListener(d -> request++);
+  }
+
+  private TextView button(String label, boolean primary, Runnable click) {
+    TextView view = ui.button(label, primary, click);
+    view.setMaxLines(1);
+    view.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    view.setPadding(ui.dp(10), ui.dp(12), ui.dp(10), ui.dp(12));
+    return view;
   }
 
   void show(String initial) {
