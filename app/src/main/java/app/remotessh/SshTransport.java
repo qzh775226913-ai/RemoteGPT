@@ -19,8 +19,13 @@ public final class SshTransport implements AutoCloseable {
   private void phase(String value) { phase = value; progress.accept(value); }
 
   private byte[] persistentScript;
+  private final List<String> persistentIdentities = new ArrayList<>();
 
   public void setPersistentScript(byte[] script) { persistentScript = script; }
+  public void setPersistentIdentities(Collection<String> identities) {
+    persistentIdentities.clear();
+    if (identities != null) persistentIdentities.addAll(identities);
+  }
 
   static String quote(String text) { return "'" + text.replace("'", "'\"'\"'") + "'"; }
 
@@ -45,7 +50,10 @@ public final class SshTransport implements AutoCloseable {
         files.chmod(0600, temp);
         files.rename(temp, script);
       }
-      return "python3 " + quote(script) + " " + quote(p.id) + " " + quote(p.command);
+      org.json.JSONArray identities = new org.json.JSONArray();
+      for (String id : persistentIdentities) if (id != null && !id.isEmpty()) identities.put(id);
+      if (identities.length() == 0) identities.put(p.id);
+      return "python3 " + quote(script) + " " + quote(identities.toString()) + " " + quote(p.command);
     } finally { files.disconnect(); }
   }
 
@@ -180,6 +188,41 @@ public final class SshTransport implements AutoCloseable {
     synchronized (diagnostics) {
       return new String(diagnostics.toByteArray(), StandardCharsets.UTF_8);
     }
+  }
+
+  /** A separate SSH channel keeps version checks/install output out of JSON-RPC. */
+  public org.json.JSONObject maintenance(String script, org.json.JSONObject request) throws Exception {
+    Session current = session;
+    if (closed || current == null || !current.isConnected()) throw new IOException("SSH 未连接");
+    ChannelExec exec = (ChannelExec) current.openChannel("exec");
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    OutputStream bounded = new OutputStream() {
+      public synchronized void write(int value) throws IOException {
+        if (output.size() >= 65536) throw new IOException("版本响应超过大小限制");
+        output.write(value);
+      }
+      public synchronized void write(byte[] bytes, int offset, int length) throws IOException {
+        if (output.size() + length > 65536) throw new IOException("版本响应超过大小限制");
+        output.write(bytes, offset, length);
+      }
+    };
+    try {
+      exec.setPty(false);
+      exec.setCommand("python3 -c " + quote(script) + " " + quote(request.toString()));
+      exec.setInputStream(null);
+      exec.setOutputStream(bounded);
+      exec.setErrStream(new OutputStream() { public void write(int value) {} });
+      exec.connect(15000);
+      long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(
+          request.optString("action").equals("update") ? 650 : 90);
+      while (!exec.isClosed()) {
+        if (closed || !current.isConnected()) throw new IOException("SSH 已断开，请重连后检查版本和更新结果");
+        if (System.nanoTime() > deadline) throw new IOException("远端版本操作超时，请重新检查更新结果");
+        Thread.sleep(50);
+      }
+      if (exec.getExitStatus() != 0) throw new IOException("远端版本检测不可用，请检查 Python 3 和执行权限");
+      return new org.json.JSONObject(output.toString(StandardCharsets.UTF_8.name()).trim());
+    } finally { exec.disconnect(); }
   }
 
   private ChannelSftp sftp() throws Exception {

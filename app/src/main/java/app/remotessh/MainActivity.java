@@ -41,6 +41,8 @@ public final class MainActivity extends Activity {
   private final Map<String, ChatItem> currentItems = new HashMap<>();
   private final List<String> order = new ArrayList<>();
   private Dialog trustDialog, approvalDialog, drawer, editorDialog;
+  private Dialog versionDialog;
+  private RemoteVersion shownVersion;
   private RemoteBrowser browser;
   private DirectoryPicker directoryPicker;
   private LinearLayout readOnlyBar;
@@ -91,6 +93,8 @@ public final class MainActivity extends Activity {
         if (input != null) app.draftText=input.getText().toString();
         app.openConversation(id);
       }
+      String liveToken = intent.getStringExtra("liveToken");
+      if (liveToken != null && !liveToken.isEmpty()) app.liveStatus.acknowledgeViewed(liveToken);
     }
   }
   @Override protected void onNewIntent(Intent intent) {
@@ -174,6 +178,7 @@ public final class MainActivity extends Activity {
     if (drawer != null) drawer.dismiss();
     if (editorDialog != null) editorDialog.dismiss();
     if (browser != null) browser.dismiss();
+    if (versionDialog != null) versionDialog.dismiss();
     if (directoryPicker != null) directoryPicker.dismiss();
     super.onDestroy();
   }
@@ -1084,6 +1089,8 @@ public final class MainActivity extends Activity {
                 connectProfile(p);
               }
 
+              public void version() { showRemoteVersion(); }
+
               public void add() {
                 browser.dismiss();
                 editProfile(new Profile(), true);
@@ -1311,7 +1318,7 @@ public final class MainActivity extends Activity {
       boolean allowed = getSystemService(NotificationManager.class).canPostPromotedNotifications();
       support = allowed ? "系统已允许实时通知；最终展示由 ColorOS 决定。" : "请在系统通知设置中允许实时通知／流体云。";
     } else support = "此系统未提供 Android 16 实时通知接口，将显示普通任务通知。";
-    TextView description = text(support + "\n\n运行中显示状态，待审批时可展开查看摘要并允许一次或拒绝。任务结束后自动收起。收起状态只隐藏本轮流体云，不会停止远端任务。\n\n原有气泡继续保留，可在系统通知设置中单独管理。", 14, fg);
+    TextView description = text(support + "\n\n运行中显示状态，待审批时可展开查看摘要并允许一次或拒绝。任务结束后显示已完成和最后回复；点“知道了”或从流体云进入对话后消失。收起状态只隐藏本轮流体云，不会停止远端任务。\n\n原有气泡继续保留，可在系统通知设置中单独管理。", 14, fg);
     description.setPadding(0, dp(12), 0, dp(12));
     panelView.addView(description);
     enabled.setOnCheckedChangeListener((button, checked) -> {
@@ -1659,11 +1666,17 @@ public final class MainActivity extends Activity {
   private void chooseModel() {
     if (!app.connected) { toast("连接后可选择远端模型"); return; }
     final String[] selected = {app.model, app.reasoningEffort};
+    final Profile modelProfile = app.profile;
+    final String modelThread = app.threadId;
     LinearLayout panelView = column();
     panelView.setPadding(dp(20), 0, dp(20), dp(8));
     TextView subtitle = text("模型与推理强度 · 下一轮生效", 12, muted);
     subtitle.setPadding(dp(4), 0, 0, dp(16));
     panelView.addView(subtitle);
+    TextView catalogStatus = text("", 12, muted);
+    panelView.addView(catalogStatus);
+    TextView refresh = action("刷新模型", () -> app.refreshModels());
+    panelView.addView(refresh);
     ScrollView modelScroll = new ScrollView(this);
     LinearLayout modelList = column(); modelScroll.addView(modelList);
     int modelCount = app.models.length() + 1;
@@ -1704,6 +1717,10 @@ public final class MainActivity extends Activity {
     Dialog[] holder = new Dialog[1];
     Runnable[] redraw = new Runnable[1];
     redraw[0] = () -> {
+      catalogStatus.setText(app.modelsStatus.isEmpty() ? "模型由远端提供；未列出新模型时请检查远端 Codex 版本和账号" : app.modelsStatus);
+      refresh.setEnabled(!app.modelsLoading && app.connected);
+      modelScroll.getLayoutParams().height = dp(Math.min(240, (app.models.length() + 1) * 52));
+      modelScroll.requestLayout();
       modelList.removeAllViews();
       JSONObject chosen = null;
       for (int i = -1; i < app.models.length(); i++) {
@@ -1735,15 +1752,17 @@ public final class MainActivity extends Activity {
       effortSlider.setMax(Math.max(1, efforts.size() - 1));
       effortSlider.setEnabled(efforts.size() > 1);
       effortSlider.setProgress(efforts.isEmpty() ? 0 : index);
-      selected[1] = efforts.isEmpty() ? "" : efforts.get(index);
-      effortValue.setText(efforts.isEmpty() ? "默认" : ModelOptions.label(selected[1]));
+      if (!selected[1].isEmpty() && !efforts.contains(selected[1])) selected[1] = "";
+      effortValue.setText(efforts.isEmpty() ? "默认" : ModelOptions.label(efforts.get(index)));
       if (Build.VERSION.SDK_INT >= 30) effortSlider.setStateDescription(effortValue.getText());
       low.setText(efforts.isEmpty() ? "" : ModelOptions.label(efforts.get(0)));
       high.setText(efforts.size() < 2 ? "" : ModelOptions.label(efforts.get(efforts.size() - 1)));
       effortHint.setText(efforts.isEmpty() ? "此模型未提供可选强度" : "默认 · " + ModelOptions.label(efforts.get(defaultIndex)));
       resetEffort.setEnabled(!efforts.isEmpty());
       resetEffort.setAlpha(efforts.isEmpty() ? .4f : 1);
-      clickable(resetEffort, () -> effortSlider.setProgress(defaultIndex, true));
+      clickable(resetEffort, () -> {
+        effortSlider.setProgress(defaultIndex); selected[1] = "";
+      });
       effortSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
         public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
           if (efforts.isEmpty()) return;
@@ -1762,23 +1781,80 @@ public final class MainActivity extends Activity {
     };
     redraw[0].run();
     TextView apply = action("完成", () -> {
-      app.model = selected[0]; app.reasoningEffort = selected[1];
-      for (int i = 0; i < app.models.length(); i++) {
-        JSONObject entry = app.models.optJSONObject(i);
-        if (entry != null && (ModelOptions.id(entry).equals(selected[0])
-            || (selected[0].isEmpty() && entry.optBoolean("isDefault")))) {
-          app.model = ModelOptions.id(entry);
-          if (selected[1].isEmpty()) app.reasoningEffort = entry.optString("defaultReasoningEffort");
-          break;
-        }
+      if (!app.connected || app.profile != modelProfile || !app.threadId.equals(modelThread)) {
+        holder[0].dismiss(); return;
       }
+      app.model = selected[0]; app.reasoningEffort = selected[1];
       app.changed(); holder[0].dismiss();
     });
     apply.setTextColor(bg); apply.setBackground(rounded(fg, 22)); panelView.addView(apply);
     holder[0] = sheet("模型", panelView);
+    final JSONArray[] rendered = {app.models};
+    Runnable updateModels = () -> {
+      if (!app.connected || app.profile != modelProfile || !app.threadId.equals(modelThread)) {
+        holder[0].dismiss(); return;
+      }
+      catalogStatus.setText(app.modelsStatus);
+      refresh.setEnabled(!app.modelsLoading);
+      if (rendered[0] != app.models) {
+        rendered[0] = app.models;
+        redraw[0].run();
+      }
+    };
+    app.stateListeners.add(updateModels);
+    holder[0].setOnDismissListener(d -> app.stateListeners.remove(updateModels));
+    app.refreshModels();
+  }
+
+  private void showRemoteVersion() {
+    if (!app.connected || versionDialog != null) return;
+    RemoteVersion version = app.remoteVersion;
+    shownVersion = version;
+    String target = version.latest;
+    String detail = "当前会话版本：" + (version.running.isEmpty() ? "未知" : version.running)
+        + "\n已安装版本：" + (version.installed.isEmpty() ? "未知" : version.installed)
+        + "\n最新稳定版：" + (target.isEmpty() ? "尚未获取" : target);
+    if (!version.error.isEmpty()) detail += "\n\n" + version.error;
+    if (!version.reason.isEmpty()) detail += "\n\n" + version.reason;
+    AlertDialog.Builder builder = new AlertDialog.Builder(this).setTitle("远端 Codex 版本");
+    if (version.canUpdate()) {
+      detail += "\n\n是否更新远端 Codex？空闲且支持安全重启时自动启用新版；有任务运行时先安装，任务结束后再点此处重启。选择暂不更新可继续使用当前版本。";
+      builder.setPositiveButton("更新至 " + target, (d, w) -> app.updateRemoteVersion(version, target));
+      builder.setNegativeButton("暂不更新", null);
+    } else if (version.updating) {
+      detail += "\n\n正在更新，请保持连接。";
+      builder.setPositiveButton("知道了", null);
+    } else if (version.needsRestart()) {
+      detail += "\n\n新版已安装，当前会话仍运行旧版。你可以自行决定何时重启。重启会停止所有正在进行的远端对话，然后短暂断开并使用新版重新连接。";
+      builder.setPositiveButton("重启并启用新版", (d, w) -> confirmRemoteRestart(version));
+      builder.setNegativeButton("稍后", null);
+    } else builder.setPositiveButton("关闭", null);
+    if (!version.checking && !version.updating)
+      builder.setNeutralButton("重新检查", (d, w) -> app.checkRemoteVersion(true));
+    builder.setMessage(detail);
+    versionDialog = builder.create();
+    versionDialog.setOnDismissListener(d -> { versionDialog = null; shownVersion = null; });
+    versionDialog.show();
+  }
+
+  private void confirmRemoteRestart(RemoteVersion version) {
+    if (!app.connected || version != app.remoteVersion || !version.needsRestart()) return;
+    new AlertDialog.Builder(this)
+        .setTitle("停止任务并重启？")
+        .setMessage("重启将立即停止这台远端电脑上由 RemoteGPT 托管的所有进行中对话和待处理审批。未完成的回复会中断。\n\n重启后 App 会自动重新连接，并使用已安装的 Codex "
+            + version.installed + "。")
+        .setNegativeButton("取消", null)
+        .setPositiveButton("停止任务并重启", (d, w) -> app.restartRemoteVersion(version))
+        .show();
   }
 
   private void showPending() {
+    if (versionDialog != null && (!app.connected || shownVersion != app.remoteVersion)) versionDialog.dismiss();
+    if (app.connected && app.remoteVersion.prompt && versionDialog == null
+        && trustDialog == null && approvalDialog == null && app.visibleApproval() == null) {
+      app.remoteVersion.prompt = false;
+      showRemoteVersion();
+    }
     if (!app.trustHost.isEmpty() && (trustDialog == null || !trustDialog.isShowing())) {
       String fingerprint = app.trustFingerprint;
       trustDialog =

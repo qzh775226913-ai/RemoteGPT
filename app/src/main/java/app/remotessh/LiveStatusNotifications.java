@@ -26,7 +26,8 @@ public final class LiveStatusNotifications {
     LiveStatusNotifications value = cards.get(thread); return value == null ? -1 : value.notificationId;
   }
   private String lastSignature = "", runToken = "", owner = "", turn = "";
-  private boolean active, dismissed;
+  private String completionTitle = "", completionDetails = "";
+  private boolean active, completed, dismissed;
   private String postedChannel = "";
   private final java.util.Set<String> alerted = new java.util.HashSet<>();
 
@@ -57,6 +58,8 @@ public final class LiveStatusNotifications {
     if (now && (!active || !owner.equals(newOwner)
         || (!turn.isEmpty() && !app.turnId.isEmpty() && !turn.equals(app.turnId)))) {
       runToken = UUID.randomUUID().toString();
+      completed = false;
+      completionTitle = completionDetails = "";
       dismissed = false;
       lastSignature = "";
       alerted.clear();
@@ -64,6 +67,35 @@ public final class LiveStatusNotifications {
     active = now;
     owner = newOwner;
     turn = app.turnId;
+  }
+
+  void complete(String thread) {
+    if (!card) {
+      app.inConversation(thread, () -> card(thread).completeSnapshot());
+      return;
+    }
+    completeSnapshot();
+  }
+
+  private void completeSnapshot() {
+    if (runToken.isEmpty()) runToken = UUID.randomUUID().toString();
+    completed = true;
+    active = false;
+    completionTitle = app.threadTitle.replaceAll("\\s+", " ").trim();
+    completionDetails = finalReply(app);
+    if (completionDetails.isEmpty()) completionDetails = "任务已完成";
+    dismissed = false;
+    lastSignature = "";
+  }
+
+  private static String finalReply(RemoteApp app) {
+    for (int i = app.items.size() - 1; i >= 0; i--) {
+      ChatItem item = app.items.get(i);
+      if (item.user()) break;
+      if (item.type.equals("agentMessage") && !item.text.trim().isEmpty())
+        return excerpt(item.text, 1200, 12);
+    }
+    return "";
   }
 
   private static ChatItem latest(RemoteApp app) {
@@ -174,9 +206,9 @@ public final class LiveStatusNotifications {
     observe();
     NotificationManager manager = app.getSystemService(NotificationManager.class);
     boolean enabled = app.getSharedPreferences("background", Context.MODE_PRIVATE).getBoolean("liveStatus", true);
-    if (!active || !enabled) { clear(); return; }
+    if ((!active && !completed) || !enabled) { clear(); return; }
     manager.createNotificationChannel(new NotificationChannel(CHANNEL, "流体云 · 任务与审批", NotificationManager.IMPORTANCE_DEFAULT));
-    JSONObject request = app.approvals.isEmpty() || app.replaying ? null : app.approvals.get(0);
+    JSONObject request = completed || app.approvals.isEmpty() || app.replaying ? null : app.approvals.get(0);
     String token = request == null ? "" : app.notificationApprovalToken(request);
     boolean newRequest = request != null && !alerted.contains(token);
     if (newRequest) dismissed = false;
@@ -185,15 +217,21 @@ public final class LiveStatusNotifications {
     manager.createNotificationChannel(new NotificationChannel(ATTENTION_CHANNEL,
         "流体云 · 审批与询问提醒", NotificationManager.IMPORTANCE_HIGH));
     boolean answering = request != null && app.isAnswering(request);
-    String stage = answering ? "提交中" : stage(app), details = preview(app);
-    String signature = runToken + stage + details + token + app.threadTitle + answering;
+    String stage = completed ? "已完成" : answering ? "提交中" : stage(app);
+    String details = completed ? completionDetails : preview(app);
+    String shownTitle = completed
+        ? (completionTitle.isEmpty() ? "已完成" : "已完成 · " + shorten(completionTitle, 6))
+        : title(app);
+    String signature = runToken + stage + details + token + shownTitle + answering + completed;
     if (signature.equals(lastSignature)) return;
     lastSignature = signature;
-    Intent open = app.conversationIntent(MainActivity.class, app.threadId).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    Intent open = app.conversationIntent(MainActivity.class, app.threadId)
+        .putExtra("liveToken", completed ? runToken : "")
+        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
     PendingIntent content = PendingIntent.getActivity(app, notificationId, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     Bundle extras = new Bundle(); extras.putBoolean(PROMOTED, true);
     Notification.Builder builder = new Notification.Builder(app, channel)
-        .setSmallIcon(R.drawable.ic_notification).setContentTitle(title(app))
+        .setSmallIcon(R.drawable.ic_notification).setContentTitle(shownTitle)
         .setContentText(tail(details.replace('\n', ' '), 180))
         .setStyle(new Notification.BigTextStyle().bigText(details))
         .setOngoing(true).setOnlyAlertOnce(!newRequest).setShowWhen(false)
@@ -207,6 +245,8 @@ public final class LiveStatusNotifications {
       builder.addAction(allow.build()).addAction(decline.build());
     } else if (request != null && !answering) {
       builder.addAction(new Notification.Action.Builder(null, "填写信息", content).build());
+    } else if (completed) {
+      builder.addAction(new Notification.Action.Builder(null, "知道了", action(runToken, "acknowledge")).build());
     }
     // A channel change requires reposting; ordinary deltas only update the same card.
     if (!postedChannel.isEmpty() && !postedChannel.equals(channel)) manager.cancel(notificationId);
@@ -222,14 +262,18 @@ public final class LiveStatusNotifications {
 
   void handle(String token, String choice) {
     if (!card) {
-      if (choice.equals("hide")) {
+      if (choice.equals("hide") || choice.equals("acknowledge")) {
         for (LiveStatusNotifications c : cards.values()) if (token.equals(c.runToken)) c.handle(token, choice);
       } else handleApproval(token, choice);
       return;
     }
-    if (choice.equals("hide")) {
+    if (choice.equals("hide") || choice.equals("acknowledge")) {
       if (token.equals(runToken)) { dismissed = true; clear(); }
     } else handleApproval(token, choice);
+  }
+
+  void acknowledgeViewed(String token) {
+    handle(token, "acknowledge");
   }
 
   private void handleApproval(String token, String choice) {

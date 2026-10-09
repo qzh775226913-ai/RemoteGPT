@@ -12,6 +12,8 @@ final class RemoteBrowser {
   interface Actions {
     void connect(Profile p);
 
+    default void version() {}
+
     void add();
 
     void settings();
@@ -31,6 +33,7 @@ final class RemoteBrowser {
   private final TextView heading, subtitle, primary;
   private final EditText search;
   private String filter = "", project = "";
+  private String renderedSignature = "";
 
   private boolean centerHost = true;
 
@@ -74,6 +77,8 @@ final class RemoteBrowser {
     subtitle = ui.text("", 13);
     subtitle.setTextColor(ui.muted);
     subtitle.setPadding(ui.dp(20), 0, ui.dp(20), ui.dp(12));
+    subtitle.setContentDescription("远端版本与更新");
+    subtitle.setOnClickListener(v -> { if (app.connected) actions.version(); });
     root.addView(subtitle);
     ScrollView scroll = new ScrollView(activity);
     list = ui.column();
@@ -156,6 +161,7 @@ final class RemoteBrowser {
 
   void show() {
     ui.show(dialog);
+    renderedSignature = "";
     if (!app.historyProject.isEmpty()) {
       app.historyProject = "";
       if (app.connected) app.refreshThreads(false);
@@ -182,6 +188,9 @@ final class RemoteBrowser {
 
   void refresh() {
     if (!isShowing()) return;
+    String signature = signature();
+    if (signature.equals(renderedSignature)) return;
+    renderedSignature = signature;
     heading.setText(project.isEmpty() ? "远程控制" : RemoteDirectory.name(project));
     heading.setMaxLines(1);
     heading.setEllipsize(TextUtils.TruncateAt.END);
@@ -220,9 +229,27 @@ final class RemoteBrowser {
     }
     subtitle.setText(
         app.connected
-            ? app.profile.title() + " · 已连接" + (project.isEmpty() ? "" : "\n" + project)
+            ? app.profile.title() + " · 已连接 · " + app.remoteVersion.label() + (project.isEmpty() ? "" : "\n" + project)
             : app.connecting ? "正在连接…" : "选择一台电脑，查看项目和对话");
     refreshList();
+  }
+
+  private String signature() {
+    StringBuilder value = new StringBuilder(filter).append('|').append(project).append('|')
+        .append(app.connected).append('|').append(app.connecting).append('|')
+        .append(app.profile == null ? "" : app.profile.id).append('|')
+        .append(app.remoteVersion.label()).append('|').append(app.nextCursor).append('|').append(app.canSwitchConversation());
+    for (Profile p : app.vault.profiles)
+      value.append("|p:").append(p.id).append(':').append(p.name).append(':').append(p.cwd)
+          .append(':').append(p.projects.hashCode());
+    for (int i = 0; i < app.threads.length(); i++) {
+      JSONObject thread = app.threads.optJSONObject(i);
+      if (thread != null) value.append("|t:").append(thread.optString("id"))
+          .append(':').append(thread.optString("name")).append(':').append(thread.optString("preview"))
+          .append(':').append(thread.optString("cwd")).append(':').append(thread.optLong("updatedAt"))
+          .append(':').append(app.threadRunning(thread));
+    }
+    return value.toString();
   }
 
   private boolean matches(String text) {
@@ -321,7 +348,9 @@ final class RemoteBrowser {
             row,
             () -> {
               if (!app.canSwitchConversation()) {
-                Toast.makeText(ui.activity, "正在恢复会话或上传附件，请稍候", Toast.LENGTH_SHORT).show();
+                app.openConversation(id);
+                Toast.makeText(ui.activity, "正在恢复会话，完成后自动打开", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
                 return;
               }
               app.viewConversation(id);

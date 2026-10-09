@@ -1,5 +1,7 @@
 """Integration tests using a fake app-server, never real Codex credentials."""
 import json
+import hashlib
+import importlib.util
 import os
 from pathlib import Path
 import queue
@@ -64,8 +66,8 @@ for line in sys.stdin:
 
 
 class Client:
-    def __init__(self, env, command):
-        self.proc = subprocess.Popen([sys.executable, str(HOST), 'profile-1', command],
+    def __init__(self, env, command, identities='profile-1'):
+        self.proc = subprocess.Popen([sys.executable, str(HOST), identities, command],
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         self.events = queue.Queue()
         def read():
@@ -106,8 +108,8 @@ class PersistentSessionTest(unittest.TestCase):
         self.command = shlex.quote(sys.executable) + ' -u ' + shlex.quote(str(fake))
         self.clients = []
 
-    def client(self):
-        c = Client(self.env, self.command)
+    def client(self, identities='profile-1'):
+        c = Client(self.env, self.command, identities)
         self.clients.append(c)
         c.request(1, 'initialize')
         c.send(dict(method='initialized', params={}))
@@ -124,12 +126,74 @@ class PersistentSessionTest(unittest.TestCase):
                 pass
         self.tmp.cleanup()
 
+    def test_safe_restart_stops_only_idle_host(self):
+        c = self.client()
+        self.assertTrue(c.request(2, 'remote/session')['result']['safeRestart'])
+        result = c.request(3, 'remote/shutdownIfIdle')
+        self.assertTrue(result['result']['shutdown'])
+        c.proc.wait(timeout=8)
+        for stream in (c.proc.stdin, c.proc.stdout, c.proc.stderr):
+            stream.close()
+        replacement = self.client()
+        self.assertTrue(replacement.request(4, 'remote/session')['result']['safeRestart'])
+
+    def test_safe_restart_refuses_running_or_approval_waiting_tasks(self):
+        c = self.client()
+        c.request(2, 'thread/start')
+        c.request(3, 'turn/start', threadId='thread-1')
+        self.assertIn('error', c.request(4, 'remote/shutdownIfIdle'))
+        while True:
+            event = c.next()
+            if event.get('id') == 'approval-1':
+                break
+        self.assertIn('error', c.request(5, 'remote/shutdownIfIdle'))
+        self.assertIsNone(c.proc.poll())
+
     def test_idle_unsubscribe_removes_hosted_baseline(self):
         c = self.client()
         c.request(2, 'thread/start')
         self.assertIn('thread-1', c.request(3, 'remote/session')['result']['threads'])
         c.request(4, 'thread/unsubscribe', threadId='thread-1')
         self.assertNotIn('thread-1', c.request(5, 'remote/session')['result']['threads'])
+
+    def test_network_alias_profiles_share_the_same_daemon(self):
+        wifi = self.client(json.dumps(['wifi-profile', 'tailscale-profile']))
+        wifi.request(2, 'thread/start', threadId='same-thread')
+
+        tailscale = self.client(json.dumps(['tailscale-profile', 'wifi-profile']))
+        session = tailscale.request(2, 'remote/session')['result']
+        self.assertIn('same-thread', session['threads'])
+        resumed = tailscale.request(3, 'thread/resume', threadId='same-thread')
+        self.assertTrue(resumed['result']['remoteReplay'])
+
+    def test_live_legacy_daemon_wins_over_failed_shared_migration(self):
+        spec = importlib.util.spec_from_file_location('remote_session_under_test', HOST)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        identity = 'old-wifi-profile'
+        legacy_key = hashlib.sha256((identity + '\0' + self.command).encode()).hexdigest()[:24]
+        shared_key = hashlib.sha256(('shared-v2\0' + self.command).encode()).hexdigest()[:24]
+        root = self.home / '.remote-gpt'
+        for key in (legacy_key, shared_key):
+            folder = root / key
+            folder.mkdir(parents=True)
+            (folder / 'daemon.pid').write_text(str(os.getpid()))
+            (folder / 'socket').touch()
+        old_home = os.environ.get('HOME')
+        os.environ['HOME'] = str(self.home)
+        try:
+            selected = module.session_folder(json.dumps([identity]), self.command)
+        finally:
+            if old_home is None:
+                os.environ.pop('HOME', None)
+            else:
+                os.environ['HOME'] = old_home
+            for key in (legacy_key, shared_key):
+                folder = root / key
+                for child in folder.iterdir():
+                    child.unlink()
+                folder.rmdir()
+        self.assertEqual(root / legacy_key, selected)
 
     def test_rejected_unsubscribe_keeps_writer_recoverable_after_reconnect(self):
         c = self.client()

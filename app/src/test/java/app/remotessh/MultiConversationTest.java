@@ -55,6 +55,21 @@ public class MultiConversationTest {
       assertEquals(2,bubbles); assertEquals("B",app.threadId);
     } finally { service.destroy(); }
   }
+  @Test public void acknowledgingCompletedThreadKeepsOtherRunningCard() throws Exception {
+    second(); var service=Robolectric.buildService(ConnectionService.class).create();
+    try {
+      emit("turn/completed", "A", "turn", Json.obj("status", "completed"));
+      Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+      var shadow=Shadows.shadowOf(app.getSystemService(NotificationManager.class));
+      Notification done=shadow.getNotification(app.liveStatus.idFor("A"));
+      int runningId=app.liveStatus.idFor("B");
+      assertEquals("知道了",done.actions[0].title.toString());
+      assertNotNull(shadow.getNotification(runningId));
+      done.actions[0].actionIntent.send(); Shadows.shadowOf(Looper.getMainLooper()).idle();
+      assertNull(shadow.getNotification(app.liveStatus.idFor("A")));
+      assertNotNull(shadow.getNotification(runningId));
+    } finally { service.destroy(); }
+  }
   @Test public void backgroundApprovalAnswersCorrectRequestWithoutSwitching() throws Exception {
     second(); ByteArrayOutputStream sent=new ByteArrayOutputStream();
     RpcClient rpc=new RpcClient(new ByteArrayInputStream(new byte[0]),sent,new RpcClient.Events(){

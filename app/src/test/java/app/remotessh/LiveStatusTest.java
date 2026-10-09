@@ -50,6 +50,25 @@ public class LiveStatusTest {
       assertNull(Shadows.shadowOf(app.getSystemService(NotificationManager.class)).getNotification(2));
     } finally { service.destroy(); }
   }
+  @Test public void completedCardKeepsFinalReplyUntilAcknowledged() throws Exception {
+    app.threadTitle = "修复左侧列表";
+    app.items.add(new ChatItem("u", "userMessage", "请修复"));
+    app.items.add(new ChatItem("r", "reasoning", "内部思考"));
+    app.items.add(new ChatItem("a", "agentMessage", "修复已经完成，测试全部通过。"));
+    app.liveStatus.complete("task");
+    app.busy = false; app.remoteRunning = false; app.turnId = "";
+    app.liveStatus.update();
+    Notification done = live();
+    assertNotNull(done);
+    assertEquals("已完成 · 修复左侧列表", done.extras.getCharSequence(Notification.EXTRA_TITLE).toString());
+    assertEquals("修复已经完成，测试全部通过。",
+        done.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString());
+    assertEquals("知道了", done.actions[0].title.toString());
+    assertFalse(Shadows.shadowOf(done.contentIntent).getSavedIntent().getStringExtra("liveToken").isEmpty());
+    done.actions[0].actionIntent.send();
+    Shadows.shadowOf(Looper.getMainLooper()).idle();
+    assertNull(live());
+  }
   @Test public void replacingSameIdApprovalInvalidatesOldActionAndDoubleTapSendsOnce() throws Exception {
     app.approvals.add(approval()); app.liveStatus.update();
     PendingIntent old = live().actions[0].actionIntent;

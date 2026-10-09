@@ -211,6 +211,107 @@ public class MainActivityTest {
     assertEquals(conversation.getHeight() - sc.getHeight(), sc.getScrollY());
   }
 
+  @Test public void browserStatusShowsVersionsAndOffersManualUpdateEntry() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
+    app.profile.name = "开发电脑"; app.vault.profiles.add(app.profile);
+    app.remoteVersion.running = "0.156.1";
+    app.remoteVersion.accept(Json.obj("installed", "0.156.1", "latest", "0.160.0", "manager", "npm", "path", "/codex"));
+    final boolean[] clicked = {false};
+    RemoteBrowser browser = new RemoteBrowser(activity, app, false, new RemoteBrowser.Actions() {
+      public void connect(Profile p) {} public void add() {} public void settings() {}
+      public void directories() {} public void diagnostics() {} public void chat() {}
+      public void version() { clicked[0] = true; }
+    });
+    browser.show();
+    android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    View shell = dialog.getWindow().getDecorView();
+    TextView status = (TextView) find(shell, "远端版本与更新");
+    assertTrue(status.getText().toString().contains("已连接 · Codex 0.156.1"));
+    assertTrue(status.getText().toString().contains("待更新（现版本 0.156.1 → 最新版 0.160.0）"));
+    status.performClick(); assertTrue(clicked[0]);
+    captureView(shell, "remote-version-browser");
+    app.remoteVersion.updating = true; browser.refresh();
+    assertTrue(status.getText().toString().contains("正在更新至 0.160.0"));
+    browser.dismiss();
+  }
+
+  @Test public void outdatedRemotePromptsOnceAndDecliningKeepsConnection() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
+    app.remoteVersion.running = "0.100.0";
+    app.remoteVersion.accept(Json.obj("installed", "0.100.0", "latest", "0.101.0", "manager", "npm", "path", "/codex"));
+    app.remoteVersion.prompt = true; app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertTrue(dialog.isShowing());
+    assertTrue(shadowOf(dialog).getMessage().toString().contains("0.101.0"));
+    dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).performClick();
+    assertTrue(app.connected); assertFalse(app.remoteVersion.updating); assertFalse(app.remoteVersion.prompt);
+    app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertFalse(dialog.isShowing());
+    java.lang.reflect.Method show = MainActivity.class.getDeclaredMethod("showRemoteVersion"); show.setAccessible(true); show.invoke(activity);
+    android.app.AlertDialog reopened = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertTrue(reopened.isShowing());
+    captureView(reopened.getWindow().getDecorView(), "remote-version-confirmation");
+  }
+
+  @Test public void versionDialogCannotApplyToAnotherConnection() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
+    app.remoteVersion.running = "0.100.0";
+    app.remoteVersion.accept(Json.obj("installed", "0.100.0", "latest", "0.101.0", "manager", "npm", "path", "/codex"));
+    java.lang.reflect.Method show = MainActivity.class.getDeclaredMethod("showRemoteVersion"); show.setAccessible(true); show.invoke(activity);
+    android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    RemoteVersion previous = app.remoteVersion;
+    app.remoteVersion = new RemoteVersion(); app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertFalse(dialog.isShowing());
+    app.updateRemoteVersion(previous, "0.101.0");
+    assertFalse(app.remoteVersion.updating);
+  }
+
+  @Test public void installedUpdateAlwaysOffersAppRestartWithDestructiveConfirmation() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
+    app.profile.persistent = true;
+    app.remoteVersion.running = "0.156.1";
+    app.remoteVersion.accept(Json.obj("installed", "0.160.0", "latest", "0.160.0",
+        "manager", "npm", "path", "/codex"));
+    app.remoteVersion.restartSupported = false;
+    java.lang.reflect.Method show = MainActivity.class.getDeclaredMethod("showRemoteVersion");
+    show.setAccessible(true); show.invoke(activity);
+    android.app.AlertDialog version = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertNotNull(version.getButton(android.content.DialogInterface.BUTTON_POSITIVE));
+    assertEquals("重启并启用新版", version.getButton(android.content.DialogInterface.BUTTON_POSITIVE).getText().toString());
+    assertFalse(shadowOf(version).getMessage().toString().contains("于远端重启"));
+    version.dismiss();
+    java.lang.reflect.Method confirmMethod = MainActivity.class.getDeclaredMethod("confirmRemoteRestart", RemoteVersion.class);
+    confirmMethod.setAccessible(true); confirmMethod.invoke(activity, app.remoteVersion);
+    android.app.AlertDialog confirm = (android.app.AlertDialog) org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    assertEquals("停止任务并重启？", shadowOf(confirm).getTitle().toString());
+    String warning = shadowOf(confirm).getMessage().toString();
+    assertTrue(warning.contains("所有进行中对话"));
+    assertTrue(warning.contains("待处理审批"));
+    assertEquals("停止任务并重启", confirm.getButton(android.content.DialogInterface.BUTTON_POSITIVE).getText().toString());
+    captureView(confirm.getWindow().getDecorView(), "remote-restart-confirmation");
+    confirm.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).performClick();
+    assertTrue(app.connected);
+  }
+
+  @Test public void modelPanelUpdatesWhileOpenAndKeepsRemoteDefault() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
+    app.models = new org.json.JSONArray(); app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    find(content(), "选择模型与推理强度").performClick();
+    android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    View shell = dialog.getWindow().getDecorView();
+    app.models = new org.json.JSONArray().put(Json.obj("model", "gpt-6.1-sol", "displayName", "GPT-6.1 Sol",
+        "isDefault", true, "defaultReasoningEffort", "medium", "supportedReasoningEfforts",
+        new org.json.JSONArray().put("low").put("medium").put("future")));
+    app.changed();
+    assertNotNull(find(shell, "选择模型：gpt-6.1-sol"));
+    assertNotNull(find(shell, "刷新模型"));
+    find(shell, "完成").performClick();
+    assertEquals("", app.model); assertEquals("", app.reasoningEffort);
+  }
+
   @Test
   public void modelPanelSelectsSupportedEffortAndPermissionIconSharesRow() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
@@ -472,6 +573,24 @@ public class MainActivityTest {
     assertNotNull(find(directory, "使用此文件夹"));
     assertNotNull(find(directory, "新建项目"));
     captureView(directory, "remote-directories");
+    dialog.dismiss();
+  }
+
+  @Test public void streamingUpdatesDoNotRecreateBrowserConversationRows() {
+    RemoteApp app = (RemoteApp) activity.getApplication();
+    Profile profile = new Profile(); profile.name = "工作站";
+    app.profile = profile; app.vault.profiles.add(profile); app.connected = true;
+    app.threadId = "running"; app.busy = true; app.remoteRunning = true; app.turnId = "turn";
+    app.threads = new org.json.JSONArray().put(Json.obj("id", "running", "name", "正在回复的对话",
+        "status", Json.obj("type", "active")));
+    app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    find(content(), "打开连接和聊天记录").performClick();
+    android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    View root = find(dialog.getWindow().getDecorView(), "远程控制项目列表");
+    View original = (View) find(root, "正在回复的对话").getParent();
+    app.items.add(new ChatItem("a", "agentMessage", "第一个 token"));
+    app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertSame(original, (View) find(root, "正在回复的对话").getParent());
     dialog.dismiss();
   }
 

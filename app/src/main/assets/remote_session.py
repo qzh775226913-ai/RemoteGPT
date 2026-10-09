@@ -84,10 +84,13 @@ class Peer:
 
 class Host:
     def __init__(self, folder, command):
+        self.folder = folder
         self.lock = threading.RLock()
         self.peer = None
         self.pending = {}
         self.approvals = {}
+        self.active = set()
+        self.shutting_down = False
         self.sequence = 0
         self.initialized = False
         self.initialization = None
@@ -121,6 +124,24 @@ class Host:
             method = value.get('method')
             ident = value.get('id')
             params = value.get('params') or {}
+            if self.shutting_down:
+                if ident is not None:
+                    peer.send(dict(id=ident, error=dict(code=-32000, message='远端正在安全重启，请稍候重连')))
+                return
+            if method == 'remote/shutdownIfIdle':
+                if (not self.initialized or self.active or self.approvals or peer.resuming
+                        or any(p[2].startswith(('turn/', 'thread/')) for p in self.pending.values())):
+                    peer.send(dict(id=ident, error=dict(code=-32000, message='远端仍有任务或恢复请求，未执行重启')))
+                else:
+                    self.shutting_down = True
+                    peer.send(dict(id=ident, result={'shutdown': True}))
+                    def stop():
+                        try:
+                            os.killpg(self.process.pid, signal.SIGTERM)
+                        except ProcessLookupError:
+                            pass
+                    threading.Timer(1.0, stop).start()
+                return
             if method == 'initialize' and self.initialization is not None:
                 peer.send(dict(id=ident, result=self.initialization))
                 return
@@ -135,7 +156,9 @@ class Host:
                     self.initialized = True
                 return
             if method == 'remote/session':
-                peer.send(dict(id=ident, result={'lastThread': self.last_thread, 'threads': list(self.baselines), 'multiSession': True}))
+                peer.send(dict(id=ident, result={'lastThread': self.last_thread,
+                    'threads': list(self.baselines), 'multiSession': True,
+                    'safeRestart': True, 'sessionFolder': self.folder.name}))
                 return
             thread = params.get('threadId', '')
             if method == 'thread/resume' and thread in self.baselines:
@@ -208,12 +231,16 @@ class Host:
                         if result is not None:
                             if request == 'initialize':
                                 self.initialization = result
+                            if request == 'turn/start' and result.get('turn', {}).get('status', 'inProgress') == 'inProgress':
+                                self.active.add(request_thread)
                             if request in ('thread/start', 'thread/resume'):
                                 thread = result.get('thread', {}).get('id')
                                 if thread:
                                     seq = self.db.execute('SELECT COALESCE(MAX(seq),0) FROM events').fetchone()[0]
                                     self.baselines[thread] = (result, seq)
                                     self.last_thread = thread
+                                    if result.get('thread', {}).get('status', {}).get('type') == 'active':
+                                        self.active.add(thread)
                         if request == 'thread/unsubscribe' and 'error' not in value:
                             self.baselines.pop(request_thread, None)
                         value['id'] = original
@@ -226,10 +253,16 @@ class Host:
                         self.approvals[str(ident)] = value
                     if method == 'serverRequest/resolved':
                         self.approvals.pop(str(params.get('requestId')), None)
+                    if method == 'thread/status/changed' and params.get('status', {}).get('type') == 'active':
+                        self.active.add(thread)
+                    if method == 'turn/started':
+                        self.active.add(thread)
                     if method == 'turn/completed':
+                        self.active.discard(thread)
                         self.approvals = {k: v for k, v in self.approvals.items()
                                           if v.get('params', {}).get('threadId') != thread}
                     if method == 'thread/closed':
+                        self.active.discard(thread)
                         self.baselines.pop(thread, None)
                     self.db.execute('INSERT INTO events(thread,body) VALUES (?,?)', (thread, json.dumps(value)))
                     self.db.commit()
@@ -341,13 +374,54 @@ def attach(folder, command):
         sock.close()
 
 
+def live_daemon(folder):
+    """Check an existing daemon without attaching and evicting its phone peer."""
+    try:
+        pid = int((folder / 'daemon.pid').read_text())
+        os.kill(pid, 0)
+        return (folder / 'socket').exists()
+    except (OSError, ValueError):
+        return False
+
+
+def session_folder(identity_argument, command):
+    """Share one app-server across network aliases of the same remote account."""
+    root = Path.home() / '.remote-gpt'
+    try:
+        decoded = json.loads(identity_argument)
+        identities = decoded if isinstance(decoded, list) else [identity_argument]
+    except (json.JSONDecodeError, TypeError):
+        identities = [identity_argument]
+
+    # The home directory already scopes this to one remote OS account. The
+    # command remains part of the key so intentionally different app-server
+    # launches stay isolated, while Wi-Fi/Tailscale host aliases converge.
+    shared_key = hashlib.sha256(('shared-v2\0' + command).encode()).hexdigest()[:24]
+    shared = root / shared_key
+
+    # Before 1.0.23 the profile UUID was part of the key. Reuse a live legacy
+    # daemon before the shared one. A first failed post-upgrade connection may
+    # already have created the shared daemon while the old Wi-Fi daemon still
+    # owns an in-flight thread; preferring shared here would preserve the writer
+    # conflict forever.
+    for identity in identities:
+        if not isinstance(identity, str) or not identity:
+            continue
+        legacy_key = hashlib.sha256((identity + '\0' + command).encode()).hexdigest()[:24]
+        legacy = root / legacy_key
+        if live_daemon(legacy):
+            return legacy
+    if live_daemon(shared):
+        return shared
+    return shared
+
+
 if __name__ == '__main__':
     os.umask(0o077)
     if sys.argv[1] == '--daemon':
         daemon(Path(sys.argv[2]), sys.argv[3])
     else:
-        profile, command = sys.argv[1:3]
-        key = hashlib.sha256((profile + '\0' + command).encode()).hexdigest()[:24]
-        folder = Path.home() / '.remote-gpt' / key
+        identities, command = sys.argv[1:3]
+        folder = session_folder(identities, command)
         folder.mkdir(mode=0o700, parents=True, exist_ok=True)
         attach(folder, command)

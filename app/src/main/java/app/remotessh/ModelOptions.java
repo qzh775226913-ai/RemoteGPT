@@ -4,7 +4,8 @@ import java.util.*;
 import org.json.*;
 
 final class ModelOptions {
-  static String id(JSONObject model) { return model.optString("model", model.optString("id")); }
+  static String id(JSONObject model) { return model.isNull("model") || model.optString("model").trim().isEmpty()
+      ? model.optString("id", "").trim() : model.optString("model").trim(); }
   static List<String> efforts(JSONObject model) {
     List<String> values = new ArrayList<>();
     if (model == null) return values;
@@ -14,8 +15,6 @@ final class ModelOptions {
       String effort = entry == null ? supported.optString(i) : entry.optString("reasoningEffort");
       if (!effort.isEmpty() && !values.contains(effort)) values.add(effort);
     }
-    List<String> order = Arrays.asList("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra");
-    values.sort(Comparator.comparingInt(v -> order.contains(v) ? order.indexOf(v) : order.size()));
     return values;
   }
   static String displayName(JSONArray models, String id) {

@@ -41,6 +41,12 @@ public final class RemoteApp extends Application {
   public final List<ChatItem> items = new ArrayList<>();
   public final List<JSONObject> approvals = new ArrayList<>();
   public JSONArray threads = new JSONArray(), models = new JSONArray();
+  public RemoteVersion remoteVersion = new RemoteVersion();
+  private boolean restartingRemote;
+  private final List<String> remoteSessionIdentities = new ArrayList<>();
+  private String remoteSessionFolder = "";
+  public boolean modelsLoading;
+  public String modelsStatus = "";
   public String nextCursor = "";
   public Runnable observer;
   public final Set<Runnable> stateListeners = new HashSet<>();
@@ -101,7 +107,7 @@ public final class RemoteApp extends Application {
   }
 
   boolean canSwitchConversation() {
-    return connected && !attaching && !(busy && threadId.isEmpty()) && restoringThread.isEmpty() && loadingThread.isEmpty() && restoreQueue.isEmpty();
+    return connected && !restartingRemote && !attaching && !(busy && threadId.isEmpty()) && restoringThread.isEmpty() && loadingThread.isEmpty() && restoreQueue.isEmpty();
   }
 
   private void select(String id) {
@@ -377,6 +383,7 @@ public final class RemoteApp extends Application {
   }
 
   public void connect(Profile p) {
+    String previousProfileId = profile == null ? "" : profile.id;
     boolean sameHost = profile != null && profile.id.equals(p.id);
     disconnect();
     conversations.clear();
@@ -420,6 +427,31 @@ public final class RemoteApp extends Application {
                 while ((n = script.read(buffer)) != -1) bytes.write(buffer, 0, n);
                 t.setPersistentScript(bytes.toByteArray());
               }
+              // Profiles for Wi-Fi, a DNS name, and Tailscale can all reach the
+              // same remote account. Give the host helper every local legacy ID
+              // so it can reuse an already-running pre-1.0.23 daemon instead of
+              // starting a second app-server that conflicts on thread writers.
+              java.util.LinkedHashSet<String> identities = new java.util.LinkedHashSet<>();
+              synchronized (vault) {
+                // A live route switch has the strongest signal: the profile we
+                // just left owns the writer. After an app restart, prefer an
+                // older alias that remembers the same thread over the target
+                // profile, whose duplicate daemon may only contain a failed
+                // resume attempt.
+                if (!previousProfileId.isEmpty() && !previousProfileId.equals(p.id))
+                  identities.add(previousProfileId);
+                for (Profile candidate : vault.profiles)
+                  if (!candidate.id.equals(p.id)
+                      && candidate.user.equals(p.user)
+                      && candidate.command.equals(p.command)
+                      && !p.lastThread.isEmpty()
+                      && candidate.lastThread.equals(p.lastThread)) identities.add(candidate.id);
+                identities.add(p.id);
+                for (Profile candidate : vault.profiles) identities.add(candidate.id);
+              }
+              remoteSessionIdentities.clear();
+              remoteSessionIdentities.addAll(identities);
+              t.setPersistentIdentities(identities);
             }
             RpcClient c =
                 t.connect(
@@ -462,7 +494,7 @@ public final class RemoteApp extends Application {
                       public void onClosed(Exception e) {
                         main.post(
                             () -> {
-                              if (g == generation) failConnection(e, t);
+                              if (g == generation && !restartingRemote) failConnection(e, t);
                             });
                       }
                     });
@@ -483,9 +515,12 @@ public final class RemoteApp extends Application {
                       Json.obj(
                           "clientInfo",
                           Json.obj(
-                              "name", "remote_ssh_android", "title", "Remote", "version", "1.0.22"),
+                              "name", "remote_ssh_android", "title", "Remote", "version", "1.0.27"),
                           "capabilities", Json.obj("experimentalApi", true)),
-                      r -> completeInitialization(c, t, g));
+                      r -> {
+                        remoteVersion.running = RemoteVersion.fromHandshake(r);
+                        completeInitialization(c, t, g);
+                      });
                 });
           } catch (Exception e) {
             main.post(
@@ -518,16 +553,14 @@ public final class RemoteApp extends Application {
                   String resumeId = reconnectThread;
                   reconnectThread = "";
                   if (profile != null && profile.persistent) {
-                    request("remote/session", new JSONObject(), session -> restoreSession(session, resumeId));
+                    request("remote/session", new JSONObject(), session -> {
+                      remoteVersion.restartSupported = session.optBoolean("safeRestart");
+                      remoteSessionFolder = session.optString("sessionFolder");
+                      restoreSession(session, resumeId);
+                    });
                   } else if (!resumeId.isEmpty()) viewConversation(resumeId);
-                  request(
-                      "model/list",
-                      Json.obj("limit", 100),
-                      m -> {
-                        models = m.optJSONArray("data");
-                        if (models == null) models = new JSONArray();
-                        changed();
-                      });
+                  refreshModels();
+                  checkRemoteVersion(true);
                 });
           } catch (Exception e) {
             main.post(
@@ -536,6 +569,149 @@ public final class RemoteApp extends Application {
                 });
           }
         });
+  }
+
+  private String maintenanceScript() throws java.io.IOException {
+    try (java.io.InputStream input = getAssets().open("remote_maintenance.py")) {
+      java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+      byte[] buffer = new byte[8192]; int n;
+      while ((n = input.read(buffer)) != -1) bytes.write(buffer, 0, n);
+      return bytes.toString("UTF-8");
+    }
+  }
+
+  public void checkRemoteVersion(boolean prompt) {
+    if (!connected || transport == null || profile == null || remoteVersion.checking || remoteVersion.updating) return;
+    RemoteVersion version = remoteVersion;
+    SshTransport current = transport;
+    int g = generation;
+    String command = profile.command;
+    version.checking = true; version.error = ""; changed();
+    worker.execute(() -> {
+      JSONObject result;
+      try { result = current.maintenance(maintenanceScript(), Json.obj("action", "check", "command", command)); }
+      catch (Exception e) { result = Json.obj("error", message(e)); }
+      JSONObject value = result;
+      main.post(() -> {
+        if (g != generation || current != transport || version != remoteVersion) return;
+        version.checking = false; version.accept(value);
+        version.prompt = prompt && version.updateAvailable(); changed();
+      });
+    });
+  }
+
+  public void updateRemoteVersion(RemoteVersion expected, String target) {
+    if (expected != remoteVersion || !connected || transport == null || profile == null
+        || !expected.canUpdate() || !expected.latest.equals(target)) return;
+    SshTransport current = transport;
+    int g = generation;
+    String command = profile.command;
+    expected.updating = true; expected.prompt = false; expected.error = ""; changed();
+    worker.execute(() -> {
+      JSONObject result;
+      try { result = current.maintenance(maintenanceScript(), Json.obj("action", "update", "command", command,
+          "target", target, "path", expected.path, "installed", expected.installed)); }
+      catch (Exception e) { result = Json.obj("error", message(e)); }
+      JSONObject value = result;
+      main.post(() -> {
+        if (g != generation || current != transport || expected != remoteVersion) return;
+        expected.updating = false; expected.accept(value);
+        expected.prompt = value.has("error") || expected.needsRestart();
+        changed();
+      });
+    });
+  }
+
+  boolean remoteHasWork() {
+    if (busy || attaching || replaying || !restoringThread.isEmpty() || !loadingThread.isEmpty()
+        || !restoreQueue.isEmpty() || !approvals.isEmpty()) return true;
+    for (ConversationState state : conversations.values())
+      if (state.busy || state.remoteRunning || !state.approvals.isEmpty()) return true;
+    for (int i = 0; i < threads.length(); i++) {
+      JSONObject thread = threads.optJSONObject(i);
+      if (thread != null && threadRunning(thread)) return true;
+    }
+    return false;
+  }
+
+  public void restartRemoteVersion(RemoteVersion expected) {
+    if (expected != remoteVersion || !connected || profile == null || restartingRemote) return;
+    restartingRemote = true;
+    expected.error = "";
+    state = "正在停止远端任务并重启 Codex…";
+    changed();
+    SshTransport current = transport;
+    int g = generation;
+    boolean persistent = profile.persistent;
+    String command = profile.command;
+    JSONArray identities = new JSONArray(remoteSessionIdentities);
+    String sessionFolder = remoteSessionFolder;
+    worker.execute(() -> {
+      try {
+        if (persistent) {
+          JSONObject result = current.maintenance(maintenanceScript(), Json.obj(
+              "action", "restart", "command", command, "identities", identities,
+              "sessionFolder", sessionFolder));
+          if (result.has("error")) throw new java.io.IOException(result.optString("error"));
+        }
+        main.post(() -> {
+          if (g != generation) return;
+          Profile target = profile;
+          String previousThread = threadId.isEmpty() ? target.lastThread : threadId;
+          String draft = unsentText;
+          String savedDraft = draftText, savedModel = model, savedEffort = reasoningEffort;
+          List<String> savedImages = new ArrayList<>(draftImages);
+          Map<String, android.graphics.Bitmap> savedPreviews = new HashMap<>(draftImagePreviews);
+          disconnect();
+          state = "正在重启远端 Codex…"; changed();
+          int disconnectedGeneration = generation;
+          main.postDelayed(() -> {
+            if (generation != disconnectedGeneration || connected || connecting) return;
+            connect(target); reconnectThread = previousThread; unsentText = draft;
+            resumeDraftThread = previousThread;
+            draftText = savedDraft; model = savedModel; reasoningEffort = savedEffort;
+            draftImages.addAll(savedImages); draftImagePreviews.putAll(savedPreviews);
+          }, persistent ? 1200 : 0);
+        });
+      } catch (Exception e) {
+        main.post(() -> {
+          if (g != generation) return;
+          restartingRemote = false;
+          expected.error = "重启未执行：" + message(e); changed();
+        });
+      }
+    });
+  }
+
+  public void refreshModels() {
+    if (!connected || rpc == null || modelsLoading) return;
+    final RpcClient client = rpc;
+    final int g = generation;
+    modelsLoading = true;
+    modelsStatus = "正在刷新模型…";
+    changed();
+    worker.execute(() -> {
+      try {
+        JSONArray refreshed = ModelCatalog.load(params -> {
+          if (client != rpc || g != generation) throw new java.io.IOException("连接已切换");
+          return client.request("model/list", params).get(35, TimeUnit.SECONDS);
+        });
+        main.post(() -> {
+          if (g != generation || client != rpc) return;
+          models = refreshed;
+          modelsLoading = false;
+          modelsStatus = models.length() == 0 ? "远端未返回可选模型，可使用远端默认" : "已同步远端模型";
+          changed();
+        });
+      } catch (Exception e) {
+        main.post(() -> {
+          if (g != generation || client != rpc) return;
+          modelsLoading = false;
+          modelsStatus = "刷新失败，保留上次列表：" + message(e);
+          changed();
+        });
+      }
+    });
   }
 
   private void failConnection(Throwable e, SshTransport t) {
@@ -587,6 +763,12 @@ public final class RemoteApp extends Application {
     trustHost = "";
     RpcClient old = rpc;
     rpc = null;
+    modelsLoading = false;
+    modelsStatus = "";
+    remoteVersion = new RemoteVersion();
+    restartingRemote = false;
+    remoteSessionIdentities.clear();
+    remoteSessionFolder = "";
     SshTransport t = transport;
     transport = null;
     if (old != null || t != null)
@@ -943,7 +1125,7 @@ public final class RemoteApp extends Application {
   public void send(String text) { send(text, false); }
 
   private void send(String text, boolean textOnly) {
-    if (replaying || !connected || busy || readOnly || attaching || (text.trim().isEmpty() && draftImages.isEmpty())) return;
+    if (restartingRemote || replaying || !connected || busy || readOnly || attaching || (text.trim().isEmpty() && draftImages.isEmpty())) return;
     final List<String> attachments = textOnly ? new ArrayList<>() : new ArrayList<>(draftImages);
     busy = true;
     stopping = false;
@@ -1407,6 +1589,8 @@ public final class RemoteApp extends Application {
         if (historical) historicalError(turn.optString("id"), message);
         else error = message;
       }
+      if (!historical && turn.optString("status").equals("completed") && liveStatus != null)
+        liveStatus.complete(threadId);
       if (!historical) refreshThreads(false);
       if (!historical && turn.optString("status").equals("completed") && !readOnly && !queuedMessage().isEmpty()) {
         readyMessages.add(queueKey());
