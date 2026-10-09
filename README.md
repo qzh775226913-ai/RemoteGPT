@@ -1,3 +1,14 @@
+## 1.0.29：按远端能力选择运行速度
+
+- 模型面板新增“运行速度”：远端默认、普通及远端实际提供的快速／其他档位，下一轮生效。优先读取 `serviceTiers` 的 ID、名称和说明，兼容 `additionalSpeedTiers`；不内置模型或速度白名单。
+- 连接成功及打开面板时读取项目有效配置、管理默认项和分页功能列表，依据实际默认模型判断能力，遵循远端 `fast_mode` 关闭设置。不支持这些可选查询的旧端仍可聊天；没有能力信息时不虚构快速选项。
+- 每条对话分别保存速度选择和原始远端档位，重连与历史重放不会覆盖已保存选择；Wi-Fi 与 Tailscale 连接在 SSH 主机指纹、账号和启动命令相同时共享选择。启动命令只以摘要作为偏好存储标识。
+- 普通模式显式发送 `serviceTier: "default"`，恢复远端默认会撤销本 App 的覆盖；未修改的默认模式不发送覆盖参数。发送前再次校验能力，模型不支持或远端关闭所选档位时保留消息并提示重新选择，不自动重发。
+- 新托管在成功提交轮次后更新恢复配置，拒绝的请求不会更新；手机仍兼容正在运行的旧托管，无需为此强制停止远端任务。小屏面板可滚动，“完成”按钮固定在底部。
+- 交付：`dist/RemoteGPT-1.0.29-Android-universal-debug.apk`，versionCode 30，沿用现有包名、应用名称与签名。
+
+协议及配置依据：[OpenAI App Server](https://learn.chatgpt.com/docs/app-server)、[配置参考](https://learn.chatgpt.com/docs/config-file/config-reference)、[运行速度](https://learn.chatgpt.com/docs/agent-configuration/speed)，并核对本机 Codex 0.162.0 的实际模型目录与生成的协议 Schema。
+
 ## 1.0.28：由用户决定何时在 App 内重启远端 Codex
 
 - 安装新版后不再自动重启。版本弹窗始终提供“重启并启用新版”，用户可以点“稍后”，在合适时间再次点击“待重启”进入。

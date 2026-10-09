@@ -1,3 +1,12 @@
+## 1.0.29 远端运行速度选择验收
+
+- 修改前已提交 1.0.28 工作区基线：`2f8efcd`。
+- Android 完整回归 172 项全部通过，0 失败、0 跳过，包括隔离 SSH 夹具测试。最后补充刷新失败保留已知功能开关的回归后，相关配置及速度状态定向测试 17 项全部通过；最终 `assembleDebug` 和 `lintDebug` 成功。Python 28 项全部通过，`git diff --check` 通过。
+- 覆盖动态档位、现代与旧版协议、配置默认模型、项目和全局功能开关、分页、刷新失败、模型切换、每条对话存储、重新连接、恢复默认、请求期间改选、成功更新托管恢复配置及拒绝请求不更新配置。已查看普通和小屏原生模型面板截图，固定完成按钮可见。
+- 核对本机 Codex 0.162.0 的实际模型目录和生成协议：快速档位 ID 为 `priority`，显式普通档位为 `default`；界面以每台远端实际返回的能力和说明为准。只进行了配置读取及临时线程协议探测，没有发起真实模型推理，也未重启实际远端会话。
+- APK 包名 `app.remotessh`，名称 RemoteGPT，版本 1.0.29 / versionCode 30；签名验证通过，与 1.0.28 证书相同，可覆盖安装。交付 `dist/RemoteGPT-1.0.29-Android-universal-debug.apk`，4,797,701 字节，SHA-256：`91b8b6b79dea22700c4f9dd5bc26f2c8b10ac3a5cabe6bfa5ea4ab2ca100739a`。
+- 已发布到现有 Tailscale HTTP 服务，并完整下载核对字节数与 SHA-256：[下载安装包](http://100.109.221.115:8000/RemoteGPT-1.0.29-Android-universal-debug.apk)。截图位于 `dist/screenshots/1.0.29/`。未进行 Android 真机验收或实际速度测量；旧托管仍可继续运行，新托管的恢复配置更新在其下次启动后生效。
+
 ## 1.0.28 App 内确认重启验收
 
 - Android 共 151 项：141 通过、10 项 SSH 专用夹具测试未启用、0 失败；Python 27 项通过。`assembleDebug`、`lintDebug`、`git diff --check` 通过。

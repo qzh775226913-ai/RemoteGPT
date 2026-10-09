@@ -312,6 +312,48 @@ public class MainActivityTest {
     assertEquals("", app.model); assertEquals("", app.reasoningEffort);
   }
 
+  @Test public void speedPickerUsesRemoteDetailsAndRevokesUnsupportedModelChoice() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
+    app.models = new org.json.JSONArray().put(Json.obj("model", "fast-model", "displayName", "Fast model", "serviceTiers",
+        new org.json.JSONArray().put(Json.obj("id", "priority", "name", "Fast", "description", "Server speed and usage details"))))
+        .put(Json.obj("model", "ordinary-model", "displayName", "Ordinary model", "serviceTiers", new org.json.JSONArray()));
+    app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    find(content(), "选择模型与推理强度").performClick();
+    android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog(); View shell = dialog.getWindow().getDecorView();
+    find(shell, "选择模型：fast-model").performClick();
+    find(shell, "选择运行速度：priority").performClick();
+    assertNotNull(find(shell, "Server speed and usage details"));
+    captureView(shell, "model-speed-picker");
+    find(shell, "完成").performClick();
+    assertEquals("priority", app.serviceTier);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertTrue(((TextView) find(content(), "选择模型与推理强度")).getText().toString().contains("快速"));
+    find(content(), "选择模型与推理强度").performClick();
+    shell = org.robolectric.shadows.ShadowDialog.getLatestDialog().getWindow().getDecorView();
+    find(shell, "选择模型：ordinary-model").performClick();
+    assertNull(find(shell, "选择运行速度：priority"));
+    find(shell, "完成").performClick(); assertEquals("", app.serviceTier);
+  }
+
+  @Test @Config(qualifiers="w360dp-h640dp-xhdpi")
+  public void speedPickerScrollsOnSmallPhoneAndHonorsRemoteFeatureGate() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
+    app.model = "gated"; app.modelSettings.fastEnabled = false;
+    app.models = new org.json.JSONArray().put(Json.obj("model", "gated", "serviceTiers",
+        new org.json.JSONArray().put(Json.obj("id", "priority", "name", "Fast"))));
+    app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    find(content(), "选择模型与推理强度").performClick();
+    View shell = org.robolectric.shadows.ShadowDialog.getLatestDialog().getWindow().getDecorView();
+    assertNull(find(shell, "选择运行速度：priority"));
+    assertNotNull(find(shell, "选择运行速度：default"));
+    assertNotNull(find(shell, "完成")); captureView(shell, "model-speed-small-phone");
+    android.graphics.Rect visible = new android.graphics.Rect();
+    find(shell, "完成").getDrawingRect(visible);
+    ((ViewGroup) shell).offsetDescendantRectToMyCoords(find(shell, "完成"), visible);
+    assertTrue(visible.height() > 0); assertTrue(visible.top >= 0);
+    assertTrue(visible.bottom <= activity.getResources().getDisplayMetrics().heightPixels);
+  }
+
   @Test
   public void modelPanelSelectsSupportedEffortAndPermissionIconSharesRow() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();

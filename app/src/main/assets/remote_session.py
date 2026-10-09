@@ -167,7 +167,7 @@ class Host:
                 peer.resuming = thread
                 peer.replay_since = since
                 peer.pause_seq = self.db.execute('SELECT COALESCE(MAX(seq),0) FROM events').fetchone()[0]
-                peer.send(dict(id=ident, result=dict(baseline, remoteReplay=True)))
+                peer.send(dict(id=ident, result=dict(baseline, remoteReplay=True, remoteConfigCurrent=True)))
                 return
             if method == 'remote/replay':
                 if peer.resuming != thread:
@@ -196,7 +196,7 @@ class Host:
                 # baseline before the response can strand a writer in this very
                 # app-server when unsubscribe is rejected or unsupported; after
                 # reconnect, forwarding resume then reports "active writer".
-                self.pending[self.sequence] = (peer, ident, method, thread)
+                self.pending[self.sequence] = (peer, ident, method, thread, dict(params))
                 value['id'] = self.sequence
             elif not method and ident is not None:
                 if str(ident) not in self.approvals:
@@ -220,7 +220,7 @@ class Host:
                         pending = self.pending.pop(ident, None)
                         if pending is None:
                             continue
-                        peer, original, request, request_thread = pending
+                        peer, original, request, request_thread, request_params = pending
                         result = value.get('result')
                         if request == 'initialize':
                             self.initializing = False
@@ -233,6 +233,13 @@ class Host:
                                 self.initialization = result
                             if request == 'turn/start' and result.get('turn', {}).get('status', 'inProgress') == 'inProgress':
                                 self.active.add(request_thread)
+                            if request == 'turn/start' and request_thread in self.baselines:
+                                baseline, since = self.baselines[request_thread]
+                                updated = dict(baseline)
+                                for source, target in [('model', 'model'), ('effort', 'reasoningEffort'), ('serviceTier', 'serviceTier')]:
+                                    if source in request_params:
+                                        updated[target] = request_params[source]
+                                self.baselines[request_thread] = (updated, since)
                             if request in ('thread/start', 'thread/resume'):
                                 thread = result.get('thread', {}).get('id')
                                 if thread:

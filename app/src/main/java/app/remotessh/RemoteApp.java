@@ -17,6 +17,12 @@ public final class RemoteApp extends Application {
   public String state = "未连接", error = "", threadId = "", turnId = "", model = "", unsentText = "";
   public boolean connecting, connected, busy, steering;
   public String reasoningEffort = "", draftText = "";
+  public String serviceTier = "", inheritedServiceTier = "", effectiveServiceTier = "", effectiveModel = "";
+  boolean inheritedTierKnown, tierOverrideApplied;
+  public ModelSettings modelSettings = new ModelSettings();
+  public boolean modelSettingsLoading;
+  private int settingsRevision;
+  private boolean serviceTierProtocol;
   public PermissionMode permissionMode = PermissionMode.INHERIT;
   public boolean readOnly, remoteRunning;
   public final UsageLimits usage = new UsageLimits();
@@ -92,7 +98,7 @@ public final class RemoteApp extends Application {
     checkpoint();
     ConversationState selected = conversations.get(threadId);
     ConversationState target = conversations.computeIfAbsent(id, key -> {
-      ConversationState c = new ConversationState(); c.threadId=key; return c;
+      ConversationState c = new ConversationState(); c.threadId=key; restoreServiceTier(c, key); return c;
     });
     String selectedProject = profile == null ? "" : profile.cwd;
     String selectedLast = profile == null ? "" : profile.lastThread;
@@ -114,7 +120,9 @@ public final class RemoteApp extends Application {
     if (!id.equals(threadId)) leaveIdleConversation();
     checkpoint();
     ConversationState target = conversations.computeIfAbsent(id, key -> {
-      ConversationState c = new ConversationState(); c.threadId=key; c.model=model; c.effort=reasoningEffort; c.permission=permissionMode; return c;
+      ConversationState c = new ConversationState(); c.threadId=key; c.model=model; c.effort=reasoningEffort; c.permission=permissionMode;
+      restoreServiceTier(c, key);
+      return c;
     });
     target.apply(this);
     if (profile != null) { profile.lastThread=id; save(); }
@@ -392,6 +400,9 @@ public final class RemoteApp extends Application {
     reconnectThread = p.lastThread;
     model = "";
     reasoningEffort = "";
+    serviceTier = ""; inheritedServiceTier = ""; effectiveServiceTier = ""; effectiveModel = "";
+    inheritedTierKnown = false; tierOverrideApplied = false; serviceTierProtocol = false;
+    modelSettings = new ModelSettings();
     draftImages.clear();
     draftImagePreviews.clear();
     pendingImagePreview = null;
@@ -515,7 +526,7 @@ public final class RemoteApp extends Application {
                       Json.obj(
                           "clientInfo",
                           Json.obj(
-                              "name", "remote_ssh_android", "title", "Remote", "version", "1.0.27"),
+                              "name", "remote_ssh_android", "title", "Remote", "version", "1.0.29"),
                           "capabilities", Json.obj("experimentalApi", true)),
                       r -> {
                         remoteVersion.running = RemoteVersion.fromHandshake(r);
@@ -560,6 +571,7 @@ public final class RemoteApp extends Application {
                     });
                   } else if (!resumeId.isEmpty()) viewConversation(resumeId);
                   refreshModels();
+                  refreshModelSettings();
                   checkRemoteVersion(true);
                 });
           } catch (Exception e) {
@@ -699,6 +711,7 @@ public final class RemoteApp extends Application {
         main.post(() -> {
           if (g != generation || client != rpc) return;
           models = refreshed;
+          serviceTierProtocol |= ServiceTierOptions.hasProtocolMetadata(refreshed);
           modelsLoading = false;
           modelsStatus = models.length() == 0 ? "远端未返回可选模型，可使用远端默认" : "已同步远端模型";
           changed();
@@ -712,6 +725,137 @@ public final class RemoteApp extends Application {
         });
       }
     });
+  }
+
+  public void refreshModelSettings() {
+    if (!connected || rpc == null) return;
+    String cwd = currentProject();
+    if (modelSettingsLoading && modelSettings.cwd.equals(cwd)) return;
+    final RpcClient client = rpc; final int g = generation, revision = ++settingsRevision;
+    modelSettingsLoading = true;
+    // Keep the last usable snapshot while refreshing the same project.
+    if (!modelSettings.cwd.equals(cwd)) { modelSettings = new ModelSettings(); modelSettings.cwd = cwd; }
+    changed();
+    worker.execute(() -> {
+      ModelSettings refreshed = ModelSettings.load(request -> {
+        if (g != generation || client != rpc) throw new java.io.IOException("连接已切换");
+        return client.request(request.getString("method"), request.getJSONObject("params")).get(20, TimeUnit.SECONDS);
+      }, cwd);
+      main.post(() -> {
+        if (g != generation || client != rpc || revision != settingsRevision) return;
+        if (!refreshed.globalFeaturesKnown && modelSettings.globalFeaturesKnown) {
+          refreshed.globalFastEnabled &= modelSettings.globalFastEnabled;
+          refreshed.fastEnabled &= refreshed.globalFastEnabled;
+          refreshed.globalFeaturesKnown = true;
+        }
+        if (!refreshed.configKnown && modelSettings.configKnown && modelSettings.cwd.equals(cwd)) {
+          refreshed.model = modelSettings.model; refreshed.managedModel = modelSettings.managedModel;
+          refreshed.tier = modelSettings.tier; refreshed.configKnown = true;
+          refreshed.fastEnabled &= modelSettings.fastEnabled;
+          refreshed.globalFastEnabled &= modelSettings.globalFastEnabled;
+        }
+        modelSettings = refreshed; modelSettingsLoading = false; changed();
+      });
+    });
+  }
+
+  private String tierPreferenceKey(String id) {
+    if (profile == null) return "unconnected:" + id;
+    String pin = vault == null ? null : vault.getPin(profile.host + ":" + profile.port);
+    String identity = pin == null ? profile.id : pin + "\0" + profile.user + "\0" + profile.command;
+    try {
+      // Custom launch commands may contain private values; do not copy them into preference keys.
+      byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+          .digest(identity.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      return Base64.getUrlEncoder().withoutPadding().encodeToString(digest) + ":" + id;
+    } catch (java.security.NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); }
+  }
+
+  private void saveServiceTier() {
+    if (profile == null) return;
+    android.content.SharedPreferences.Editor edit = getSharedPreferences("service-tiers", MODE_PRIVATE).edit();
+    String key = tierPreferenceKey(threadId);
+    edit.putString(key + ":choice", serviceTier);
+    edit.putBoolean(key + ":applied", tierOverrideApplied);
+    if (inheritedTierKnown) edit.putString(key + ":base", inheritedServiceTier);
+    edit.apply();
+  }
+
+  private void restoreServiceTier(ConversationState c, String id) {
+    android.content.SharedPreferences prefs = getSharedPreferences("service-tiers", MODE_PRIVATE);
+    String prefix = tierPreferenceKey(id);
+    c.serviceTier = prefs.getString(prefix + ":choice", "");
+    c.inheritedTierKnown = prefs.contains(prefix + ":base");
+    c.inheritedServiceTier = prefs.getString(prefix + ":base", "");
+    c.tierOverrideApplied = prefs.getBoolean(prefix + ":applied", false);
+  }
+
+  JSONObject selectedModel(String selection) {
+    String id = selection;
+    if (id.isEmpty()) {
+      if (!threadId.isEmpty() && !effectiveModel.isEmpty()) id = effectiveModel;
+      else if (modelSettings.configKnown && modelSettings.cwd.equals(currentProject())) {
+        id = reasoningEffort.isEmpty() && !modelSettings.managedModel.isEmpty() ? modelSettings.managedModel : modelSettings.model;
+        if (id.isEmpty()) for (int i = 0; i < models.length(); i++) {
+          JSONObject entry = models.optJSONObject(i);
+          if (entry != null && entry.optBoolean("isDefault")) { id = ModelOptions.id(entry); break; }
+        }
+      }
+    }
+    return ServiceTierOptions.model(models, id);
+  }
+
+  boolean supportsServiceTier() { return serviceTierProtocol || ServiceTierOptions.hasProtocolMetadata(models); }
+
+  boolean speedSelectionEnabled() {
+    return modelSettings.cwd.equals(currentProject()) ? modelSettings.fastEnabled : modelSettings.globalFastEnabled;
+  }
+
+  String defaultServiceTier(JSONObject selected) {
+    String tier = inheritedTierKnown ? inheritedServiceTier : "";
+    if (!inheritedTierKnown && modelSettings.configKnown && modelSettings.cwd.equals(currentProject())) tier = modelSettings.tier;
+    if (!inheritedTierKnown && tier.isEmpty() && selected != null && !selected.isNull("defaultServiceTier"))
+      tier = selected.optString("defaultServiceTier");
+    if (tier.isEmpty() || tier.equals(ServiceTierOptions.STANDARD)) return ServiceTierOptions.STANDARD;
+    if (ServiceTierOptions.hasMetadata(selected)
+        && ServiceTierOptions.supportedId(selected, tier).isEmpty())
+      return ServiceTierOptions.STANDARD;
+    return !ServiceTierOptions.hasMetadata(selected) ? tier : ServiceTierOptions.supportedId(selected, tier);
+  }
+
+  void chooseServiceTier(String choice) { serviceTier = choice; saveServiceTier(); changed(); }
+
+  String serviceTierSummary() {
+    JSONObject selected = selectedModel(model);
+    String tier = serviceTier.isEmpty() ? (!tierOverrideApplied && !effectiveServiceTier.isEmpty() ? effectiveServiceTier : defaultServiceTier(selected)) : serviceTier;
+    return serviceTier.isEmpty() && tier.equals(ServiceTierOptions.STANDARD) ? "" : ServiceTierOptions.label(tier, selected);
+  }
+
+  private boolean validateServiceTier() {
+    if (serviceTier.isEmpty()) return true;
+    if (serviceTier.equals(ServiceTierOptions.STANDARD) && supportsServiceTier()) return true;
+    JSONObject selected = selectedModel(model);
+    if (!supportsServiceTier() || !speedSelectionEnabled() || selected == null
+        || ServiceTierOptions.supportedId(selected, serviceTier).isEmpty()) {
+      error = "当前远端模型未提供所选速度档位，请在模型面板重新选择"; changed(); return false;
+    }
+    return true;
+  }
+
+  private String requestedServiceTier() {
+    if (serviceTier.isEmpty()) return defaultServiceTier(selectedModel(model));
+    if (serviceTier.equals(ServiceTierOptions.STANDARD)) return serviceTier;
+    return ServiceTierOptions.supportedId(selectedModel(model), serviceTier);
+  }
+
+  private boolean shouldSendServiceTier() {
+    if (!supportsServiceTier()) return false;
+    if (!serviceTier.isEmpty() || tierOverrideApplied) return true;
+    JSONObject selected = selectedModel(model);
+    // A model change must not carry an inherited Fast tier onto a model which explicitly lacks it.
+    return !model.isEmpty() && !model.equals(effectiveModel) && !effectiveServiceTier.isEmpty()
+        && !effectiveServiceTier.equals(ServiceTierOptions.STANDARD) && ServiceTierOptions.hasMetadata(selected)
+        && ServiceTierOptions.supportedId(selected, effectiveServiceTier).isEmpty();
   }
 
   private void failConnection(Throwable e, SshTransport t) {
@@ -765,6 +909,7 @@ public final class RemoteApp extends Application {
     rpc = null;
     modelsLoading = false;
     modelsStatus = "";
+    modelSettingsLoading = false; settingsRevision++;
     remoteVersion = new RemoteVersion();
     restartingRemote = false;
     remoteSessionIdentities.clear();
@@ -1058,6 +1203,16 @@ public final class RemoteApp extends Application {
     resumeDraftThread = "";
     if (!id.equals(threadId)) select(id);
     if (!readonly && r.has("model") && !r.isNull("model")) model = r.optString("model");
+    if (!readonly && r.has("model") && !r.isNull("model")) effectiveModel = r.optString("model");
+    if (!readonly && r.has("serviceTier")) {
+      serviceTierProtocol = true;
+      // remoteReplay is a historical baseline; it must not replace a saved choice/base.
+      if (!r.optBoolean("remoteReplay") || r.optBoolean("remoteConfigCurrent") || effectiveServiceTier.isEmpty())
+        effectiveServiceTier = r.isNull("serviceTier") ? ServiceTierOptions.STANDARD : r.optString("serviceTier");
+      if (!inheritedTierKnown && serviceTier.isEmpty() && !tierOverrideApplied) {
+        inheritedServiceTier = effectiveServiceTier; inheritedTierKnown = true; saveServiceTier();
+      }
+    }
     if (!readonly && r.has("reasoningEffort")) reasoningEffort = r.isNull("reasoningEffort") ? "" : r.optString("reasoningEffort");
     this.readOnly = readonly;
     remoteRunning = Json.object(thread, "status").optString("type").equals("active");
@@ -1126,6 +1281,7 @@ public final class RemoteApp extends Application {
 
   private void send(String text, boolean textOnly) {
     if (restartingRemote || replaying || !connected || busy || readOnly || attaching || (text.trim().isEmpty() && draftImages.isEmpty())) return;
+    if (!validateServiceTier()) return;
     final List<String> attachments = textOnly ? new ArrayList<>() : new ArrayList<>(draftImages);
     busy = true;
     stopping = false;
@@ -1140,6 +1296,12 @@ public final class RemoteApp extends Application {
       try {
         if (!profile.cwd.isEmpty()) p.put("cwd", profile.cwd);
         if (!model.isEmpty()) p.put("model", model);
+        if (shouldSendServiceTier()) {
+          if (modelSettings.configKnown && !inheritedTierKnown) {
+            inheritedServiceTier = defaultServiceTier(selectedModel(model)); inheritedTierKnown = true;
+          }
+          p.put("serviceTier", requestedServiceTier());
+        }
       } catch (JSONException ignored) {
       }
       request(
@@ -1154,6 +1316,14 @@ public final class RemoteApp extends Application {
               return;
             }
             threadCwd = Json.object(r, "thread").optString("cwd", r.optString("cwd", profile.cwd));
+            effectiveModel = r.optString("model", model);
+            if (r.has("serviceTier")) {
+              serviceTierProtocol = true;
+              effectiveServiceTier = r.isNull("serviceTier") ? ServiceTierOptions.STANDARD : r.optString("serviceTier");
+              if (!inheritedTierKnown && serviceTier.isEmpty()) { inheritedServiceTier = effectiveServiceTier; inheritedTierKnown = true; }
+            }
+            if (p.has("serviceTier")) tierOverrideApplied = !serviceTier.isEmpty();
+            saveServiceTier();
             profile.lastThread = threadId;
             loadedThreads.add(threadId);
             threadTitle = text;
@@ -1232,14 +1402,24 @@ public final class RemoteApp extends Application {
     try {
       if (!model.isEmpty()) params.put("model", model);
       if (!reasoningEffort.isEmpty()) params.put("effort", reasoningEffort);
+      if (shouldSendServiceTier()) params.put("serviceTier", requestedServiceTier());
       params.put("summary", "auto");
       permissionMode.applyTurn(params);
     } catch (JSONException ignored) {
     }
+    final String sentDefaultTier = inheritedTierKnown ? (inheritedServiceTier.isEmpty() ? ServiceTierOptions.STANDARD : inheritedServiceTier)
+        : defaultServiceTier(selectedModel(model));
     request(
         "turn/start",
         params,
         r -> {
+          if (params.has("serviceTier")) {
+            effectiveServiceTier = params.optString("serviceTier");
+            // A selection changed while the request was pending belongs to the next turn.
+            tierOverrideApplied = !ServiceTierOptions.same(params.optString("serviceTier"), sentDefaultTier);
+          }
+          if (params.has("model")) effectiveModel = params.optString("model");
+          saveServiceTier();
           unsentText = "";
           draftImages.removeAll(attachments);
           for (String path : attachments) draftImagePreviews.remove(path);

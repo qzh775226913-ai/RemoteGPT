@@ -49,6 +49,9 @@ for line in sys.stdin:
         print('{broken json', flush=True)
         time.sleep(30)
     elif m == 'turn/start':
+        if r.get('params', {}).get('serviceTier') == 'rejected':
+            send(dict(id=r['id'], error=dict(code=-32602, message='unsupported tier')))
+            continue
         send(dict(id=r['id'], result=dict(turn=dict(id='turn-1'))))
         threading.Thread(target=work).start()
     elif m == 'test/events':
@@ -155,6 +158,23 @@ class PersistentSessionTest(unittest.TestCase):
         self.assertIn('thread-1', c.request(3, 'remote/session')['result']['threads'])
         c.request(4, 'thread/unsubscribe', threadId='thread-1')
         self.assertNotIn('thread-1', c.request(5, 'remote/session')['result']['threads'])
+
+    def test_successful_turn_overrides_update_reconnect_configuration(self):
+        c = self.client()
+        c.request(2, 'thread/start')
+        c.request(3, 'turn/start', threadId='thread-1', serviceTier='priority', model='new-model', effort='high')
+        self.assertIn('error', c.request(7, 'turn/start', threadId='thread-1', serviceTier='rejected'))
+        c.kill()
+        c = self.client()
+        result = c.request(4, 'thread/resume', threadId='thread-1')['result']
+        self.assertTrue(result['remoteConfigCurrent'])
+        self.assertEqual('priority', result['serviceTier'])
+        self.assertEqual('new-model', result['model'])
+        self.assertEqual('high', result['reasoningEffort'])
+        c.request(5, 'turn/start', threadId='thread-1', serviceTier='default')
+        c.kill()
+        c = self.client()
+        self.assertEqual('default', c.request(6, 'thread/resume', threadId='thread-1')['result']['serviceTier'])
 
     def test_network_alias_profiles_share_the_same_daemon(self):
         wifi = self.client(json.dumps(['wifi-profile', 'tailscale-profile']))

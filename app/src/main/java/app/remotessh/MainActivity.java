@@ -504,7 +504,8 @@ public final class MainActivity extends Activity {
     permissionButton.setTooltipText(app.permissionMode.label);
     permissionButton.invalidate();
     modelButton.setText(ModelOptions.displayName(app.models, app.model)
-        + (app.reasoningEffort.isEmpty() ? "" : " · " + ModelOptions.label(app.reasoningEffort)));
+        + (app.reasoningEffort.isEmpty() ? "" : " · " + ModelOptions.label(app.reasoningEffort))
+        + (app.serviceTierSummary().isEmpty() ? "" : " · " + app.serviceTierSummary()));
     modelButton.setTooltipText(modelButton.getText());
     runningIndicator.setVisibility(app.currentThreadRunning() ? View.VISIBLE : View.GONE);
     if (scroll.isFollowing()) {
@@ -1665,17 +1666,17 @@ public final class MainActivity extends Activity {
 
   private void chooseModel() {
     if (!app.connected) { toast("连接后可选择远端模型"); return; }
-    final String[] selected = {app.model, app.reasoningEffort};
+    final String[] selected = {app.model, app.reasoningEffort, app.serviceTier};
     final Profile modelProfile = app.profile;
     final String modelThread = app.threadId;
     LinearLayout panelView = column();
     panelView.setPadding(dp(20), 0, dp(20), dp(8));
-    TextView subtitle = text("模型与推理强度 · 下一轮生效", 12, muted);
+    TextView subtitle = text("模型、推理强度与运行速度 · 下一轮生效", 12, muted);
     subtitle.setPadding(dp(4), 0, 0, dp(16));
     panelView.addView(subtitle);
     TextView catalogStatus = text("", 12, muted);
     panelView.addView(catalogStatus);
-    TextView refresh = action("刷新模型", () -> app.refreshModels());
+    TextView refresh = action("刷新模型", () -> { app.refreshModels(); app.refreshModelSettings(); });
     panelView.addView(refresh);
     ScrollView modelScroll = new ScrollView(this);
     LinearLayout modelList = column(); modelScroll.addView(modelList);
@@ -1714,6 +1715,11 @@ public final class MainActivity extends Activity {
     panelView.addView(effortPanel);
     TextView effortHint = text("", 12, muted);
     effortHint.setPadding(dp(4), dp(12), 0, dp(16)); panelView.addView(effortHint);
+    TextView speedTitle = text("运行速度", 13, muted);
+    speedTitle.setPadding(dp(4), dp(4), 0, dp(8)); panelView.addView(speedTitle);
+    LinearLayout speedChoices = row(); panelView.addView(speedChoices);
+    TextView speedHint = text("", 12, muted);
+    speedHint.setPadding(dp(4), dp(10), dp(4), dp(12)); panelView.addView(speedHint);
     Dialog[] holder = new Dialog[1];
     Runnable[] redraw = new Runnable[1];
     redraw[0] = () -> {
@@ -1743,7 +1749,52 @@ public final class MainActivity extends Activity {
         });
         modelList.addView(option);
       }
+      JSONObject resolved = app.selectedModel(selected[0]);
+      if (resolved != null) chosen = resolved;
+      speedChoices.removeAllViews();
+      String supported = ServiceTierOptions.supportedId(resolved, selected[2]);
+      boolean revoked = !selected[2].isEmpty() && (!app.supportsServiceTier()
+          || !selected[2].equals(ServiceTierOptions.STANDARD) && (!app.speedSelectionEnabled() || supported.isEmpty()));
+      if (revoked) selected[2] = "";
+      else if (!selected[2].isEmpty()) selected[2] = supported;
+      List<JSONObject> speeds = new ArrayList<>();
+      speeds.add(Json.obj("id", "", "name", "远端默认"));
+      if (app.supportsServiceTier()) speeds.add(Json.obj("id", ServiceTierOptions.STANDARD, "name", "普通"));
+      if (app.speedSelectionEnabled()) speeds.addAll(ServiceTierOptions.tiers(resolved));
+      // Each option stays readable when a future server offers more than Fast.
+      LinearLayout speedRows = column();
+      speedChoices.addView(speedRows, new LinearLayout.LayoutParams(-1, -2));
+      LinearLayout speedRow = null;
+      for (int i = 0; i < speeds.size(); i++) {
+        if (i % 3 == 0) { speedRow = row(); speedRows.addView(speedRow); }
+        String tier = speeds.get(i).optString("id");
+        TextView option = text(ServiceTierOptions.label(tier, resolved), 13, fg);
+        option.setGravity(Gravity.CENTER); option.setMinHeight(dp(44)); option.setPadding(dp(6), dp(6), dp(6), dp(6));
+        option.setBackground(rounded(selected[2].equals(tier) ? panel : bg, 12));
+        option.setTypeface(null, selected[2].equals(tier) ? Typeface.BOLD : Typeface.NORMAL);
+        option.setContentDescription("选择运行速度：" + (tier.isEmpty() ? "远端默认" : tier));
+        option.setSelected(selected[2].equals(tier));
+        LinearLayout.LayoutParams speedParams = new LinearLayout.LayoutParams(0, -2, 1);
+        speedParams.setMargins(dp(2), dp(2), dp(2), dp(2));
+        speedRow.addView(option, speedParams);
+        clickable(option, () -> { selected[2] = tier; redraw[0].run(); });
+      }
+      String speedDetail = "";
+      if (selected[2].isEmpty()) speedDetail = app.inheritedTierKnown || app.modelSettings.configKnown
+          ? "沿用远端默认 · " + ServiceTierOptions.label(app.defaultServiceTier(resolved), resolved) : "沿用远端默认，不覆盖远端配置";
+      else if (selected[2].equals(ServiceTierOptions.STANDARD)) speedDetail = "普通速度 · 下一轮生效";
+      else for (JSONObject tier : ServiceTierOptions.tiers(resolved))
+        if (ServiceTierOptions.same(tier.optString("id"), selected[2]) && !tier.isNull("description")) speedDetail = tier.optString("description");
+      if (!selected[2].isEmpty() && !selected[2].equals(ServiceTierOptions.STANDARD) && speedDetail.isEmpty())
+        speedDetail = "更快响应，用量可能增加 · 下一轮生效";
+      if (!app.supportsServiceTier()) speedDetail = "远端未提供速度选项，可沿用远端默认";
+      else if (!app.speedSelectionEnabled()) speedDetail += "\n远端已关闭速度档位选择";
+      else if (resolved == null) speedDetail += app.modelSettingsLoading ? "\n正在确认远端默认模型…" : "\n请选择具体模型或刷新以确认速度选项";
+      else if (ServiceTierOptions.tiers(resolved).isEmpty()) speedDetail += "\n此模型未提供快速档位";
+      if (revoked) speedDetail = "所选速度已不可用，恢复远端默认\n" + speedDetail;
+      speedHint.setText(speedDetail);
       List<String> efforts = ModelOptions.efforts(chosen);
+      effortPanel.setVisibility(efforts.isEmpty() ? View.GONE : View.VISIBLE);
       String defaultEffort = chosen == null ? "" : chosen.optString("defaultReasoningEffort");
       int defaultIndex = Math.max(0, efforts.indexOf(defaultEffort));
       int index = efforts.indexOf(selected[1]);
@@ -1785,25 +1836,37 @@ public final class MainActivity extends Activity {
         holder[0].dismiss(); return;
       }
       app.model = selected[0]; app.reasoningEffort = selected[1];
-      app.changed(); holder[0].dismiss();
+      app.chooseServiceTier(selected[2]); holder[0].dismiss();
     });
-    apply.setTextColor(bg); apply.setBackground(rounded(fg, 22)); panelView.addView(apply);
-    holder[0] = sheet("模型", panelView);
+    apply.setTextColor(bg); apply.setBackground(rounded(fg, 22));
+    ScrollView pickerScroll = new ScrollView(this); pickerScroll.setFillViewport(false); pickerScroll.addView(panelView);
+    LinearLayout pickerContainer = column();
+    int available = Math.max(dp(180), getResources().getDisplayMetrics().heightPixels - dp(232));
+    panelView.measure(View.MeasureSpec.makeMeasureSpec(wide ? dp(500) : getResources().getDisplayMetrics().widthPixels - dp(16), View.MeasureSpec.EXACTLY),
+        View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+    pickerContainer.addView(pickerScroll, new LinearLayout.LayoutParams(-1, Math.min(available, panelView.getMeasuredHeight())));
+    LinearLayout pickerFooter = column(); pickerFooter.setPadding(dp(20), dp(10), dp(20), dp(8));
+    pickerFooter.addView(apply); pickerContainer.addView(pickerFooter);
+    holder[0] = sheet("模型", pickerContainer);
     final JSONArray[] rendered = {app.models};
+    final ModelSettings[] renderedSettings = {app.modelSettings};
+    final boolean[] settingsLoading = {app.modelSettingsLoading};
     Runnable updateModels = () -> {
       if (!app.connected || app.profile != modelProfile || !app.threadId.equals(modelThread)) {
         holder[0].dismiss(); return;
       }
       catalogStatus.setText(app.modelsStatus);
       refresh.setEnabled(!app.modelsLoading);
-      if (rendered[0] != app.models) {
+      if (rendered[0] != app.models || renderedSettings[0] != app.modelSettings || settingsLoading[0] != app.modelSettingsLoading) {
         rendered[0] = app.models;
+        renderedSettings[0] = app.modelSettings; settingsLoading[0] = app.modelSettingsLoading;
         redraw[0].run();
       }
     };
     app.stateListeners.add(updateModels);
     holder[0].setOnDismissListener(d -> app.stateListeners.remove(updateModels));
     app.refreshModels();
+    app.refreshModelSettings();
   }
 
   private void showRemoteVersion() {
