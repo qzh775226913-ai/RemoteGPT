@@ -12,6 +12,10 @@ public final class Markdown {
   }
 
   public static CharSequence render(String source, int muted, int panel, java.util.function.Consumer<String> open) {
+    return render(source, muted, panel, open, null);
+  }
+
+  public static CharSequence render(String source, int muted, int panel, java.util.function.Consumer<String> open, java.util.function.Consumer<String> copy) {
     SpannableStringBuilder out = new SpannableStringBuilder();
     boolean code = false;
     String[] lines = source.split("\n", -1);
@@ -40,14 +44,14 @@ public final class Markdown {
           line = "│ " + line.substring(2);
           out.append(line);
           out.setSpan(new ForegroundColorSpan(muted), start, out.length(), 33);
-        } else inline(out, line, open);
+        } else inline(out, line, open, copy);
       }
       if (n < lines.length - 1) out.append('\n');
     }
     return out;
   }
 
-  private static void inline(SpannableStringBuilder out, String line, java.util.function.Consumer<String> open) {
+  private static void inline(SpannableStringBuilder out, String line, java.util.function.Consumer<String> open, java.util.function.Consumer<String> copy) {
     Matcher m =
         Pattern.compile("\\*\\*(.+?)\\*\\*|`([^`]+)`|\\[([^\\]]+)\\]\\(([^\\s)]+)\\)")
             .matcher(line);
@@ -59,8 +63,12 @@ public final class Markdown {
         out.append(m.group(1));
         out.setSpan(new StyleSpan(Typeface.BOLD), s, out.length(), 33);
       } else if (m.group(2) != null) {
-        out.append(m.group(2));
+        String value = m.group(2);
+        out.append(value);
         out.setSpan(new TypefaceSpan("monospace"), s, out.length(), 33);
+        if (copy != null) out.setSpan(new ClickableSpan() {
+          @Override public void onClick(android.view.View widget) { copy.accept(value); }
+        }, s, out.length(), 33);
       } else {
         out.append(m.group(3));
         String url = m.group(4);

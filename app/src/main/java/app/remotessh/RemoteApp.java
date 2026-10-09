@@ -757,6 +757,8 @@ public final class RemoteApp extends Application {
         if (!refreshed.configKnown && modelSettings.configKnown && modelSettings.cwd.equals(cwd)) {
           refreshed.model = modelSettings.model; refreshed.managedModel = modelSettings.managedModel;
           refreshed.tier = modelSettings.tier; refreshed.configKnown = true;
+          refreshed.developerInstructions = modelSettings.developerInstructions;
+          refreshed.questionToolAllowed &= modelSettings.questionToolAllowed;
           refreshed.fastEnabled &= modelSettings.fastEnabled;
           refreshed.globalFastEnabled &= modelSettings.globalFastEnabled;
         }
@@ -1310,6 +1312,7 @@ public final class RemoteApp extends Application {
     changed();
     if (threadId.isEmpty()) {
       JSONObject p = permissionMode.startParams();
+      if(modelSettings.cwd.equals(currentProject())) modelSettings.applyQuestionSupport(p);
       // ThreadStartParams uses kebab-case configuration values; turn overrides use tagged
       // camel-case objects.
       try {

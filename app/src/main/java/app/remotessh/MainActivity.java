@@ -39,6 +39,7 @@ public final class MainActivity extends Activity {
 
   private View jump;
   private final Map<String, TextView> texts = new HashMap<>();
+  private final Map<String, MessageBodyView> messageBodies = new HashMap<>();
   private final Map<String, String> rendered = new HashMap<>();
   private final Map<String, ChatItem> currentItems = new HashMap<>();
   private final List<String> order = new ArrayList<>();
@@ -49,6 +50,9 @@ public final class MainActivity extends Activity {
   private DirectoryPicker directoryPicker;
   private LinearLayout readOnlyBar;
   private String shownApproval = "";
+  private QuestionForm questionForm;
+  private Bundle restoredQuestion;
+  private String restoredQuestionToken = "";
   private boolean scheduled, firstRender = true, wide;
   private boolean latestScrollPending, messageUpdatesPaused;
   private final Runnable pinLatest = () -> {
@@ -120,6 +124,8 @@ public final class MainActivity extends Activity {
       pendingImageHost = saved.getString("imageHost", "");
       pendingImageThread = saved.getString("imageThread", "");
       pendingImageProject = saved.getString("imageProject", "");
+      restoredQuestion=saved.getBundle("questionAnswers");
+      restoredQuestionToken=saved.getString("questionToken", "");
     }
   }
 
@@ -177,6 +183,9 @@ public final class MainActivity extends Activity {
     out.putString("imageHost", pendingImageHost);
     out.putString("imageThread", pendingImageThread);
     out.putString("imageProject", pendingImageProject);
+    if (questionForm!=null && !shownApproval.isEmpty()) {
+      out.putString("questionToken",shownApproval);out.putBundle("questionAnswers",questionForm.saveAnswers());
+    }
     super.onSaveInstanceState(out);
   }
 
@@ -327,16 +336,21 @@ public final class MainActivity extends Activity {
     clickable(usageLabel, this::usageInfo);
     center.addView(usageLabel);
     readOnlyBar = column();
+    readOnlyBar.setPadding(dp(16), dp(4), dp(16), dp(12));
     TextView readonly = text("只读历史 · 尚未取得写入权限", 13, muted);
-    readonly.setPadding(dp(20), dp(8), dp(20), dp(8));
+    readonly.setPadding(dp(4), dp(8), dp(4), dp(12));
     readOnlyBar.addView(readonly);
     LinearLayout roActions = row();
-    roActions.addView(action("刷新", app::refreshReadOnly), new LinearLayout.LayoutParams(0, -2, 1));
-    roActions.addView(
-        action("接续", () -> app.resume(app.threadId)), new LinearLayout.LayoutParams(0, -2, 1));
-    roActions.addView(action("新对话", this::startNewChat), new LinearLayout.LayoutParams(0, -2, 1));
+    TextView[] readOnlyControls = {action("刷新", app::refreshReadOnly), action("接续", () -> app.resume(app.threadId)), action("新对话", this::startNewChat)};
+    for (int i=0;i<readOnlyControls.length;i++) {
+      readOnlyControls[i].setSingleLine(true); readOnlyControls[i].setEllipsize(TextUtils.TruncateAt.END);
+      readOnlyControls[i].setPadding(dp(8),dp(12),dp(8),dp(12));
+      LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1);
+      if (i<readOnlyControls.length-1) cp.setMarginEnd(dp(10)); roActions.addView(readOnlyControls[i],cp);
+    }
     readOnlyBar.addView(roActions);
-    readOnlyBar.addView(action("重连并接续", app::reconnectAndResume));
+    LinearLayout.LayoutParams reconnectParams=new LinearLayout.LayoutParams(-1,-2); reconnectParams.topMargin=dp(10);
+    readOnlyBar.addView(action("重连并接续", app::reconnectAndResume),reconnectParams);
     readOnlyBar.setVisibility(View.GONE);
     center.addView(readOnlyBar);
     error = text("", 13, isDark() ? Color.rgb(255, 151, 137) : Color.rgb(165, 47, 36));
@@ -541,6 +555,7 @@ public final class MainActivity extends Activity {
         if (!appendOnly) {
           messages.removeAllViews();
           texts.clear();
+          messageBodies.clear();
           mediaRows.clear();
           mediaSources.clear();
           rendered.clear();
@@ -555,6 +570,8 @@ public final class MainActivity extends Activity {
         String key = item.text + "\u0000" + item.detail + "\u0000" + item.status + item.images.toString();
         if (!key.equals(rendered.get(item.id))) {
           rendered.put(item.id, key);
+          MessageBodyView messageBody = messageBodies.get(item.id);
+          if (messageBody != null) messageBody.setSource(item.text);
           TextView view = texts.get(item.id);
           if (view != null) {
             // Empty reasoning items are valid protocol events, not missing replies.
@@ -643,7 +660,7 @@ public final class MainActivity extends Activity {
     content.setTextIsSelectable(true);
     content.setLinksClickable(true);
     content.setMovementMethod(LinkMovementMethod.getInstance());
-    texts.put(item.id, content);
+    if (!item.type.equals("agentMessage")) texts.put(item.id, content);
     currentItems.put(item.id, item);
     if (item.user()) {
       content.setBackground(rounded(panel, 22));
@@ -663,7 +680,10 @@ public final class MainActivity extends Activity {
             if (latest != null) showDetails(latest);
           });
     }
-    wrap.addView(content, new LinearLayout.LayoutParams(item.prose() ? -2 : -1, -2));
+    if (item.type.equals("agentMessage")) {
+      MessageBodyView messageBody = new MessageBodyView(this,fg,muted,panel,this::openLink,this::copy);
+      messageBodies.put(item.id,messageBody); wrap.addView(messageBody,new LinearLayout.LayoutParams(-1,-2));
+    } else wrap.addView(content, new LinearLayout.LayoutParams(item.prose() ? -2 : -1, -2));
     LinearLayout media = column();
     mediaRows.put(item.id, media);
     wrap.addView(media, new LinearLayout.LayoutParams(-1, -2));
@@ -2008,8 +2028,9 @@ public final class MainActivity extends Activity {
       approvalDialog.dismiss();
       approvalDialog = null;
       shownApproval = "";
+      questionForm = null;
     }
-    if (req == null || approvalDialog != null) return;
+    if (req == null || approvalDialog != null || app.isAnswering(req)) return;
     shownApproval = id;
     JSONObject p = Json.object(req, "params");
     if (req.optString("method").equals("item/tool/requestUserInput")) {
@@ -2056,26 +2077,10 @@ public final class MainActivity extends Activity {
   }
 
   private void showQuestions(JSONObject req, JSONObject p) {
-    LinearLayout form = column();
-    form.setPadding(dp(20), 0, dp(20), dp(16));
-    Map<String, EditText> answers = new LinkedHashMap<>();
-    JSONArray questions = p.optJSONArray("questions");
-    if (questions != null)
-      for (int i = 0; i < questions.length(); i++) {
-        JSONObject q = questions.optJSONObject(i);
-        if (q == null) continue;
-        EditText answer =
-            field(form, q.optString("question"), "", "输入回答", q.optBoolean("isSecret"));
-        answers.put(q.optString("id"), answer);
-        JSONArray options = q.optJSONArray("options");
-        if (options != null)
-          for (int k = 0; k < options.length(); k++) {
-            JSONObject option = options.optJSONObject(k);
-            if (option == null) continue;
-            String label = option.optString("label");
-            form.addView(action(label, () -> answer.setText(label)));
-          }
-      }
+    QuestionForm form = new QuestionForm(this,p,fg,muted,panel);
+    questionForm=form;
+    if (shownApproval.equals(restoredQuestionToken)) form.restoreAnswers(restoredQuestion);
+    restoredQuestion=null;restoredQuestionToken="";
     ScrollView sc = new ScrollView(this);
     sc.addView(form);
     approvalDialog =
@@ -2090,23 +2095,15 @@ public final class MainActivity extends Activity {
                   approvalDialog = null;
                   shownApproval = "";
                 })
-            .setPositiveButton(
-                "发送",
-                (d, w) -> {
-                  JSONObject result = new JSONObject();
-                  for (Map.Entry<String, EditText> entry : answers.entrySet())
-                    try {
-                      result.put(
-                          entry.getKey(),
-                          Json.obj(
-                              "answers",
-                              new JSONArray().put(entry.getValue().getText().toString())));
-                    } catch (JSONException ignored) {
-                    }
-                  app.answer(req, Json.obj("answers", result));
-                  approvalDialog = null;
-                  shownApproval = "";
-                })
+            .setPositiveButton("发送", null)
             .show();
+    AlertDialog dialog=(AlertDialog) approvalDialog;
+    android.widget.Button sendAnswer=dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+    form.onChanged(()->sendAnswer.setEnabled(form.ready()));
+    sendAnswer.setOnClickListener(v->{
+      if(!form.ready() || app.isAnswering(req))return;
+      app.answer(req,form.result());
+      if(app.isAnswering(req)) {dialog.dismiss();approvalDialog=null;shownApproval="";questionForm=null;}
+    });
   }
 }

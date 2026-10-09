@@ -240,9 +240,9 @@ public class MainActivityTest {
     capture("freeze-initial"); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
     ConversationScrollView sc = (ConversationScrollView) find(content(), "对话消息");
     ViewGroup conversation = (ViewGroup) sc.getChildAt(0);
-    java.lang.reflect.Field field = MainActivity.class.getDeclaredField("texts"); field.setAccessible(true);
-    @SuppressWarnings("unchecked") java.util.Map<String, TextView> texts = (java.util.Map<String, TextView>) field.get(activity);
-    TextView original = texts.get("freeze0");
+    java.lang.reflect.Field field = MainActivity.class.getDeclaredField("messageBodies"); field.setAccessible(true);
+    @SuppressWarnings("unchecked") java.util.Map<String, MessageBodyView> bodies = (java.util.Map<String, MessageBodyView>) field.get(activity);
+    TextView original = (TextView)bodies.get("freeze0").getChildAt(0);
     String originalText = original.getText().toString();
     int originalHeight = conversation.getHeight();
     sc.scrollTo(0, 200);
@@ -253,14 +253,14 @@ public class MainActivityTest {
     capture("freeze-reading"); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     assertFalse(sc.isFollowing()); assertEquals(200, sc.getScrollY());
     assertEquals(originalHeight, conversation.getHeight());
-    assertSame(original, texts.get("freeze0"));
+    assertSame(original, bodies.get("freeze0").getChildAt(0));
     assertEquals(originalText, original.getText().toString());
-    assertFalse(texts.containsKey("freeze-new"));
+    assertFalse(bodies.containsKey("freeze-new"));
     assertEquals(26, app.items.size()); // Transport continues receiving while the UI is frozen.
     sc.scrollTo(0, conversation.getHeight());
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     capture("freeze-resumed"); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
-    assertTrue(sc.isFollowing()); assertTrue(texts.containsKey("freeze-new"));
+    assertTrue(sc.isFollowing()); assertTrue(bodies.containsKey("freeze-new"));
     assertTrue(original.getText().toString().contains("上方内容流式变长"));
     assertEquals(conversation.getHeight() - sc.getHeight(), sc.getScrollY());
   }
@@ -656,6 +656,35 @@ public class MainActivityTest {
     assertEquals(View.VISIBLE, ((View) card.getParent()).getVisibility());
     assertNotNull(find(details.getWindow().getDecorView(), reasoning.detail));
     details.dismiss();
+  }
+
+  @Test public void copyableBlocksAndReadOnlyButtons() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.readOnly=true;app.threadId="chat";
+    app.items.add(new ChatItem("a","agentMessage","运行以下命令：\n```sh\ngit status\necho ready\n```\n然后查看结果。"));app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    find(content(),"复制内容块 1").performClick();
+    android.content.ClipboardManager clipboard=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+    assertEquals("git status\necho ready\n",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+    View refresh=find(content(),"刷新"), resume=find(content(),"接续"), reconnect=find(content(),"重连并接续");
+    assertTrue(((LinearLayout.LayoutParams)refresh.getLayoutParams()).getMarginEnd()>0);
+    assertTrue(((LinearLayout.LayoutParams)resume.getLayoutParams()).getMarginEnd()>0);
+    assertTrue(((LinearLayout.LayoutParams)reconnect.getLayoutParams()).topMargin>0);
+    assertTrue(((View)refresh.getParent().getParent()).getPaddingLeft()>0);
+    capture("copy-blocks-readonly-spaced");
+  }
+
+  @Test public void questionsRequireExplicitAnswerAndSurviveRotation() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.busy=true;app.threadId="chat";
+    org.json.JSONObject req=Json.obj("id",17,"method","item/tool/requestUserInput","params",Json.obj("threadId","chat","isBlocking",true,"questions",new org.json.JSONArray().put(Json.obj("id","q","question","选择方案","options",new org.json.JSONArray().put(Json.obj("label","方案 A","description","优先兼容"))))));
+    app.approvals.add(req);app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertFalse(dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled());assertSame(req,app.visibleApproval());
+    find(dialog.getWindow().getDecorView(),"方案 A").performClick();assertTrue(dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled());assertSame(req,app.visibleApproval());
+    captureView(dialog.getWindow().getDecorView(),"question-choices-waiting");
+    controller.recreate();activity=controller.get();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertTrue(((RadioButton)find(dialog.getWindow().getDecorView(),"方案 A")).isChecked());
+    assertTrue(dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled());assertSame(req,app.visibleApproval());
   }
 
   @Test

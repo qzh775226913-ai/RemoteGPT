@@ -7,6 +7,19 @@ import org.json.*;
 final class ModelSettings {
   String model = "", managedModel = "", tier = "", cwd = "", status = "";
   boolean configKnown, globalFeaturesKnown, fastEnabled = true, globalFastEnabled = true;
+  boolean questionToolSupported, questionToolAllowed = true;
+  String developerInstructions = "";
+
+  void applyQuestionSupport(JSONObject params) {
+    if (!configKnown || !questionToolSupported || !questionToolAllowed) return;
+    try {
+      JSONObject overrides=params.optJSONObject("config");
+      if(overrides==null) {overrides=new JSONObject();params.put("config",overrides);}
+      overrides.put("features.default_mode_request_user_input",true);
+      params.put("developerInstructions", developerInstructions + "\n"
+          + "This client supports structured user questions with clickable choices. When a user decision is required before dependent work, use the blocking request_user_input tool and wait for the answer; do not merely ask in prose and proceed, and do not use an asynchronous question for a required decision. Optional questions may remain non-blocking. Put commands, configuration, and other content intended for direct copying in fenced code blocks.");
+    } catch(JSONException ignored) {}
+  }
   static ModelSettings load(ModelCatalog.PageSource source, String cwd) {
     ModelSettings settings = new ModelSettings(); settings.cwd = cwd;
     try {
@@ -17,6 +30,7 @@ final class ModelSettings {
       settings.model = config.isNull("model") ? "" : config.optString("model");
       settings.tier = config.isNull("service_tier") ? "" : config.optString("service_tier");
       settings.configKnown = true;
+      settings.developerInstructions = config.isNull("developer_instructions") ? "" : config.optString("developer_instructions");
       JSONObject features = config.optJSONObject("features");
       if (features != null && features.has("fast_mode") && !features.isNull("fast_mode"))
         settings.fastEnabled = features.optBoolean("fast_mode");
@@ -26,6 +40,8 @@ final class ModelSettings {
       JSONObject requirements = response.optJSONObject("requirements");
       if (requirements != null) {
         JSONObject features = requirements.optJSONObject("featureRequirements");
+        if (features != null && features.has("default_mode_request_user_input") && !features.isNull("default_mode_request_user_input"))
+          settings.questionToolAllowed=features.optBoolean("default_mode_request_user_input");
         if (features != null && features.has("fast_mode") && !features.isNull("fast_mode")) {
           settings.globalFeaturesKnown = true;
           settings.globalFastEnabled &= features.optBoolean("fast_mode");
@@ -39,6 +55,7 @@ final class ModelSettings {
     try {
       Set<String> seen = new HashSet<>(); String cursor = "";
       boolean enabled = settings.globalFastEnabled;
+      boolean questionToolSupported = false;
       do {
         JSONObject params = Json.obj("limit", 100);
         if (!cursor.isEmpty()) params.put("cursor", cursor);
@@ -49,12 +66,15 @@ final class ModelSettings {
           JSONObject feature = data.optJSONObject(i);
           if (feature != null && feature.optString("name").equals("fast_mode") && feature.has("enabled"))
             enabled = enabled && feature.optBoolean("enabled");
+          if (feature != null && feature.optString("name").equals("default_mode_request_user_input")
+              && !feature.optString("stage").equals("removed")) questionToolSupported=true;
         }
         cursor = page.isNull("nextCursor") ? "" : page.optString("nextCursor");
         if (!cursor.isEmpty() && (!seen.add(cursor) || seen.size() > 1000)) throw new IllegalStateException("功能分页异常");
       } while (!cursor.isEmpty());
       settings.globalFastEnabled = enabled;
       settings.globalFeaturesKnown = true;
+      settings.questionToolSupported=questionToolSupported;
       settings.fastEnabled &= enabled;
     } catch (Exception ignored) { /* Positive model metadata remains useful without this optional endpoint. */ }
     return settings;
