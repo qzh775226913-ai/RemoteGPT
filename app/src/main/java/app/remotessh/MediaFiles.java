@@ -9,6 +9,7 @@ import android.graphics.*;
 /** Bounded binary handling; remote paths are never opened as Android local files. */
 final class MediaFiles {
   static final long IMAGE_LIMIT = 20L * 1024 * 1024;
+  static final int MAX_ATTACHMENTS = 4;
   static final long DOWNLOAD_LIMIT = 100L * 1024 * 1024;
   static final Pattern IMAGE = Pattern.compile("!\\[([^\\]]*)\\]\\(([^\\s)]+)\\)");
 
@@ -54,6 +55,33 @@ final class MediaFiles {
     Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
     if (bitmap == null) throw new IOException("无法解码图片");
     return bitmap;
+  }
+
+  static final class Image {
+    final byte[] bytes;
+    final String extension;
+    final Bitmap preview;
+    Image(byte[] bytes, String extension, Bitmap preview) {
+      this.bytes = bytes; this.extension = extension; this.preview = preview;
+    }
+  }
+
+  static Image prepareImage(byte[] bytes) throws IOException {
+    BitmapFactory.Options info = new BitmapFactory.Options(); info.inJustDecodeBounds = true;
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.length, info);
+    if (info.outWidth <= 0 || info.outHeight <= 0) throw new IOException("此手机无法读取这张图片，请换一张或导出为 JPEG / PNG");
+    String mime = info.outMimeType == null ? "" : info.outMimeType;
+    Bitmap preview = decode(bytes, 256);
+    if (Arrays.asList("image/jpeg", "image/png", "image/webp", "image/gif").contains(mime))
+      return new Image(bytes, mime.equals("image/jpeg") ? ".jpg" : "." + mime.substring(6), preview);
+    // Native albums may return HEIF/AVIF. Decode locally and send a portable JPEG.
+    Bitmap image = decode(bytes, 2560);
+    try {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      if (!image.compress(Bitmap.CompressFormat.JPEG, 92, out)) throw new IOException("无法转换图片");
+      if (out.size() > IMAGE_LIMIT) throw new IOException("转换后的图片超过大小限制");
+      return new Image(out.toByteArray(), ".jpg", preview);
+    } finally { image.recycle(); }
   }
 
   static List<String> images(ChatItem item) {

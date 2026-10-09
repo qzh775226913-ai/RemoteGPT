@@ -34,6 +34,8 @@ public final class MainActivity extends Activity {
   private final Map<String, List<String>> mediaSources = new HashMap<>();
   private static final java.util.concurrent.ExecutorService mediaWorker = java.util.concurrent.Executors.newFixedThreadPool(2);
   private String pendingDownload = "", pendingDownloadHost = "";
+  private int pendingImageGeneration = -1;
+  private String pendingImageHost = "", pendingImageThread = "", pendingImageProject = "";
 
   private View jump;
   private final Map<String, TextView> texts = new HashMap<>();
@@ -114,6 +116,10 @@ public final class MainActivity extends Activity {
       input.setText(app.draftText);
       pendingDownload = saved.getString("download", "");
       pendingDownloadHost = saved.getString("downloadHost", "");
+      pendingImageGeneration = saved.getInt("imageGeneration", -1);
+      pendingImageHost = saved.getString("imageHost", "");
+      pendingImageThread = saved.getString("imageThread", "");
+      pendingImageProject = saved.getString("imageProject", "");
     }
   }
 
@@ -158,7 +164,7 @@ public final class MainActivity extends Activity {
   protected void onStop() {
     super.onStop();
     app.observer = null;
-    app.setForeground(false);
+    app.setForeground(false, pendingImageGeneration >= 0);
     app.main.removeCallbacks(ticker);
   }
 
@@ -167,6 +173,10 @@ public final class MainActivity extends Activity {
     out.putString("draft", input.getText().toString());
     out.putString("download", pendingDownload);
     out.putString("downloadHost", pendingDownloadHost);
+    out.putInt("imageGeneration", pendingImageGeneration);
+    out.putString("imageHost", pendingImageHost);
+    out.putString("imageThread", pendingImageThread);
+    out.putString("imageProject", pendingImageProject);
     super.onSaveInstanceState(out);
   }
 
@@ -749,8 +759,38 @@ public final class MainActivity extends Activity {
 
   private void pickImage() {
     if (!app.connected || app.busy || app.readOnly || app.attaching) { toast("请先连接并等待当前操作完成"); return; }
-    startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*")
-        .addCategory(Intent.CATEGORY_OPENABLE), 43);
+    if (app.draftImages.size() >= MediaFiles.MAX_ATTACHMENTS) { toast("每条消息最多 " + MediaFiles.MAX_ATTACHMENTS + " 张图片"); return; }
+    if (pendingImageGeneration >= 0) { toast("请先完成当前选图"); return; }
+    LinearLayout choices = column(); choices.setPadding(dp(20), 0, dp(20), dp(16));
+    TextView hint = text("可多选，目前还能添加 " + (MediaFiles.MAX_ATTACHMENTS - app.draftImages.size()) + " 张。相册的搜索和多选由相册 App 提供；不支持时可使用系统选择器。", 13, muted);
+    hint.setPadding(dp(4), 0, dp(4), dp(12)); choices.addView(hint);
+    Dialog[] holder = new Dialog[1];
+    String[] labels = {"手机相册", "其他相册 / 图片 App", "系统选择器"};
+    ImagePicker.Source[] sources = ImagePicker.Source.values();
+    for (int i = 0; i < labels.length; i++) {
+      ImagePicker.Source source = sources[i];
+      TextView option = action(labels[i], () -> { holder[0].dismiss(); launchImagePicker(source); });
+      LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2); params.bottomMargin = dp(8);
+      choices.addView(option, params);
+    }
+    holder[0] = sheet("选择图片来源", choices);
+  }
+
+  private String imageProject() {
+    return app.threadCwd + "\n" + (app.profile == null ? "" : app.profile.cwd);
+  }
+
+  private void launchImagePicker(ImagePicker.Source source) {
+    if (!app.connected || app.busy || app.readOnly || app.attaching || app.profile == null) {
+      toast("请先连接并等待当前操作完成"); return;
+    }
+    int remaining = MediaFiles.MAX_ATTACHMENTS - app.draftImages.size();
+    if (remaining <= 0) { toast("每条消息最多 " + MediaFiles.MAX_ATTACHMENTS + " 张图片"); return; }
+    pendingImageGeneration = app.connectionGeneration(); pendingImageHost = app.profile.id;
+    pendingImageThread = app.threadId; pendingImageProject = imageProject();
+    if (!ImagePicker.launch(this, source, remaining)) {
+      pendingImageGeneration = -1; toast("没有可用的图片选择器，请安装或启用相册 / 文件 App");
+    }
   }
 
   private void renderAttachments() {
@@ -762,7 +802,8 @@ public final class MainActivity extends Activity {
     }
     if (app.attaching) {
       addAttachmentPreview(app.pendingImagePreview, null, index + 1);
-      attachmentStrip.addView(text("图片上传中…", 13, muted));
+      TextView uploading = text("图片上传中…" + (app.imageUploadCount > 1 ? "（" + app.imageUploadIndex + " / " + app.imageUploadCount + "）" : ""), 13, muted);
+      uploading.setContentDescription("图片上传中…"); attachmentStrip.addView(uploading);
     }
   }
 
@@ -1627,7 +1668,20 @@ public final class MainActivity extends Activity {
   @Override
   protected void onActivityResult(int request, int result, Intent data) {
     super.onActivityResult(request, result, data);
-    if (request == 43 && result == RESULT_OK && data != null && data.getData() != null) app.attachImage(data.getData());
+    if (request == ImagePicker.REQUEST) {
+      boolean sameContext = pendingImageGeneration >= 0 && pendingImageGeneration == app.connectionGeneration()
+          && app.profile != null && pendingImageHost.equals(app.profile.id) && pendingImageThread.equals(app.threadId)
+          && pendingImageProject.equals(imageProject());
+      pendingImageGeneration = -1;
+      if (result == RESULT_OK && data != null) {
+        List<android.net.Uri> selected = ImagePicker.selected(data);
+        if (!selected.isEmpty()) {
+          if (!sameContext) toast("连接或对话已改变，请在当前对话重新选择图片");
+          else app.attachImages(selected);
+        }
+      }
+      return;
+    }
     if (request == 44) {
       String source = pendingDownload, host = pendingDownloadHost;
       pendingDownload = "";

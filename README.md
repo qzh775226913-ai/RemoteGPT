@@ -1,3 +1,14 @@
+## 1.0.31：手机相册与批量图片上传
+
+- 添加图片时可选“手机相册”“其他相册 / 图片 App”或“系统选择器”。相册入口交由手机已安装的 App 选择器处理，使用相册自身提供的搜索；不写死厂商包名。没有对应入口时自动尝试其他选图 App、系统照片选择器及文件选择器。
+- 支持多选返回的 `ClipData` 和单张返回的 URI，去重后按选择顺序逐张上传并显示进度。每条消息仍最多 4 张，每张原文件最多 20 MiB；超出剩余数量时提示重新选择，不静默丢弃所选图片。
+- 某张图片读取或上传失败时继续处理其余图片，已成功上传的预览保留在输入栏。PNG / JPEG / WebP / GIF 保留原文件；其他手机能够解码的格式（如 HEIF / AVIF）转换为最长边不超过 2560 像素的 JPEG，无法解码时提示改选或导出。
+- 外部相册打开、旋转和上传期间保留当前对话状态；返回后若连接、项目或对话已改变，则要求在当前对话重新选图。上传期间仍禁止发送未完成的附件或切换对话，旧连接的迟到上传结果不会添加到新连接。
+- 相册的智能搜索和多选取决于该相册自身是否提供；不支持多选时可使用“系统选择器”。沿用 Android 8.0 最低版本，不请求整个相册或存储访问权限。
+- 交付：`dist/RemoteGPT-1.0.31-Android-universal-debug.apk`，versionCode 32，沿用现有包名、名称与签名。
+
+接口依据：[Android 选图与内容 Intent](https://developer.android.com/guide/components/intents-common)、[系统照片多选与文件选择回退](https://developer.android.com/training/data-storage/shared/photo-picker)、[按 Intent 查询可用 App](https://developer.android.com/training/package-visibility/declaring)。
+
 ## 1.0.30：目录按钮布局与模型触摸滚动修复
 
 - 目录选择器顶部仅保留“上一级”和“输入路径”；“新建项目”移到底部，与“使用此文件夹”并排。按钮保持单行，增加间距，缩减水平内边距以适配窄屏。

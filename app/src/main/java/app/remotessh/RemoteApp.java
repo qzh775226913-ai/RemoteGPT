@@ -44,6 +44,7 @@ public final class RemoteApp extends Application {
   public final Map<String, android.graphics.Bitmap> draftImagePreviews = new HashMap<>();
   public android.graphics.Bitmap pendingImagePreview;
   public boolean attaching;
+  public int imageUploadIndex, imageUploadCount;
   public final List<ChatItem> items = new ArrayList<>();
   public final List<JSONObject> approvals = new ArrayList<>();
   public JSONArray threads = new JSONArray(), models = new JSONArray();
@@ -62,6 +63,7 @@ public final class RemoteApp extends Application {
   private SshTransport transport;
   private RpcClient rpc;
   private int generation;
+  int connectionGeneration() { return generation; }
   public LiveStatusNotifications liveStatus;
   private final Map<JSONObject, String> approvalTokens = new IdentityHashMap<>();
   private final Set<JSONObject> answering = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -202,8 +204,12 @@ public final class RemoteApp extends Application {
   }
 
   public void setForeground(boolean visible) {
+    setForeground(visible, false);
+  }
+
+  void setForeground(boolean visible, boolean keepConversation) {
     foreground = visible;
-    if (!visible) leaveIdleConversation();
+    if (!visible && !keepConversation) leaveIdleConversation();
     main.removeCallbacks(reconnectTask);
     if (visible && retryEligible && !connected && !connecting) main.post(reconnectTask);
   }
@@ -224,7 +230,7 @@ public final class RemoteApp extends Application {
   }
 
   void leaveIdleConversation() {
-    if (busy || replaying || currentThreadRunning() || threadId.isEmpty()) return;
+    if (attaching || busy || replaying || currentThreadRunning() || threadId.isEmpty()) return;
     releaseThread(threadId);
     readOnly = true;
     checkpoint();
@@ -885,6 +891,7 @@ public final class RemoteApp extends Application {
     statusPolling.clear();
     statusRevision++;
     pendingImagePreview = null;
+    imageUploadIndex = imageUploadCount = 0;
     generation++;
     approvalTokens.clear();
     answering.clear();
@@ -1433,46 +1440,67 @@ public final class RemoteApp extends Application {
   }
 
   public void attachImage(android.net.Uri uri) {
-    if (!connected || busy || readOnly || attaching || draftImages.size() >= 4) {
-      error = "连接后可添加最多 4 张图片，请等待当前操作完成"; changed(); return;
+    attachImages(Collections.singletonList(uri));
+  }
+
+  public void attachImages(List<android.net.Uri> selected) {
+    List<android.net.Uri> uris = new ArrayList<>(new LinkedHashSet<>(selected));
+    uris.removeAll(Collections.singleton(null));
+    if (uris.isEmpty()) return;
+    if (!connected || busy || readOnly || attaching) {
+      error = "请先连接并等待当前操作完成，再添加图片"; changed(); return;
     }
+    int remaining = MediaFiles.MAX_ATTACHMENTS - draftImages.size();
+    if (uris.size() > remaining) {
+      error = "每条消息最多 " + MediaFiles.MAX_ATTACHMENTS + " 张图片，目前还能添加 " + Math.max(0, remaining) + " 张，请重新选择";
+      changed(); return;
+    }
+    if (transport == null) { error = "请先连接 SSH 主机"; changed(); return; }
     attaching = true;
     pendingImagePreview = null;
+    imageUploadIndex = 1; imageUploadCount = uris.size();
     final int token = generation;
     final SshTransport current = transport;
     changed();
     worker.execute(() -> {
-      java.io.File file = null;
-      try {
-        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
-        try (java.io.InputStream in = getContentResolver().openInputStream(uri)) {
-          if (in == null) throw new java.io.IOException("无法读取图片");
-          MediaFiles.copy(in, bytes, MediaFiles.IMAGE_LIMIT);
-        }
-        byte[] data = bytes.toByteArray();
-        android.graphics.BitmapFactory.Options info = new android.graphics.BitmapFactory.Options();
-        info.inJustDecodeBounds = true;
-        android.graphics.BitmapFactory.decodeByteArray(data, 0, data.length, info);
-        String mime = info.outMimeType == null ? "" : info.outMimeType;
-        if (info.outWidth <= 0 || info.outHeight <= 0 || !java.util.Arrays.asList("image/jpeg", "image/png", "image/webp", "image/gif").contains(mime))
-          throw new java.io.IOException("请选择 PNG、JPEG、WebP 或 GIF 图片");
-        String extension = mime.equals("image/jpeg") ? ".jpg" : "." + mime.substring(6);
-        android.graphics.Bitmap preview = MediaFiles.decode(data, 256);
-        main.post(() -> {
-          if (token == generation) { pendingImagePreview = preview; changed(); }
-        });
-        file = java.io.File.createTempFile("attachment-", extension, getCacheDir());
-        try (java.io.OutputStream out = new java.io.FileOutputStream(file)) { out.write(data); }
-        String path = current.uploadImage(file);
-        main.post(() -> {
-          if (token == generation) {
-            draftImages.add(path); draftImagePreviews.put(path, preview);
-            pendingImagePreview = null; attaching = false; changed();
+      List<String> failures = new ArrayList<>();
+      for (int i = 0; i < uris.size(); i++) {
+        final int index = i + 1;
+        // Synchronize cancellation through the main looper before each file.
+        CompletableFuture<Boolean> active = new CompletableFuture<>();
+        main.post(() -> active.complete(token == generation && connected && attaching && transport == current));
+        try { if (!active.get()) break; }
+        catch (Exception canceled) { break; }
+        java.io.File file = null;
+        try {
+          main.post(() -> { if (token == generation) { imageUploadIndex = index; pendingImagePreview = null; changed(); } });
+          java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+          try (java.io.InputStream in = getContentResolver().openInputStream(uris.get(i))) {
+            if (in == null) throw new java.io.IOException("无法读取图片");
+            MediaFiles.copy(in, bytes, MediaFiles.IMAGE_LIMIT);
           }
-        });
-      } catch (Exception e) {
-        main.post(() -> { if (token == generation) { pendingImagePreview = null; attaching = false; error = "图片上传失败：" + ConnectionFailure.reason(e); changed(); } });
-      } finally { if (file != null) file.delete(); }
+          MediaFiles.Image image = MediaFiles.prepareImage(bytes.toByteArray());
+          main.post(() -> { if (token == generation) { pendingImagePreview = image.preview; changed(); } });
+          file = java.io.File.createTempFile("attachment-", image.extension, getCacheDir());
+          try (java.io.OutputStream out = new java.io.FileOutputStream(file)) { out.write(image.bytes); }
+          String path = current.uploadImage(file);
+          main.post(() -> {
+            if (token == generation) {
+              draftImages.add(path); draftImagePreviews.put(path, image.preview);
+              pendingImagePreview = null; changed();
+            }
+          });
+        } catch (Exception e) {
+          failures.add("第 " + index + " 张：" + ConnectionFailure.reason(e));
+        } finally { if (file != null) file.delete(); }
+      }
+      main.post(() -> {
+        if (token != generation) return;
+        pendingImagePreview = null; attaching = false; imageUploadIndex = imageUploadCount = 0;
+        if (!failures.isEmpty()) error = (failures.size() == uris.size() ? "图片上传失败" : "部分图片上传失败，成功的图片已保留")
+            + "\n" + android.text.TextUtils.join("\n", failures);
+        changed();
+      });
     });
   }
 

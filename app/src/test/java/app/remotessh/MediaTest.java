@@ -49,12 +49,14 @@ public class MediaTest {
     assertEquals("sandbox:/mnt/data/report.pdf", opened[0]);
   }
 
-  @Test public void imageOnlyTurnSendsRemotePathAndRetainsAttachmentOnError() throws Exception {
+  @Test public void imageOnlyTurnSendsMultipleRemotePathsAndRetainsAttachmentsOnError() throws Exception {
     RemoteApp app = (RemoteApp) RuntimeEnvironment.getApplication();
     app.connected = true; app.profile = new Profile(); app.threadId = "thread";
     app.draftImages.add("/home/u/photo.png");
+    app.draftImages.add("/home/u/second.png");
     android.graphics.Bitmap preview = android.graphics.Bitmap.createBitmap(20, 20, android.graphics.Bitmap.Config.ARGB_8888);
     app.draftImagePreviews.put("/home/u/photo.png", preview);
+    app.draftImagePreviews.put("/home/u/second.png", preview);
     PipedOutputStream server = new PipedOutputStream();
     ByteArrayOutputStream sent = new ByteArrayOutputStream();
     RpcClient rpc = new RpcClient(new PipedInputStream(server), sent, new RpcClient.Events() {
@@ -70,18 +72,21 @@ public class MediaTest {
       assertEquals("high", request.getJSONObject("params").getString("effort"));
       assertEquals("auto", request.getJSONObject("params").getString("summary"));
       JSONArray input = request.getJSONObject("params").getJSONArray("input");
-      assertEquals(1, input.length());
+      assertEquals(2, input.length());
       assertEquals("localImage", input.getJSONObject(0).getString("type"));
       assertEquals("/home/u/photo.png", input.getJSONObject(0).getString("path"));
+      assertEquals("localImage", input.getJSONObject(1).getString("type"));
+      assertEquals("/home/u/second.png", input.getJSONObject(1).getString("path"));
       server.write((Json.obj("id", request.getLong("id"), "error", Json.obj("code", -1, "message", "test failure")) + "\n").getBytes("UTF-8"));
       server.flush();
       for (int i = 0; i < 100 && app.busy; i++) {
         Thread.sleep(10); Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(10));
       }
       assertFalse(app.busy);
-      assertEquals(1, app.draftImages.size());
+      assertEquals(2, app.draftImages.size());
       assertSame(preview, app.draftImagePreviews.get("/home/u/photo.png"));
       assertEquals("/home/u/photo.png", app.items.get(0).images.get(0));
+      assertEquals("/home/u/second.png", app.items.get(0).images.get(1));
     } finally { rpc.close(); server.close(); field.set(app, null); }
   }
 }

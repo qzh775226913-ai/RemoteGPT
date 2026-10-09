@@ -83,6 +83,56 @@ public class MainActivityTest {
     return null;
   }
 
+  private void documentImagePickerAvailable() {
+    android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT)
+        .setType("image/*").addCategory(android.content.Intent.CATEGORY_OPENABLE);
+    android.content.pm.ResolveInfo info = new android.content.pm.ResolveInfo();
+    info.activityInfo = new android.content.pm.ActivityInfo(); info.activityInfo.packageName = "test.files";
+    info.activityInfo.name = "test.files.Picker"; info.activityInfo.exported = true;
+    shadowOf(activity.getPackageManager()).addResolveInfoForIntent(intent, info);
+  }
+
+  @Test public void imageSourcesOfferGalleryAppsAndMultiSelectFallback() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
+    app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    documentImagePickerAvailable();
+    find(content(), "添加图片").performClick();
+    View sheet = org.robolectric.shadows.ShadowDialog.getLatestDialog().getWindow().getDecorView();
+    assertNotNull(find(sheet, "手机相册")); assertNotNull(find(sheet, "其他相册 / 图片 App"));
+    assertNotNull(find(sheet, "系统选择器")); captureView(sheet, "image-source-picker");
+    find(sheet, "手机相册").performClick();
+    org.robolectric.shadows.ShadowActivity.IntentForResult started = shadowOf(activity).getNextStartedActivityForResult();
+    assertEquals(ImagePicker.REQUEST, started.requestCode);
+    assertEquals(android.content.Intent.ACTION_OPEN_DOCUMENT, started.intent.getAction());
+    assertTrue(started.intent.getBooleanExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE, false));
+    activity.onActivityResult(ImagePicker.REQUEST, android.app.Activity.RESULT_CANCELED, null);
+    assertTrue(app.draftImages.isEmpty()); assertFalse(app.attaching);
+    find(content(), "添加图片").performClick();
+    assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());
+  }
+
+  @Test public void multiImageResultSurvivesRotationAndRejectsChangedConversation() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile(); app.threadId = "original";
+    app.draftImages.addAll(java.util.Arrays.asList("/1.png", "/2.png", "/3.png"));
+    app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100)); documentImagePickerAvailable();
+    find(content(), "添加图片").performClick();
+    find(org.robolectric.shadows.ShadowDialog.getLatestDialog().getWindow().getDecorView(), "系统选择器").performClick();
+    controller.recreate(); activity = controller.get();
+    android.content.ClipData clip = android.content.ClipData.newUri(app.getContentResolver(), "images", android.net.Uri.parse("content://album/1"));
+    clip.addItem(new android.content.ClipData.Item(android.net.Uri.parse("content://album/2")));
+    android.content.Intent multiple = new android.content.Intent(); multiple.setClipData(clip);
+    activity.onActivityResult(ImagePicker.REQUEST, android.app.Activity.RESULT_OK, multiple);
+    assertTrue("Unexpected result after rotation: " + app.error + ", thread=" + app.threadId + ", images=" + app.draftImages.size(), app.error.contains("还能添加 1 张"));
+    assertEquals(3, app.draftImages.size()); assertFalse(app.attaching);
+    app.error = ""; app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    documentImagePickerAvailable(); find(content(), "添加图片").performClick();
+    find(org.robolectric.shadows.ShadowDialog.getLatestDialog().getWindow().getDecorView(), "系统选择器").performClick();
+    app.threadId = "another-conversation";
+    activity.onActivityResult(ImagePicker.REQUEST, android.app.Activity.RESULT_OK,
+        new android.content.Intent().setData(android.net.Uri.parse("content://album/single")));
+    assertEquals("", app.error); assertEquals(3, app.draftImages.size()); assertFalse(app.attaching);
+  }
+
   @Test public void browserShowsOnlySelectedHostAndConnectsOnChipTap() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication();
     app.vault.profiles.clear();
