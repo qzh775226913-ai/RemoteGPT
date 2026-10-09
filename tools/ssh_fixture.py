@@ -113,11 +113,26 @@ class Fixture(paramiko.ServerInterface):
         return paramiko.OPEN_SUCCEEDED if kind == "session" else paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
     def check_channel_exec_request(self, channel, command):
+        args = shlex.split(command.decode())
+        if len(args) == 4 and args[:2] == ['python3', '-c']:
+            # An auxiliary JSON channel must leave the main RPC channel alive.
+            def auxiliary():
+                try:
+                    request = json.loads(args[3])
+                    request['path'] = Files(self).local(request['path'])
+                    result = subprocess.run([sys.executable, '-c', args[2], json.dumps(request)],
+                                            capture_output=True, timeout=20)
+                    channel.sendall(result.stdout)
+                    channel.sendall_stderr(result.stderr)
+                    channel.send_exit_status(result.returncode)
+                finally:
+                    channel.close()
+            threading.Thread(target=auxiliary, daemon=True).start()
+            return True
         self.command = command
         self.exec_channel = channel
         self.ready.set()
         if command in (b"fixture-server", b"fixture-exit"): return True
-        args = shlex.split(command.decode())
         return (len(args) == 4 and args[0] == 'python3' and args[1].lstrip('/').startswith('.remote-gpt/host-')
                 and args[3] == 'python3 "$HOME/fake_server.py"')
 

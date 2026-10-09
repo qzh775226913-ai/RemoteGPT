@@ -46,7 +46,7 @@ public final class ConnectionService extends Service {
   }
   private final Runnable pollStatus = new Runnable() {
     public void run() {
-      if (app != null) app.pollPassiveStatus();
+      if (app != null) {app.pollPassiveStatus();app.pollConversationJournals();}
       handler.postDelayed(this, 5000);
     }
   };
@@ -59,11 +59,10 @@ public final class ConnectionService extends Service {
     if (!app.connected) return app.state;
     if (app.replaying) return "正在恢复断线期间的消息…";
     if (!app.approvals.isEmpty()) {
-      org.json.JSONObject p = Json.object(app.approvals.get(0), "params");
-      String detail = p.optString("command", p.optString("reason", "文件修改或补充信息"));
+      String detail = LiveStatusNotifications.details(app);
       detail = detail.replaceAll("\\s+", " ");
       if (detail.length() > 180) detail = detail.substring(0, 180) + "…";
-      return "等待审批 · " + detail;
+      return (LiveStatusNotifications.isApproval(app.approvals.get(0)) ? "等待审批 · " : "等待回答 · ") + detail;
     }
     return app.currentThreadRunning() ? "远端正在运行" : "已连接 · 等待消息";
   }

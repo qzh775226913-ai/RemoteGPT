@@ -687,6 +687,19 @@ public class MainActivityTest {
     assertTrue(dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled());assertSame(req,app.visibleApproval());
   }
 
+  @Test public void savedAsyncQuestionShowsChoicesAndKeepsPermission() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="chat";
+    app.journal.apply(ConversationJournalTest.fixture("call"),"chat");app.syncJournalQuestions();app.effectivePermissionMode=PermissionMode.FULL;app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertTrue(dialog.isShowing());assertNotNull(find(dialog.getWindow().getDecorView(),"A"));assertNotNull(find(dialog.getWindow().getDecorView(),"B"));
+    assertFalse(dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled());
+    assertNotNull(find(content(),"权限：完全访问"));assertEquals(PermissionMode.INHERIT,app.permissionMode);
+    captureView(dialog.getWindow().getDecorView(),"async-question-recovered");
+    app.cancelQuestion(app.visibleApproval());app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertFalse(dialog.isShowing());assertNull(app.visibleApproval());assertEquals(PermissionMode.FULL,app.displayedPermission());
+  }
+
   @Test
   public void conversationIdentityAndUsageAreVisible() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication();

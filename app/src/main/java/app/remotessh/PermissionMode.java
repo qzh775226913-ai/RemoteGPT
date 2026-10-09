@@ -21,4 +21,13 @@ public enum PermissionMode {
       params.put("sandboxPolicy", Json.obj("type", sandboxType));
     }
   }
+
+  static PermissionMode fromRemote(Object approval, JSONObject sandbox) {
+    String policy=approval instanceof String ? (String)approval : "";
+    String type=sandbox==null ? "" : sandbox.optString("type").replace("-","").toLowerCase(java.util.Locale.ROOT);
+    if(policy.equals("never") && type.equals("dangerfullaccess"))return FULL;
+    if(policy.equals("never") && type.equals("readonly"))return READ_ONLY;
+    if(policy.equals("on-request") && type.equals("workspacewrite"))return DEFAULT;
+    return null;
+  }
 }

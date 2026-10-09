@@ -7,6 +7,9 @@ import org.json.JSONObject;
 final class ConversationState {
   String threadId = "", turnId = "", title = "", cwd = "", state = "已连接", error = "", model = "", effort = "", unsent = "", draft = "";
   PermissionMode permission = PermissionMode.INHERIT;
+  PermissionMode effectivePermission = PermissionMode.INHERIT;
+  String journalPath = "";
+  ConversationJournal journal = new ConversationJournal();
   String serviceTier = "", inheritedServiceTier = "", effectiveServiceTier = "", effectiveModel = "";
   boolean inheritedTierKnown, tierOverrideApplied;
   boolean busy, steering, readOnly, remoteRunning, replaying, stopping;
@@ -20,6 +23,7 @@ final class ConversationState {
     serviceTier=a.serviceTier; inheritedServiceTier=a.inheritedServiceTier; effectiveServiceTier=a.effectiveServiceTier;
     effectiveModel=a.effectiveModel; inheritedTierKnown=a.inheritedTierKnown; tierOverrideApplied=a.tierOverrideApplied;
     permission=a.permissionMode; busy=a.busy; steering=a.steering; readOnly=a.readOnly; remoteRunning=a.remoteRunning; replaying=a.replaying; stopping=a.stopping;
+    effectivePermission=a.effectivePermissionMode;journalPath=a.journalPath;journal=a.journal;
     items.clear(); items.addAll(a.items); approvals.clear(); approvals.addAll(a.approvals);
     images.clear(); images.addAll(a.draftImages); previews.clear(); previews.putAll(a.draftImagePreviews);
   }
@@ -29,6 +33,7 @@ final class ConversationState {
     a.serviceTier=serviceTier; a.inheritedServiceTier=inheritedServiceTier; a.effectiveServiceTier=effectiveServiceTier;
     a.effectiveModel=effectiveModel; a.inheritedTierKnown=inheritedTierKnown; a.tierOverrideApplied=tierOverrideApplied;
     a.permissionMode=permission; a.busy=busy; a.steering=steering; a.readOnly=readOnly; a.remoteRunning=remoteRunning; a.replaying=replaying; a.stopping=stopping;
+    a.effectivePermissionMode=effectivePermission;a.journalPath=journalPath;a.journal=journal;
     a.items.clear(); a.items.addAll(items); a.approvals.clear(); a.approvals.addAll(approvals);
     a.draftImages.clear(); a.draftImages.addAll(images); a.draftImagePreviews.clear(); a.draftImagePreviews.putAll(previews);
   }

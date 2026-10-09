@@ -27,7 +27,9 @@ final class QuestionForm extends LinearLayout {
 
   QuestionForm(Context context, JSONObject params, int fg, int muted, int panel) {
     super(context);setOrientation(VERTICAL);setPadding(dp(20),dp(8),dp(20),dp(16));
-    TextView hint=label(params.optBoolean("isBlocking",true)
+    TextView hint=label(params.has("callId")
+        ? "远端的异步问题已保留。点击发送后，答案会作为对话消息回传。"
+        : params.optBoolean("isBlocking",true)
         ? "等待你的回答后继续；选择选项或输入内容，再点发送。"
         : "这是远端的非阻塞提问：等待回答期间，它可以继续独立工作。",muted);
     addView(hint);JSONArray questions=params.optJSONArray("questions");

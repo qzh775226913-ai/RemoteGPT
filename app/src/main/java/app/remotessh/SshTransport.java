@@ -192,17 +192,21 @@ public final class SshTransport implements AutoCloseable {
 
   /** A separate SSH channel keeps version checks/install output out of JSON-RPC. */
   public org.json.JSONObject maintenance(String script, org.json.JSONObject request) throws Exception {
+    return jsonCommand(script,request,request.optString("action").equals("update") ? 650 : 90);
+  }
+
+  org.json.JSONObject jsonCommand(String script, org.json.JSONObject request, int timeout) throws Exception {
     Session current = session;
     if (closed || current == null || !current.isConnected()) throw new IOException("SSH 未连接");
     ChannelExec exec = (ChannelExec) current.openChannel("exec");
     ByteArrayOutputStream output = new ByteArrayOutputStream();
     OutputStream bounded = new OutputStream() {
       public synchronized void write(int value) throws IOException {
-        if (output.size() >= 65536) throw new IOException("版本响应超过大小限制");
+        if (output.size() >= 65536) throw new IOException("远端响应超过大小限制");
         output.write(value);
       }
       public synchronized void write(byte[] bytes, int offset, int length) throws IOException {
-        if (output.size() + length > 65536) throw new IOException("版本响应超过大小限制");
+        if (output.size() + length > 65536) throw new IOException("远端响应超过大小限制");
         output.write(bytes, offset, length);
       }
     };
@@ -214,7 +218,7 @@ public final class SshTransport implements AutoCloseable {
       exec.setErrStream(new OutputStream() { public void write(int value) {} });
       exec.connect(15000);
       long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(
-          request.optString("action").equals("update") ? 650 : 90);
+          timeout);
       while (!exec.isClosed()) {
         if (closed || !current.isConnected()) throw new IOException("SSH 已断开，请重连后检查版本和更新结果");
         if (System.nanoTime() > deadline) throw new IOException("远端版本操作超时，请重新检查更新结果");

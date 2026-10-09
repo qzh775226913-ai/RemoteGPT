@@ -336,9 +336,9 @@ public final class MainActivity extends Activity {
     clickable(usageLabel, this::usageInfo);
     center.addView(usageLabel);
     readOnlyBar = column();
-    readOnlyBar.setPadding(dp(16), dp(4), dp(16), dp(12));
+    readOnlyBar.setPadding(dp(16), dp(2), dp(16), dp(6));
     TextView readonly = text("只读历史 · 尚未取得写入权限", 13, muted);
-    readonly.setPadding(dp(4), dp(8), dp(4), dp(12));
+    readonly.setPadding(dp(4), dp(6), dp(4), dp(6));
     readOnlyBar.addView(readonly);
     LinearLayout roActions = row();
     TextView[] readOnlyControls = {action("刷新", app::refreshReadOnly), action("接续", () -> app.resume(app.threadId)), action("新对话", this::startNewChat)};
@@ -346,10 +346,10 @@ public final class MainActivity extends Activity {
       readOnlyControls[i].setSingleLine(true); readOnlyControls[i].setEllipsize(TextUtils.TruncateAt.END);
       readOnlyControls[i].setPadding(dp(8),dp(12),dp(8),dp(12));
       LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1);
-      if (i<readOnlyControls.length-1) cp.setMarginEnd(dp(10)); roActions.addView(readOnlyControls[i],cp);
+      if (i<readOnlyControls.length-1) cp.setMarginEnd(dp(3)); roActions.addView(readOnlyControls[i],cp);
     }
     readOnlyBar.addView(roActions);
-    LinearLayout.LayoutParams reconnectParams=new LinearLayout.LayoutParams(-1,-2); reconnectParams.topMargin=dp(10);
+    LinearLayout.LayoutParams reconnectParams=new LinearLayout.LayoutParams(-1,-2); reconnectParams.topMargin=dp(3);
     readOnlyBar.addView(action("重连并接续", app::reconnectAndResume),reconnectParams);
     readOnlyBar.setVisibility(View.GONE);
     center.addView(readOnlyBar);
@@ -522,10 +522,11 @@ public final class MainActivity extends Activity {
     renderAttachments();
     renderQueuedMessage();
     updateSend();
-    permissionButton.icon = permissionIcon(app.permissionMode);
-    permissionButton.color = permissionColor(app.permissionMode);
-    permissionButton.setContentDescription("权限：" + app.permissionMode.label);
-    permissionButton.setTooltipText(app.permissionMode.label);
+    PermissionMode displayedPermission=app.displayedPermission();
+    permissionButton.icon = permissionIcon(displayedPermission);
+    permissionButton.color = permissionColor(displayedPermission);
+    permissionButton.setContentDescription("权限：" + displayedPermission.label);
+    permissionButton.setTooltipText(displayedPermission.label + (app.permissionMode==PermissionMode.INHERIT && displayedPermission!=PermissionMode.INHERIT ? " · 当前远端状态" : ""));
     permissionButton.invalidate();
     modelButton.setText(ModelOptions.displayName(app.models, app.model)
         + (app.reasoningEffort.isEmpty() ? "" : " · " + ModelOptions.label(app.reasoningEffort))
@@ -1064,15 +1065,15 @@ public final class MainActivity extends Activity {
       option.setBackground(rounded(mode == app.permissionMode ? panel : bg, 16));
       IconView glyph = new IconView(this, permissionIcon(mode), permissionColor(mode));
       option.addView(glyph, new LinearLayout.LayoutParams(dp(44), dp(52)));
-      TextView label = text(mode == PermissionMode.INHERIT ? "默认" : mode.label, 15, fg);
+      TextView label = text(mode == PermissionMode.INHERIT ? "沿用当前对话" : mode.label, 15, fg);
       option.addView(label, new LinearLayout.LayoutParams(0, dp(52), 1));
       label.setGravity(Gravity.CENTER_VERTICAL);
       if (mode == app.permissionMode) option.addView(new IconView(this, "check", fg), new LinearLayout.LayoutParams(dp(28), dp(28)));
       option.setContentDescription("权限选项：" + mode.label);
-      clickable(option, () -> { app.permissionMode = mode; app.changed(); holder[0].dismiss(); });
+      clickable(option, () -> { app.choosePermission(mode); holder[0].dismiss(); });
       choices.addView(option);
     }
-    TextView note = text("下一轮生效", 12, muted);
+    TextView note = text("下一轮生效" + (app.effectivePermissionMode==PermissionMode.INHERIT ? "" : "\n当前远端："+app.effectivePermissionMode.label), 12, muted);
     note.setPadding(dp(16), dp(12), 0, 0);
     choices.addView(note);
     holder[0] = sheet("权限", choices);
@@ -2033,7 +2034,7 @@ public final class MainActivity extends Activity {
     if (req == null || approvalDialog != null || app.isAnswering(req)) return;
     shownApproval = id;
     JSONObject p = Json.object(req, "params");
-    if (req.optString("method").equals("item/tool/requestUserInput")) {
+    if (ConversationJournal.question(req)) {
       showQuestions(req, p);
       return;
     }
@@ -2089,9 +2090,9 @@ public final class MainActivity extends Activity {
             .setView(sc)
             .setCancelable(false)
             .setNegativeButton(
-                "停止任务",
+                ConversationJournal.savedQuestion(req) ? "不回答" : "停止任务",
                 (d, w) -> {
-                  app.inConversation(p.optString("threadId", app.threadId), app::interrupt);
+                  app.cancelQuestion(req);
                   approvalDialog = null;
                   shownApproval = "";
                 })
@@ -2103,7 +2104,10 @@ public final class MainActivity extends Activity {
     sendAnswer.setOnClickListener(v->{
       if(!form.ready() || app.isAnswering(req))return;
       app.answer(req,form.result());
-      if(app.isAnswering(req)) {dialog.dismiss();approvalDialog=null;shownApproval="";questionForm=null;}
+      if(app.isAnswering(req)) {
+        restoredQuestion=form.saveAnswers();restoredQuestionToken=shownApproval;
+        dialog.dismiss();approvalDialog=null;shownApproval="";questionForm=null;
+      }
     });
   }
 }

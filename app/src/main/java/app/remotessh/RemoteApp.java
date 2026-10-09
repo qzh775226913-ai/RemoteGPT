@@ -24,6 +24,11 @@ public final class RemoteApp extends Application {
   private int settingsRevision;
   private boolean serviceTierProtocol;
   public PermissionMode permissionMode = PermissionMode.INHERIT;
+  PermissionMode effectivePermissionMode = PermissionMode.INHERIT;
+  String journalPath = "";
+  ConversationJournal journal = new ConversationJournal();
+  private String journalScript;
+  private final Set<String> journalPolling = new HashSet<>();
   public boolean readOnly, remoteRunning;
   public final UsageLimits usage = new UsageLimits();
   public String threadCwd = "";
@@ -100,7 +105,7 @@ public final class RemoteApp extends Application {
     checkpoint();
     ConversationState selected = conversations.get(threadId);
     ConversationState target = conversations.computeIfAbsent(id, key -> {
-      ConversationState c = new ConversationState(); c.threadId=key; restoreServiceTier(c, key); return c;
+      ConversationState c = new ConversationState(); c.threadId=key; restoreServiceTier(c, key); restorePermission(c,key); return c;
     });
     String selectedProject = profile == null ? "" : profile.cwd;
     String selectedLast = profile == null ? "" : profile.lastThread;
@@ -124,6 +129,7 @@ public final class RemoteApp extends Application {
     ConversationState target = conversations.computeIfAbsent(id, key -> {
       ConversationState c = new ConversationState(); c.threadId=key; c.model=model; c.effort=reasoningEffort; c.permission=permissionMode;
       restoreServiceTier(c, key);
+      if(!key.isEmpty())restorePermission(c,key);
       return c;
     });
     target.apply(this);
@@ -209,7 +215,7 @@ public final class RemoteApp extends Application {
 
   void setForeground(boolean visible, boolean keepConversation) {
     foreground = visible;
-    if (!visible && !keepConversation) leaveIdleConversation();
+    // Keep the selected writer across backgrounding; an async question may arrive later.
     main.removeCallbacks(reconnectTask);
     if (visible && retryEligible && !connected && !connecting) main.post(reconnectTask);
   }
@@ -272,7 +278,7 @@ public final class RemoteApp extends Application {
             if (e != null || revision != statusRevision || loadedThreads.contains(id)) return;
             inConversation(id, () -> {
               remoteRunning = Json.object(Json.object(r, "thread"), "status").optString("type").equals("active");
-              if (!remoteRunning) { busy=false; turnId=""; approvals.clear(); }
+              if (!remoteRunning) { busy=false; turnId=""; clearServerRequests(); }
               changed();
             });
           })));
@@ -298,6 +304,85 @@ public final class RemoteApp extends Application {
           }
         })));
   }
+
+  void pollConversationJournals() {
+    if(!connected || transport==null || profile==null)return;
+    final SshTransport current=transport;final int g=generation;final long revision=statusRevision;
+    for(String id:conversationIds())inConversation(id,()->{
+      String path=journalPath;ConversationJournal reader=journal;
+      if(!path.startsWith("/") || !path.endsWith(".jsonl") || !journalPolling.add(id))return;
+      long offset=reader.offset;
+      worker.execute(()->{
+        try {
+          String script;
+          synchronized(this){
+            if(journalScript==null)try(java.io.InputStream input=getAssets().open("conversation_state.py")){
+              java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream();MediaFiles.copy(input,bytes,65536);
+              journalScript=bytes.toString(java.nio.charset.StandardCharsets.UTF_8.name());
+            }
+            script=journalScript;
+          }
+          JSONObject result=current.jsonCommand(script,Json.obj("path",path,"offset",offset),20);
+          main.post(()->{
+            if(g!=generation || current!=transport)return;
+            journalPolling.remove(id);
+            if(revision!=statusRevision)return;
+            inConversation(id,()->{
+              if(journal!=reader || !journalPath.equals(path))return;
+              JSONArray records=result.optJSONArray("records");
+              if(result.optLong("offset")==reader.offset && !result.optBoolean("reset") && result.optJSONObject("context")==null
+                  && (records==null || records.length()==0))return;
+              reader.apply(result,id);
+              PermissionMode mode=reader.context==null ? null : PermissionMode.fromRemote(reader.context.opt("approval_policy"),reader.context.optJSONObject("sandbox_policy"));
+              if(mode!=null)effectivePermissionMode=mode;
+              syncJournalQuestions();changed();
+            });
+          });
+        }catch(Exception ignored){main.post(()->{if(g==generation)journalPolling.remove(id);});}
+      });
+    });
+  }
+
+  void syncJournalQuestions() {
+    Set<String> dismissed=getSharedPreferences("question-answers",MODE_PRIVATE).getStringSet(tierPreferenceKey(threadId),Collections.emptySet());
+    journal.dismissed.addAll(dismissed);
+    approvals.removeIf(req->ConversationJournal.savedQuestion(req)
+        && (!journal.pending.containsKey(Json.object(req,"params").optString("callId")) || journal.dismissed.contains(Json.object(req,"params").optString("callId"))));
+    for(JSONObject req:journal.pending.values()) {
+      String call=Json.object(req,"params").optString("callId");
+      if(journal.dismissed.contains(call))continue;
+      boolean present=false;for(JSONObject known:approvals)if(known.optString("id").equals(req.optString("id")))present=true;
+      if(!present)approvals.add(req);
+    }
+  }
+
+  private void clearServerRequests() { approvals.removeIf(req->!ConversationJournal.savedQuestion(req)); }
+
+  void cancelQuestion(JSONObject req) {
+    String target=Json.object(req,"params").optString("threadId",threadId);
+    inConversation(target,()->{
+      if(!ConversationJournal.savedQuestion(req)){interrupt();return;}
+      dismissSavedQuestion(req);changed();
+    });
+  }
+
+  private void dismissSavedQuestion(JSONObject req) {
+    journal.dismiss(req);approvals.remove(req);
+    Set<String> old=getSharedPreferences("question-answers",MODE_PRIVATE).getStringSet(tierPreferenceKey(threadId),Collections.emptySet());
+    LinkedHashSet<String> ids=new LinkedHashSet<>(old);ids.add(Json.object(req,"params").optString("callId"));
+    while(ids.size()>100)ids.remove(ids.iterator().next());
+    getSharedPreferences("question-answers",MODE_PRIVATE).edit().putStringSet(tierPreferenceKey(threadId),ids).apply();
+  }
+
+  private void restorePermission(ConversationState c,String id) {
+    String value=getSharedPreferences("permission-choices",MODE_PRIVATE).getString(tierPreferenceKey(id),PermissionMode.INHERIT.name());
+    try{c.permission=PermissionMode.valueOf(value);}catch(IllegalArgumentException ignored){c.permission=PermissionMode.INHERIT;}
+  }
+  void choosePermission(PermissionMode mode) {permissionMode=mode;savePermission();changed();}
+  private void savePermission() {
+    if(profile!=null)getSharedPreferences("permission-choices",MODE_PRIVATE).edit().putString(tierPreferenceKey(threadId),permissionMode.name()).apply();
+  }
+  PermissionMode displayedPermission() {return permissionMode==PermissionMode.INHERIT ? effectivePermissionMode:permissionMode;}
 
 
   @Override
@@ -403,6 +488,7 @@ public final class RemoteApp extends Application {
     conversations.clear();
     if (!sameHost) permissionMode = PermissionMode.INHERIT;
     profile = p;
+    journalPath="";journal=new ConversationJournal();effectivePermissionMode=PermissionMode.INHERIT;
     reconnectThread = p.lastThread;
     model = "";
     reasoningEffort = "";
@@ -889,6 +975,7 @@ public final class RemoteApp extends Application {
   }
 
   public void disconnect() {
+    journalPolling.clear();
     recoveringThreads.clear();
     statusPolling.clear();
     statusRevision++;
@@ -955,8 +1042,13 @@ public final class RemoteApp extends Application {
 
   private void request(
       String method, JSONObject params, java.util.function.Consumer<JSONObject> success) {
+    request(method,params,success,null);
+  }
+
+  private void request(String method,JSONObject params,java.util.function.Consumer<JSONObject> success,java.util.function.Consumer<Throwable> failure) {
     RpcClient c = rpc;
     if (c == null) {
+      if(failure!=null)failure.accept(new java.io.IOException("SSH 未连接"));
       if (method.equals("thread/resume")
           || method.equals("thread/read")
           || method.equals("thread/start")
@@ -979,6 +1071,7 @@ public final class RemoteApp extends Application {
                               if (g != generation) return;
                               Runnable completion = () -> {
                               if (e != null) {
+                                if(failure!=null)failure.accept(e);
                                 if (method.equals("account/rateLimits/read")) {
                                   usage.loading = false;
                                   usage.status = "用量暂不可用：" + message(e);
@@ -1047,7 +1140,7 @@ public final class RemoteApp extends Application {
             if (requestedRevision == statusRevision && !id.isEmpty() && !loadedThreads.contains(id) && !id.equals(loadingThread))
               inConversation(id, () -> {
                 remoteRunning = Json.object(listed, "status").optString("type").equals("active");
-                if (!remoteRunning) { busy=false; turnId=""; approvals.clear(); }
+                if (!remoteRunning) { busy=false; turnId=""; clearServerRequests(); }
                 threadTitle = restoredTitle(listed, id, threadTitle);
               });
           }
@@ -1113,6 +1206,7 @@ public final class RemoteApp extends Application {
     threadId = "";
     threadTitle = "";
     threadCwd = "";
+    journalPath="";journal=new ConversationJournal();effectivePermissionMode=PermissionMode.INHERIT;
     readOnly = false;
     remoteRunning = false;
     turnId = "";
@@ -1223,6 +1317,10 @@ public final class RemoteApp extends Application {
       }
     }
     if (!readonly && r.has("reasoningEffort")) reasoningEffort = r.isNull("reasoningEffort") ? "" : r.optString("reasoningEffort");
+    PermissionMode remotePermission=PermissionMode.fromRemote(r.opt("approvalPolicy"),r.optJSONObject("sandbox"));
+    if(remotePermission!=null && (!r.optBoolean("remoteReplay") || journal.context==null))effectivePermissionMode=remotePermission;
+    String path=thread.optString("path");
+    if(path.startsWith("/") && !path.equals(journalPath)){journalPath=path;journal=new ConversationJournal();}
     this.readOnly = readonly;
     remoteRunning = Json.object(thread, "status").optString("type").equals("active");
     threadId = thread.optString("id", id);
@@ -1234,7 +1332,7 @@ public final class RemoteApp extends Application {
     for (ChatItem item : items)
       if (item.type.equals("reasoning") && !item.detail.trim().isEmpty()) knownReasoning.put(item.id, item);
     items.clear();
-    if (!remoteRunning) approvals.clear();
+    if (!remoteRunning) clearServerRequests();
     busy = false;
     turnId = "";
     JSONArray turns = thread.optJSONArray("turns");
@@ -1269,6 +1367,7 @@ public final class RemoteApp extends Application {
       }
     restoreTitleFromMessages();
     if (!readonly && Json.object(thread, "status").optString("type").equals("active")) busy = true;
+    main.post(this::pollConversationJournals);
     stopping = false;
     state = busy ? "正在处理…" : "已连接";
     String cwd = thread.optString("cwd");
@@ -1338,6 +1437,9 @@ public final class RemoteApp extends Application {
               return;
             }
             threadCwd = Json.object(r, "thread").optString("cwd", r.optString("cwd", profile.cwd));
+            journalPath=Json.object(r,"thread").optString("path");journal=new ConversationJournal();savePermission();
+            PermissionMode remotePermission=PermissionMode.fromRemote(r.opt("approvalPolicy"),r.optJSONObject("sandbox"));
+            if(remotePermission!=null)effectivePermissionMode=remotePermission;
             effectiveModel = r.optString("model", model);
             if (r.has("serviceTier")) {
               serviceTierProtocol = true;
@@ -1408,6 +1510,10 @@ public final class RemoteApp extends Application {
   }
 
   private void startTurn(String text, List<String> attachments) {
+    startTurn(text,attachments,null,null);
+  }
+
+  private void startTurn(String text,List<String> attachments,Runnable accepted,java.util.function.Consumer<Throwable> failure) {
     ChatItem optimistic = new ChatItem("local-" + UUID.randomUUID(), "userMessage", text);
     optimistic.images.addAll(attachments);
     items.add(optimistic);
@@ -1441,6 +1547,7 @@ public final class RemoteApp extends Application {
             tierOverrideApplied = !ServiceTierOptions.same(params.optString("serviceTier"), sentDefaultTier);
           }
           if (params.has("model")) effectiveModel = params.optString("model");
+          if(permissionMode!=PermissionMode.INHERIT)effectivePermissionMode=permissionMode;
           saveServiceTier();
           unsentText = "";
           draftImages.removeAll(attachments);
@@ -1450,8 +1557,9 @@ public final class RemoteApp extends Application {
             turnId = turn.optString("id");
             if (stopping) interrupt();
           }
+          if(accepted!=null)accepted.run();
           changed();
-        });
+        },failure);
   }
 
   public void attachImage(android.net.Uri uri) {
@@ -1640,6 +1748,7 @@ public final class RemoteApp extends Application {
   public void answer(JSONObject req, JSONObject result) {
     String target = Json.object(req, "params").optString("threadId", threadId);
     if (!target.equals(threadId)) { inConversation(target, () -> answer(req, result)); return; }
+    if(ConversationJournal.savedQuestion(req)) {answerSavedQuestion(req,result);return;}
     RpcClient c = rpc;
     if (replaying || c == null || !approvals.contains(req) || !answering.add(req)) return;
     changed();
@@ -1665,6 +1774,36 @@ public final class RemoteApp extends Application {
                 });
           }
         });
+  }
+
+  private void answerSavedQuestion(JSONObject req,JSONObject result) {
+    if(!connected || replaying || rpc==null || !approvals.contains(req) || !answering.add(req))return;
+    changed();
+    java.util.function.Consumer<Throwable> failure=e->{answering.remove(req);};
+    Runnable send=()->{
+      if(attaching || stopping || restartingRemote || (busy && turnId.isEmpty())) {
+        answering.remove(req);error="请等待当前操作完成后提交回答";changed();return;
+      }
+      StringBuilder text=new StringBuilder("回答上一轮的问题：\n");
+      JSONArray questions=Json.object(req,"params").optJSONArray("questions");JSONObject answers=Json.object(result,"answers");
+      if(questions==null){answering.remove(req);return;}
+      for(int i=0;i<questions.length();i++) {
+        JSONObject q=questions.optJSONObject(i);if(q==null)continue;
+        JSONArray values=Json.object(answers,q.optString("id")).optJSONArray("answers");
+        if(values==null || values.length()==0 || values.optString(0).trim().isEmpty()){answering.remove(req);return;}
+        text.append(q.optString("question")).append('\n').append(values.optString(0)).append("\n\n");
+      }
+      Runnable accepted=()->{answering.remove(req);dismissSavedQuestion(req);};
+      if(busy && !turnId.isEmpty()) {
+        request("turn/steer",Json.obj("threadId",threadId,"expectedTurnId",turnId,"input",new JSONArray().put(Json.obj("type","text","text",text.toString()))),r->{accepted.run();changed();},failure);
+      }else {
+        if(!validateServiceTier()){answering.remove(req);return;}
+        busy=true;stopping=false;state="正在提交回答…";unsentText=text.toString();
+        startTurn(text.toString(),Collections.emptyList(),accepted,failure);
+      }
+    };
+    if(readOnly)request("thread/resume",Json.obj("threadId",threadId),r->{applyThread(r,threadId,false);send.run();},failure);
+    else send.run();
   }
 
   public void rejectUnsupported(JSONObject req) {
@@ -1756,7 +1895,7 @@ public final class RemoteApp extends Application {
         turnId = "";
         readOnly = true;
         remoteRunning = false;
-        approvals.clear();
+        clearServerRequests();
         state = "线程已释放，请接续";
         changed();
       }
@@ -1795,10 +1934,11 @@ public final class RemoteApp extends Application {
         busy = false;
         stopping = false;
         turnId = "";
-        approvals.clear();
+        clearServerRequests();
         state = "已连接";
       }
     } else if (method.equals("turn/started") && !readOnly) {
+      for(JSONObject req:new ArrayList<>(approvals))if(ConversationJournal.savedQuestion(req))dismissSavedQuestion(req);
       busy = true;
       remoteRunning = true;
       turnId = Json.object(p, "turn").optString("id");
@@ -1809,7 +1949,7 @@ public final class RemoteApp extends Application {
       busy = false;
       stopping = false;
       turnId = "";
-      approvals.clear();
+      clearServerRequests();
       JSONObject turn = Json.object(p, "turn");
       // Some servers deliver the final summary only in the turn snapshot.
       JSONArray completedItems = turn.optJSONArray("items");
@@ -1831,7 +1971,7 @@ public final class RemoteApp extends Application {
         if (historical) historicalError(turn.optString("id"), message);
         else error = message;
       }
-      if (!historical && turn.optString("status").equals("completed") && liveStatus != null)
+      if (!historical && turn.optString("status").equals("completed") && liveStatus != null && approvals.isEmpty())
         liveStatus.complete(threadId);
       if (!historical) refreshThreads(false);
       if (!historical && turn.optString("status").equals("completed") && !readOnly && !queuedMessage().isEmpty()) {
@@ -1840,7 +1980,7 @@ public final class RemoteApp extends Application {
       } else readyMessages.remove(queueKey());
       String completedThread = threadId;
       if (!historical) main.post(() -> {
-        if (!completedThread.equals(threadId) || !foreground)
+        if (!completedThread.equals(threadId))
           inConversation(completedThread, this::leaveIdleConversation);
       });
     } else if (method.equals("error")) {

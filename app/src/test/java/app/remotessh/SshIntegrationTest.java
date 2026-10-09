@@ -226,4 +226,26 @@ public class SshIntegrationTest {
       assertEquals("real-ssh", rpc.request("test", new JSONObject()).get(5, TimeUnit.SECONDS).getString("transport"));
     } finally { file.delete(); }
   }
+
+  @Test
+  public void readsAcceptedQuestionOnAuxiliaryChannelWithoutInterruptingRpc() throws Exception {
+    rpc = connect((h, f) -> true); rpc.start();
+    java.io.File rollout = java.io.File.createTempFile("fixture-rollout", ".jsonl");
+    try {
+      String arguments = Json.obj("questions", new JSONArray().put(Json.obj("title", "选择中文方案", "options", new JSONArray().put("A").put("B")))).toString();
+      String lines = Json.obj("type", "event_msg", "payload", Json.obj("type", "task_started", "turn_id", "test")) + "\n"
+          + Json.obj("type", "response_item", "payload", Json.obj("type", "function_call", "name", "request_user_input_async", "call_id", "test-call", "arguments", arguments)) + "\n"
+          + Json.obj("type", "response_item", "payload", Json.obj("type", "function_call_output", "call_id", "test-call", "output", "{\"accepted\":true}")) + "\n";
+      java.nio.file.Files.write(rollout.toPath(), lines.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      String path = transport.uploadImage(rollout);
+      String script = new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("src/main/assets/conversation_state.py")), java.nio.charset.StandardCharsets.UTF_8);
+      JSONObject result = transport.jsonCommand(script, Json.obj("path", path, "offset", 0), 20);
+      ConversationJournal journal = new ConversationJournal(); journal.apply(result, "thread");
+      assertEquals(1, journal.pending.size());
+      assertEquals("选择中文方案", Json.object(journal.pending.get("test-call"), "params").getJSONArray("questions").getJSONObject(0).getString("question"));
+      assertEquals(rollout.length(), result.getLong("offset"));
+      assertEquals(0, transport.jsonCommand(script, Json.obj("path", path, "offset", result.getLong("offset")), 20).getJSONArray("records").length());
+      assertEquals("real-ssh", rpc.request("test", Json.obj()).get(5, TimeUnit.SECONDS).getString("transport"));
+    } finally { rollout.delete(); }
+  }
 }
