@@ -33,6 +33,7 @@ public final class MainActivity extends Activity {
   private final Map<String, LinearLayout> mediaRows = new HashMap<>();
   private final Map<String, List<String>> mediaSources = new HashMap<>();
   private static final java.util.concurrent.ExecutorService mediaWorker = java.util.concurrent.Executors.newFixedThreadPool(2);
+  private static final ThumbnailLoader thumbnailWorker = new ThumbnailLoader(2);
   private String pendingDownload = "", pendingDownloadHost = "";
   private int pendingImageGeneration = -1;
   private String pendingImageHost = "", pendingImageThread = "", pendingImageProject = "";
@@ -40,7 +41,14 @@ public final class MainActivity extends Activity {
   private View jump;
   private final Map<String, TextView> texts = new HashMap<>();
   private final Map<String, MessageBodyView> messageBodies = new HashMap<>();
-  private final Map<String, String> rendered = new HashMap<>();
+  private final Map<String, ChatItem> rendered = new HashMap<>();
+  private final Map<String, QuestionHistoryView> questionCards = new HashMap<>();
+  private TextView historyButton;
+  private int historyLimit=60;
+  private boolean historyRender;
+  private boolean mediaScheduled;
+  private final List<MediaTile> mediaTiles=new ArrayList<>();
+  private final Runnable refreshMedia=()->{mediaScheduled=false;updateMediaViewport();};
   private final Map<String, ChatItem> currentItems = new HashMap<>();
   private final List<String> order = new ArrayList<>();
   private Dialog trustDialog, approvalDialog, drawer, editorDialog;
@@ -191,6 +199,8 @@ public final class MainActivity extends Activity {
 
   @Override
   protected void onDestroy() {
+    app.main.removeCallbacks(refreshMedia);
+    for(MediaTile tile:mediaTiles)tile.release();
     if (scroll != null) scroll.removeCallbacks(pinLatest);
     if (trustDialog != null) trustDialog.dismiss();
     if (approvalDialog != null) approvalDialog.dismiss();
@@ -389,6 +399,10 @@ public final class MainActivity extends Activity {
     empty.setGravity(Gravity.CENTER);
     empty.setPadding(dp(28), dp(32), dp(28), dp(56));
     conversation.addView(empty, new LinearLayout.LayoutParams(-1, -1));
+    historyButton=action("加载更早的消息",this::loadOlderMessages);
+    historyButton.setContentDescription("加载更早的消息");
+    LinearLayout.LayoutParams historyParams=new LinearLayout.LayoutParams(-1,dp(48));historyParams.setMargins(dp(24),dp(8),dp(24),0);
+    conversation.addView(historyButton,historyParams);historyButton.setVisibility(View.GONE);
     messages = column();
     messages.setPadding(dp(24), dp(20), dp(24), dp(12));
     conversation.addView(
@@ -397,7 +411,7 @@ public final class MainActivity extends Activity {
     busyLabel.setPadding(dp(24), dp(8), dp(24), dp(20));
     conversation.addView(
         busyLabel, new LinearLayout.LayoutParams(wide ? dp(Math.min(740, available)) : -1, -2));
-    jump = icon("arrow", "滚动到最新消息", () -> { scroll.follow(); render(); followLatest(); });
+    jump = icon("arrow", "滚动到最新消息", () -> { historyLimit=60;scroll.follow(); render(); followLatest(); });
     jump.setRotation(180);
     jump.setBackground(rounded(panel, 24));
     FrameLayout.LayoutParams jp =
@@ -409,6 +423,7 @@ public final class MainActivity extends Activity {
         (v, x, y, ox, oy) -> {
           jump.setVisibility(scroll.isFollowing() ? View.GONE : View.VISIBLE);
           if (scroll.isFollowing() && messageUpdatesPaused) scheduleRender();
+          scheduleMedia();
         });
     LinearLayout footer = column();
     footer.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -499,11 +514,24 @@ public final class MainActivity extends Activity {
     return scroll.nearBottom();
   }
 
+  private void loadOlderMessages() {
+    int before=conversation.getHeight(),y=scroll.getScrollY();String thread=app.threadId;
+    scroll.read();historyLimit+=60;historyRender=true;render();historyRender=false;
+    conversation.post(()->{if(thread.equals(app.threadId)){scroll.scrollTo(0,y+Math.max(0,conversation.getHeight()-before));scheduleMedia();}});
+  }
+
+  private static boolean sameContent(ChatItem a,ChatItem b) {
+    return b!=null && a.text.equals(b.text) && a.detail.equals(b.detail) && a.status.equals(b.status)
+        && a.phase.equals(b.phase) && a.type.equals(b.type) && a.images.equals(b.images)
+        && Objects.equals(a.interaction==null?null:a.interaction.toString(),b.interaction==null?null:b.interaction.toString());
+  }
+
   private void render() {
     if (!renderedThread.equals(app.threadId)) {
       renderedThread = app.threadId;
       if (input != null) { input.setText(app.draftText); input.setSelection(input.length()); }
       scroll.follow();
+      historyLimit=60;firstRender=true;
       messageUpdatesPaused = false;
     }
     title.setText(app.threadTitle.isEmpty() ? (app.threadId.isEmpty() ? getString(R.string.app_name) : "未命名对话") : app.threadTitle);
@@ -533,13 +561,19 @@ public final class MainActivity extends Activity {
         + (app.serviceTierSummary().isEmpty() ? "" : " · " + app.serviceTierSummary()));
     modelButton.setTooltipText(modelButton.getText());
     runningIndicator.setVisibility(app.currentThreadRunning() ? View.VISIBLE : View.GONE);
-    if (scroll.isFollowing()) {
+    if (scroll.isFollowing() || historyRender) {
       messageUpdatesPaused = false;
       jump.setTooltipText("滚动到最新消息");
       List<ChatItem> visibleItems = new ArrayList<>();
-      for (ChatItem source : app.items) {
+      List<ChatItem> presentation=app.displayItems();
+      int start=Math.max(0,presentation.size()-historyLimit);
+      historyButton.setVisibility(start>0?View.VISIBLE:View.GONE);
+      historyButton.setText("加载更早的消息（还有 "+start+" 项）");
+      for (ChatItem source : presentation.subList(start,presentation.size())) {
         ChatItem snapshot = new ChatItem(source.id, source.type, source.text);
         snapshot.detail = source.detail; snapshot.status = source.status;
+        snapshot.phase=source.phase;snapshot.turnId=source.turnId;
+        if(source.interaction!=null)try{snapshot.interaction=new JSONObject(source.interaction.toString());}catch(JSONException ignored){}
         snapshot.images.addAll(source.images);
         visibleItems.add(snapshot);
       }
@@ -550,8 +584,11 @@ public final class MainActivity extends Activity {
       if (empty.getVisibility() == View.VISIBLE) renderEmpty();
       List<String> desired = new ArrayList<>();
       for (ChatItem item : visibleItems) desired.add(item.id);
-      if (!desired.equals(order)) {
+      boolean styleChanged=false;
+      for(ChatItem item:visibleItems){ChatItem prior=currentItems.get(item.id);if(prior!=null && (!prior.type.equals(item.type)||!prior.phase.equals(item.phase)))styleChanged=true;}
+      if (!desired.equals(order) || styleChanged) {
         boolean appendOnly = desired.size() >= order.size() && desired.subList(0, order.size()).equals(order);
+        if(styleChanged)appendOnly=false;
         int from = appendOnly ? order.size() : 0;
         if (!appendOnly) {
           messages.removeAllViews();
@@ -559,6 +596,8 @@ public final class MainActivity extends Activity {
           messageBodies.clear();
           mediaRows.clear();
           mediaSources.clear();
+          for(MediaTile tile:mediaTiles)tile.release();
+          mediaTiles.clear();questionCards.clear();
           rendered.clear();
           currentItems.clear();
         }
@@ -568,9 +607,10 @@ public final class MainActivity extends Activity {
       }
       for (ChatItem item : visibleItems) {
         currentItems.put(item.id, item);
-        String key = item.text + "\u0000" + item.detail + "\u0000" + item.status + item.images.toString();
-        if (!key.equals(rendered.get(item.id))) {
-          rendered.put(item.id, key);
+        if (!sameContent(item,rendered.get(item.id))) {
+          rendered.put(item.id, item);
+          QuestionHistoryView questionCard=questionCards.get(item.id);
+          if(questionCard!=null && item.interaction!=null)questionCard.bind(item.interaction,item.type.equals("questionAnswer"));
           MessageBodyView messageBody = messageBodies.get(item.id);
           if (messageBody != null) messageBody.setSource(item.text);
           TextView view = texts.get(item.id);
@@ -586,7 +626,8 @@ public final class MainActivity extends Activity {
         }
         renderMedia(item);
       }
-      if (!visibleItems.isEmpty()) followLatest();
+      if (!visibleItems.isEmpty() && !historyRender) followLatest();
+      scheduleMedia();
       firstRender = false;
     } else {
       messageUpdatesPaused = true;
@@ -656,12 +697,21 @@ public final class MainActivity extends Activity {
     LinearLayout.LayoutParams wp = new LinearLayout.LayoutParams(-1, -2);
     wp.bottomMargin = dp(item.prose() ? 28 : 2);
     messages.addView(wrap, wp);
+    if(item.type.equals("question") || item.type.equals("questionAnswer")) {
+      boolean answer=item.type.equals("questionAnswer");
+      QuestionHistoryView card=new QuestionHistoryView(this,fg,muted,
+          Color.parseColor(isDark()?(answer?"#262626":"#1C1C1C"):(answer?"#EDEDED":"#F5F5F5")),
+          fg,this::copy);
+      questionCards.put(item.id,card);currentItems.put(item.id,item);
+      LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);wp.bottomMargin=dp(18);wrap.addView(card,cp);
+      return;
+    }
     TextView content = text("", item.prose() ? 16 : 13, item.prose() ? fg : muted);
     content.setLineSpacing(dp(5), 1);
     content.setTextIsSelectable(true);
     content.setLinksClickable(true);
     content.setMovementMethod(LinkMovementMethod.getInstance());
-    if (!item.type.equals("agentMessage")) texts.put(item.id, content);
+    if (!item.type.equals("agentMessage") && !item.type.equals("plan")) texts.put(item.id, content);
     currentItems.put(item.id, item);
     if (item.user()) {
       content.setBackground(rounded(panel, 22));
@@ -681,17 +731,23 @@ public final class MainActivity extends Activity {
             if (latest != null) showDetails(latest);
           });
     }
-    if (item.type.equals("agentMessage")) {
-      MessageBodyView messageBody = new MessageBodyView(this,fg,muted,panel,this::openLink,this::copy);
+    if (item.type.equals("agentMessage") || item.type.equals("plan")) {
+      boolean progress=item.phase.equals("commentary"),plan=item.type.equals("plan");
+      wrap.setBackground(rounded(progress?bg:Color.parseColor(isDark()?(plan?"#202020":"#161616"):(plan?"#F2F2F2":"#FAFAFA")),18));
+      wrap.setPadding(dp(progress?4:14),dp(progress?2:6),dp(progress?4:14),dp(8));
+      LinearLayout heading=row();TextView kind=text(plan?"计划":progress?"进展":"回复",12,muted);heading.addView(kind,new LinearLayout.LayoutParams(0,-2,1));
+      IconView copyButton=icon("copy",plan?"复制计划":"复制回复",()->{ChatItem latest=currentItems.get(item.id);if(latest!=null)copy(latest.text);});
+      heading.addView(copyButton,new LinearLayout.LayoutParams(dp(48),dp(48)));wrap.addView(heading);
+      MessageBodyView messageBody = new MessageBodyView(this,progress?muted:fg,muted,Color.parseColor(isDark()?"#2B2B2B":"#ECECEC"),this::openLink,this::copy);
       messageBodies.put(item.id,messageBody); wrap.addView(messageBody,new LinearLayout.LayoutParams(-1,-2));
     } else wrap.addView(content, new LinearLayout.LayoutParams(item.prose() ? -2 : -1, -2));
     LinearLayout media = column();
     mediaRows.put(item.id, media);
     wrap.addView(media, new LinearLayout.LayoutParams(-1, -2));
-    if (item.type.equals("agentMessage")) {
+    if (item.user()) {
       LinearLayout actions = row();
-      IconView copy = icon("copy", "复制回复", () -> copy(currentItems.get(item.id).text));
-      actions.addView(copy, new LinearLayout.LayoutParams(dp(40), dp(40)));
+      IconView copy = icon("copy", "复制消息", () -> {ChatItem latest=currentItems.get(item.id);if(latest!=null)copy(latest.text);});
+      actions.addView(copy, new LinearLayout.LayoutParams(dp(48), dp(48)));
       wrap.addView(actions);
     }
     if (animate) {
@@ -862,63 +918,84 @@ public final class MainActivity extends Activity {
     }
   }
 
+  private final class MediaTile {
+    final String itemId,source,host,cacheHost;
+    final int generation;
+    final LinearLayout row,tile;
+    final ImageView preview;
+    final TextView label;
+    volatile boolean visible;
+    boolean loading,loaded;
+    volatile long loadVersion;
+    ThumbnailLoader.Job job;
+    MediaTile(String itemId,String source,LinearLayout row,boolean multiple) {
+      this.itemId=itemId;this.source=source;this.row=row;
+      host=app.profile==null?"":app.profile.id;generation=app.connectionGeneration();
+      cacheHost=app.profile==null?"":host+":"+app.profile.host+":"+app.profile.port+":"+app.profile.user+":"+app.threadId+":"+itemId;
+      tile=column();tile.setBackground(rounded(panel,14));
+      LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(multiple?0:-1,-2,multiple?1:0);tp.setMargins(0,dp(6),dp(multiple?6:0),dp(6));
+      preview=new ImageView(MainActivity.this);preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
+      preview.setContentDescription("消息图片，点击查看大图");tile.addView(preview,new LinearLayout.LayoutParams(-1,dp(multiple?160:240)));
+      label=text("图片 · 滚动到此处加载",12,muted);label.setMinHeight(dp(48));label.setSingleLine(true);label.setEllipsize(TextUtils.TruncateAt.END);label.setGravity(Gravity.CENTER);tile.addView(label);
+      tile.setLayoutParams(tp);preview.setOnClickListener(v->openImage(source));
+      label.setOnClickListener(v->{if(loaded)saveMedia(source);else load();});PressFeedback.apply(preview,isDark());PressFeedback.apply(label,isDark());
+    }
+    boolean valid() {return !isDestroyed() && generation==app.connectionGeneration() && app.profile!=null && host.equals(app.profile.id) && mediaRows.get(itemId)==row && tile.getParent()!=null;}
+    void load() {
+      if(loading || loaded || !valid())return;loading=true;label.setText("正在加载图片…");
+      long version=++loadVersion;
+      job=thumbnailWorker.submit(running->{
+        android.graphics.Bitmap bitmap=null;
+        java.util.function.BooleanSupplier active=()->running.getAsBoolean() && visible && version==loadVersion && generation==app.connectionGeneration();
+        try {
+          MediaFiles.check(active);
+          String key=ThumbnailCache.key(cacheHost,source);bitmap=app.thumbnails.images.get(key);
+          if(bitmap==null){ByteArrayOutputStream bytes=new ByteArrayOutputStream();app.readMedia(source,bytes,MediaFiles.IMAGE_LIMIT,active);MediaFiles.check(active);bitmap=MediaFiles.decode(bytes.toByteArray(),640);if(!active.getAsBoolean()){bitmap.recycle();return;}app.thumbnails.images.put(key,bitmap);}
+          android.graphics.Bitmap image=bitmap;
+          app.main.post(()->{if(version!=loadVersion)return;loading=false;job=null;if(!valid() || !visible)return;loaded=true;preview.setImageBitmap(image);label.setText("保存图片");});
+        }catch(Exception e){app.main.post(()->{if(version!=loadVersion)return;loading=false;job=null;if(valid() && visible)label.setText("图片加载失败 · 点按重试");});}
+      });
+    }
+    void release(){visible=false;loadVersion++;if(job!=null){job.discard();job=null;}loading=false;if(loaded){preview.setImageDrawable(null);loaded=false;}label.setText("图片 · 滚动到此处加载");}
+  }
+
+  private void scheduleMedia() {
+    if(mediaScheduled)return;mediaScheduled=true;app.main.postDelayed(refreshMedia,16);
+  }
+  private void updateMediaViewport() {
+    if(isDestroyed() || scroll==null)return;
+    android.graphics.Rect rect=new android.graphics.Rect();
+    for(MediaTile tile:mediaTiles){tile.visible=tile.valid() && tile.tile.isShown() && tile.tile.getGlobalVisibleRect(rect) && rect.height()>0;if(!tile.visible)tile.release();}
+    for(MediaTile tile:mediaTiles)if(tile.visible)tile.load();
+  }
+
+  private void openImage(String source) {
+    LinearLayout view=column();ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+    view.addView(image,new LinearLayout.LayoutParams(-1,dp(420)));TextView loading=text("正在加载大图…",13,muted);view.addView(loading);
+    Dialog dialog=new AlertDialog.Builder(this).setView(view).setPositiveButton("保存图片",(d,w)->saveMedia(source)).setNegativeButton("关闭",null).show();
+    int generation=app.connectionGeneration();
+    mediaWorker.execute(()->{
+      try {ByteArrayOutputStream bytes=new ByteArrayOutputStream();app.readMedia(source,bytes,MediaFiles.IMAGE_LIMIT);android.graphics.Bitmap bitmap=MediaFiles.decode(bytes.toByteArray());
+        app.main.post(()->{if(isDestroyed() || !dialog.isShowing() || generation!=app.connectionGeneration()){bitmap.recycle();return;}image.setImageBitmap(bitmap);loading.setVisibility(View.GONE);dialog.setOnDismissListener(d->{image.setImageDrawable(null);bitmap.recycle();});});
+      }catch(Exception e){app.main.post(()->{if(dialog.isShowing())loading.setText("图片加载失败，请关闭后重试");});}
+    });
+  }
+
   private void renderMedia(ChatItem item) {
     LinearLayout row = mediaRows.get(item.id);
     List<String> sources = MediaFiles.images(item);
     if (row == null || sources.equals(mediaSources.get(item.id))) return;
     mediaSources.put(item.id, sources);
+    mediaTiles.removeIf(tile->{if(!tile.itemId.equals(item.id))return false;tile.release();return true;});
     row.removeAllViews();
-    String hostId = app.profile == null ? "" : app.profile.id;
-    for (String source : sources) {
-      ImageView preview = new ImageView(this);
-      preview.setAdjustViewBounds(true);
-      preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
-      preview.setMaxHeight(dp(320));
-      preview.setContentDescription("消息图片，点击查看大图");
-      row.addView(preview, new LinearLayout.LayoutParams(-1, -2));
-      TextView loading = text("正在加载图片…", 13, muted);
-      row.addView(loading);
-      Runnable load = () -> {
-        loading.setText("正在加载图片…");
-        mediaWorker.execute(() -> {
-          try {
-            if (app.profile == null || !hostId.equals(app.profile.id)) return;
-            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-            app.readMedia(source, bytes, MediaFiles.IMAGE_LIMIT);
-            android.graphics.Bitmap bitmap = MediaFiles.decode(bytes.toByteArray());
-            app.main.post(() -> {
-              if (isDestroyed() || app.profile == null || !hostId.equals(app.profile.id)) { bitmap.recycle(); return; }
-              if (!scroll.isFollowing()) {
-                // Keep the existing placeholder geometry while reading. Reload
-                // this image when the reader explicitly returns to live content.
-                bitmap.recycle(); mediaSources.remove(item.id); return;
-              }
-              if (mediaRows.get(item.id) != row || preview.getParent() != row) { bitmap.recycle(); return; }
-              preview.setImageBitmap(bitmap);
-              loading.setText("保存图片");
-              loading.setOnClickListener(v -> saveMedia(source));
-              PressFeedback.apply(loading, bg == Color.BLACK);
-              preview.setOnClickListener(v -> {
-                ImageView full = new ImageView(this);
-                full.setAdjustViewBounds(true); full.setImageBitmap(bitmap);
-                new AlertDialog.Builder(this).setView(full)
-                    .setPositiveButton("保存图片", (d, w) -> saveMedia(source)).setNegativeButton("关闭", null).show();
-              });
-              PressFeedback.apply(preview, bg == Color.BLACK);
-            });
-          } catch (Exception e) {
-            app.main.post(() -> {
-              if (isDestroyed()) return;
-              if (!scroll.isFollowing()) { mediaSources.remove(item.id); return; }
-              loading.setText("图片加载失败，点按重试：" + ConnectionFailure.reason(e));
-            });
-          }
-        });
-      };
-      loading.setOnClickListener(v -> load.run());
-      PressFeedback.apply(loading, bg == Color.BLACK);
-      load.run();
+    LinearLayout grid=null;int index=0;
+    for(String original:sources) {
+      String source=original;
+      try{if(!source.startsWith("data:") && !source.startsWith("https://"))source=MediaFiles.remotePath(source,app.currentProject());}catch(Exception ignored){}
+      if(index%2==0 || sources.size()==1){grid=row();row.addView(grid,new LinearLayout.LayoutParams(-1,-2));}
+      MediaTile tile=new MediaTile(item.id,source,row,sources.size()>1);mediaTiles.add(tile);grid.addView(tile.tile);index++;
     }
+    scheduleMedia();
   }
 
   private void openLink(String source) {

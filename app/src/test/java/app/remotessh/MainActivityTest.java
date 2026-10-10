@@ -966,6 +966,7 @@ public class MainActivityTest {
     app.items.add(image);
     app.items.add(new ChatItem("reply", "agentMessage", "[下载报告](sandbox:/mnt/data/report.pdf)"));
     app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));capture("image-placeholder");
     for (int i = 0; i < 150 && find(content(), "保存图片") == null; i++) {
       Thread.sleep(10); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));
     }
@@ -977,5 +978,46 @@ public class MainActivityTest {
     org.robolectric.shadows.ShadowActivity.IntentForResult request = shadowOf(activity).getNextStartedActivityForResult();
     assertEquals(android.content.Intent.ACTION_CREATE_DOCUMENT, request.intent.getAction());
     assertEquals(44, request.requestCode);
+  }
+
+  @Test public void conversationShowsTypedQuestionHistoryAndCopyActions() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="chat";
+    org.json.JSONObject req=InteractionHistoryTest.question("fixture","t1");app.interactions.question(req);
+    app.interactions.answered(req,Json.obj("answers",Json.obj("q0",Json.obj("answers",new org.json.JSONArray().put("B")))));
+    ChatItem progress=InteractionHistoryTest.message("progress","agentMessage","t1","正在检查项目结构。"),result=InteractionHistoryTest.message("result","agentMessage","t1","输出结果：\n```text\n版本 1.0.35\n```" );
+    progress.phase="commentary";result.phase="final_answer";
+    app.items.add(InteractionHistoryTest.message("u","userMessage","t1","请检查项目"));app.items.add(progress);
+    ChatItem reasoning=InteractionHistoryTest.message("reason","reasoning","t1","思考过程");reasoning.detail="优先检查关键流程";reasoning.status="completed";app.items.add(reasoning);
+    app.items.add(result);app.items.add(InteractionHistoryTest.message("a","userMessage","t2","回答上一轮的问题：\n选择方案\nB\n\n"));app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));capture("typed-conversation-history-"+((activity.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?"dark":"light"));
+    assertNotNull(find(content(),"进展"));assertNotNull(find(content(),"回复"));assertNotNull(find(content(),"交互提问 · 已回答"));assertNotNull(find(content(),"你的回答"));
+    assertNotNull(find(content(),"✓  B"));assertNotNull(find(content(),"✓  思考过程  ›"));
+    find(content(),"复制问答回答").performClick();
+    android.content.ClipboardManager clipboard=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+    assertEquals("选择方案\n回答：B",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+    find(content(),"复制内容块 1").performClick();assertEquals("版本 1.0.35\n",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+    controller.recreate();activity=controller.get();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));assertNotNull(find(content(),"你的回答"));
+  }
+
+  @Test @Config(qualifiers="w411dp-h891dp-night-xhdpi")
+  public void typedQuestionHistoryAlsoRendersInDarkTheme() throws Exception {conversationShowsTypedQuestionHistoryAndCopyActions();}
+
+  @Test public void longImageHistoryRendersInPagesAndLoadsOnlyVisibleThumbnails() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="photos";
+    Bitmap sample=Bitmap.createBitmap(30,30,Bitmap.Config.ARGB_8888);ByteArrayOutputStream bytes=new ByteArrayOutputStream();sample.compress(Bitmap.CompressFormat.PNG,100,bytes);sample.recycle();
+    String source="data:image/png;base64,"+android.util.Base64.encodeToString(bytes.toByteArray(),android.util.Base64.NO_WRAP);
+    for(int i=0;i<400;i++){ChatItem m=new ChatItem("photo"+i,"userMessage","图片消息 "+i);m.images.add(source);app.items.add(m);}app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));capture("paged-photo-history");
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("currentItems");field.setAccessible(true);
+    assertEquals(60,((java.util.Map<?,?>)field.get(activity)).size());assertEquals(400,app.items.size());
+    field=MainActivity.class.getDeclaredField("mediaTiles");field.setAccessible(true);java.util.List<?> tiles=(java.util.List<?>)field.get(activity);
+    int loaded=0;for(int i=0;i<100 && loaded==0;i++){Thread.sleep(10);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));loaded=0;for(Object tile:tiles){java.lang.reflect.Field f=tile.getClass().getDeclaredField("loaded");f.setAccessible(true);if(f.getBoolean(tile))loaded++;}}
+    assertTrue("Visible thumbnails must load",loaded>0);assertTrue("Offscreen history must not decode eagerly",loaded<6);
+    ConversationScrollView scroll=(ConversationScrollView)find(content(),"对话消息");scroll.scrollTo(0,200);
+    int before=scroll.getScrollY();assertFalse(scroll.isFollowing());find(content(),"加载更早的消息").performClick();
+    capture("paged-photo-history-older");shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    field=MainActivity.class.getDeclaredField("currentItems");field.setAccessible(true);assertEquals(120,((java.util.Map<?,?>)field.get(activity)).size());
+    assertFalse("Loading history must keep reading mode",scroll.isFollowing());assertTrue("Prepending keeps the old content on screen",scroll.getScrollY()>before);
+    assertEquals(400,app.items.size());
   }
 }

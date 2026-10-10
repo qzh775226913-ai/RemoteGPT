@@ -55,6 +55,48 @@ class ConversationStateTests(unittest.TestCase):
         self.add('response_item', {'type': 'function_call_output', 'call_id': 'q', 'output': '{"accepted":false}'})
         self.assertEqual([], module.scan(self.path, 0)['records'])
 
+    def test_archive_keeps_question_after_new_task_and_only_app_formatted_answers(self):
+        self.add('event_msg', {'type': 'task_started', 'turn_id': 'first'})
+        self.add('response_item', {'type': 'function_call', 'name': 'request_user_input_async', 'arguments': '{"questions":[{"title":"Q"}]}', 'call_id': 'q'})
+        self.add('response_item', {'type': 'function_call_output', 'call_id': 'q', 'output': '{"accepted":true}'})
+        self.add('event_msg', {'type': 'task_started', 'turn_id': 'second'})
+        self.add('event_msg', {'type': 'user_message', 'message': '回答上一轮的问题：\nQ\nA\n\n'})
+        self.add('event_msg', {'type': 'user_message', 'message': 'private-normal-chat'})
+        result = module.scan(self.path, 0)
+        self.assertEqual(['task_started', 'function_call', 'function_call_output', 'task_started', 'user_answer'], [x['type'] for x in result['history']])
+        self.assertNotIn('private-normal-chat', json.dumps(result))
+        self.assertNotIn('function_call', [x['type'] for x in result['records']])
+
+    def test_native_answers_and_metadata_stay_bounded_across_chunks(self):
+        for i in range(30):
+            self.add('response_item', {'type': 'function_call', 'name': 'request_user_input', 'call_id': str(i), 'arguments': json.dumps({'questions': [{'question': 'Q' * 1800, 'id': 'q'}]})})
+            self.add('response_item', {'type': 'function_call_output', 'call_id': str(i), 'output': '{"answers":{"q":{"answers":["A"]}}}'})
+        offset, calls, answers = 0, [], []
+        while offset < self.path.stat().st_size:
+            result = module.scan(self.path, offset, calls)
+            self.assertGreater(result['offset'], offset)
+            self.assertLess(len(json.dumps(result, ensure_ascii=False).encode()), 65536)
+            calls.extend(x['call_id'] for x in result['history'] if x['type'] == 'function_call')
+            answers.extend(x['call_id'] for x in result['history'] if x['type'] == 'function_call_output')
+            offset = result['offset']
+        self.assertEqual(30, len(calls))
+        self.assertEqual(30, len(answers))
+
+    def test_user_response_items_recover_answers_without_returning_other_messages(self):
+        self.add('response_item', {'type': 'function_call', 'name': 'request_user_input_async', 'arguments': '{}', 'call_id': 'old'})
+        self.add('response_item', {'type': 'message', 'role': 'user', 'content': [{'type': 'input_text', 'text': '回答上一轮的问题：\nQ\nA\n\n'}], 'private_metadata': 'private-context'})
+        self.add('response_item', {'type': 'message', 'role': 'user', 'content': [{'type': 'input_text', 'text': 'private-normal-chat'}]})
+        result = module.scan(self.path, 0)
+        self.assertEqual([{'type': 'user_message', 'turn_id': ''}], result['records'])
+        self.assertEqual(1, sum(x['type'] == 'user_answer' for x in result['history']))
+        self.assertNotIn('private', json.dumps(result))
+
+    def test_unrelated_tool_answer_outputs_are_not_archived(self):
+        self.add('response_item', {'type': 'function_call_output', 'call_id': 'other-tool', 'output': '{"answers":{"private":"private-output"}}'})
+        result = module.scan(self.path, 0)
+        self.assertEqual([], result['history'])
+        self.assertNotIn('private', json.dumps(result))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -14,9 +14,21 @@ final class MediaFiles {
   static final Pattern IMAGE = Pattern.compile("!\\[([^\\]]*)\\]\\(([^\\s)]+)\\)");
 
   static void copy(InputStream in, OutputStream out, long limit) throws IOException {
+    copy(in,out,limit,()->true);
+  }
+
+  static void check(java.util.function.BooleanSupplier active) throws IOException {
+    if(!active.getAsBoolean())throw new java.io.InterruptedIOException("图片加载已取消");
+  }
+
+  static void copy(InputStream in, OutputStream out, long limit, java.util.function.BooleanSupplier active) throws IOException {
     byte[] buffer = new byte[16384];
     long total = 0;
-    for (int n; (n = in.read(buffer)) != -1;) {
+    for (;;) {
+      check(active);
+      int n=in.read(buffer);
+      check(active);
+      if(n==-1)return;
       total += n;
       if (total > limit) throw new IOException("文件超过大小限制");
       out.write(buffer, 0, n);

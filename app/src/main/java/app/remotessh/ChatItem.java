@@ -5,6 +5,8 @@ import org.json.*;
 public final class ChatItem {
   public final java.util.List<String> images = new java.util.ArrayList<>();
   public String id, type, text = "", detail = "", status = "";
+  public String phase = "", turnId = "";
+  public JSONObject interaction;
 
   public ChatItem(String id, String type, String text) {
     this.id = id;
@@ -13,7 +15,7 @@ public final class ChatItem {
   }
 
   public boolean user() {
-    return type.equals("userMessage");
+    return type.equals("userMessage") || type.equals("questionAnswer");
   }
 
   public boolean prose() {
@@ -38,6 +40,8 @@ public final class ChatItem {
   public static ChatItem from(JSONObject j) {
     ChatItem m = new ChatItem(j.optString("id"), j.optString("type"), j.optString("text"));
     m.status = j.optString("status");
+    m.phase = j.optString("phase");
+    m.turnId = j.optString("turnId");
     switch (m.type) {
       case "userMessage":
         JSONArray c = j.optJSONArray("content");
@@ -89,9 +93,24 @@ public final class ChatItem {
         break;
       case "mcpToolCall":
         m.text = j.optString("server") + " · " + j.optString("tool");
-        m.detail = j.opt("result") == null ? "" : j.opt("result").toString();
         JSONObject toolResult = j.optJSONObject("result");
         JSONArray content = toolResult == null ? null : toolResult.optJSONArray("content");
+        if(toolResult==null)m.detail=j.opt("result")==null?"":j.opt("result").toString();
+        else {
+          JSONObject readable=new JSONObject();
+          for(java.util.Iterator<String> keys=toolResult.keys();keys.hasNext();) {
+            String key=keys.next();if(key.equals("content"))continue;
+            try{readable.put(key,toolResult.opt(key));}catch(JSONException ignored){}
+          }
+          JSONArray blocks=new JSONArray();
+          if(content!=null)for(int i=0;i<content.length();i++) {
+            JSONObject block=content.optJSONObject(i);
+            blocks.put(block!=null && block.optString("type").equals("image")
+                ? Json.obj("type","image","mimeType",block.optString("mimeType"),"note","图片见消息预览") : content.opt(i));
+          }
+          if(content!=null)try{readable.put("content",blocks);}catch(JSONException ignored){}
+          m.detail=readable.toString();
+        }
         if (content != null) for (int i = 0; i < content.length(); i++) {
           JSONObject block = content.optJSONObject(i);
           if (block != null && block.optString("type").equals("image") && block.optString("mimeType").startsWith("image/"))

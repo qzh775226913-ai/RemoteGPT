@@ -9,6 +9,7 @@ public final class ConversationScrollView extends ScrollView {
   public ConversationScrollView(Context context) { super(context); }
   public boolean isFollowing() { return following; }
   public void follow() { following = true; requestLayout(); }
+  public void read() { following = false; }
   public boolean nearBottom() {
     return getChildCount() == 0 || getChildAt(0).getHeight() + getPaddingTop()
         + getPaddingBottom() - getHeight() - getScrollY() <= 2 * getResources().getDisplayMetrics().density;

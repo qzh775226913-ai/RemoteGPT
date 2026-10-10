@@ -301,10 +301,16 @@ public final class SshTransport implements AutoCloseable {
   }
 
   public void download(String path, OutputStream out, long limit) throws Exception {
+    download(path,out,limit,()->true);
+  }
+
+  public void download(String path, OutputStream out, long limit, java.util.function.BooleanSupplier active) throws Exception {
+    MediaFiles.check(active);
     ChannelSftp c = sftp();
     try {
       if (c.stat(path).getSize() > limit) throw new IOException("文件超过下载大小限制");
-      try (InputStream in = c.get(path)) { MediaFiles.copy(in, out, limit); }
+      MediaFiles.check(active);
+      try (InputStream in = c.get(path)) { MediaFiles.copy(in, out, limit,active); }
     } finally { c.disconnect(); }
   }
 
