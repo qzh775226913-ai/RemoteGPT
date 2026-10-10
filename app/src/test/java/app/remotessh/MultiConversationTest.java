@@ -153,6 +153,7 @@ public class MultiConversationTest {
             JSONObject candidate=new JSONObject(line);
             String target = i==0?"A":"B";
             if (!readAnswered && candidate.optString("method").equals("thread/read") && Json.object(candidate,"params").optString("threadId").equals(target)) {
+              assertFalse("Check status without downloading full history before resume",Json.object(candidate,"params").getBoolean("includeTurns"));
               server.write((Json.obj("id",candidate.opt("id"),"result",Json.obj("thread",Json.obj("id",target,"status",Json.obj("type","active"))))+"\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
               server.flush(); readAnswered=true;
             }

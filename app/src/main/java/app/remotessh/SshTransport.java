@@ -285,6 +285,10 @@ public final class SshTransport implements AutoCloseable {
   }
 
   public String uploadImage(File file) throws Exception {
+    return uploadFile(file,file.getName());
+  }
+
+  public String uploadFile(File file,String name) throws Exception {
     ChannelSftp c = sftp();
     try {
       String folder = c.getHome() + "/.remote-ssh-attachments";
@@ -293,9 +297,14 @@ public final class SshTransport implements AutoCloseable {
         c.mkdir(folder);
       }
       c.chmod(0700, folder);
-      String target = folder + "/" + UUID.randomUUID() + file.getName().substring(file.getName().lastIndexOf('.'));
-      try (InputStream in = new FileInputStream(file)) { c.put(in, target); }
-      c.chmod(0600, target);
+      String target = folder + "/" + UUID.randomUUID() + "-" + FileAttachment.safeName(name);
+      try {
+        try (InputStream in = new FileInputStream(file)) { c.put(in, target); }
+        c.chmod(0600, target);
+      } catch(Exception failure) {
+        try { c.rm(target); } catch(Exception ignored) { }
+        throw failure;
+      }
       return target;
     } finally { c.disconnect(); }
   }

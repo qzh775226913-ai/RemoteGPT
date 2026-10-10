@@ -55,6 +55,24 @@ public class RpcClientTest {
     assertEquals("model", b.get(2, TimeUnit.SECONDS).getString("kind"));
   }
 
+  @Test public void snapshotPreparationCompletesBeforeFollowingLiveEventIsDispatched() throws Exception {
+    CountDownLatch preparing=new CountDownLatch(1),release=new CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<ThreadSnapshot> prepared=new java.util.concurrent.atomic.AtomicReference<>();
+    java.util.concurrent.atomic.AtomicReference<String> thread=new java.util.concurrent.atomic.AtomicReference<>();
+    client.request("thread/resume",Json.obj("threadId","t"),(result,error)->{
+      thread.set(Thread.currentThread().getName());prepared.set(new ThreadSnapshot(result));preparing.countDown();
+      try{release.await(3,TimeUnit.SECONDS);}catch(InterruptedException e){Thread.currentThread().interrupt();}
+    });
+    try {
+      receive(Json.obj("id",1,"result",Json.obj("thread",Json.obj("id","t","turns",new JSONArray().put(Json.obj("id","turn","items",new JSONArray().put(Json.obj("id","m","type","agentMessage","text","baseline"))))))));
+      assertTrue(preparing.await(2,TimeUnit.SECONDS));
+      receive(Json.obj("method","item/agentMessage/delta","params",Json.obj("threadId","t","itemId","m","delta","new output")));
+      assertNull(events.poll(30,TimeUnit.MILLISECONDS));
+      assertEquals("remote-rpc-reader",thread.get());assertEquals("baseline",prepared.get().turns.get(0).get(0).text);
+    }finally{release.countDown();}
+    assertNotNull(events.poll(2,TimeUnit.SECONDS));
+  }
+
   @Test
   public void routesServerRequestWithoutConsumingClientResponse() throws Exception {
     CompletableFuture<JSONObject> f = client.request("turn/start", new JSONObject());

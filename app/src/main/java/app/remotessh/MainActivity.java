@@ -57,6 +57,9 @@ public final class MainActivity extends Activity {
   private RemoteBrowser browser;
   private DirectoryPicker directoryPicker;
   private LinearLayout readOnlyBar;
+  private TextView readOnlyLabel,resumeButton,reconnectButton,refreshButton,newChatButton;
+  private LoadingSpinner resumeSpinner,reconnectSpinner;
+  private boolean visibleActivity;
   private String shownApproval = "";
   private QuestionForm questionForm;
   private Bundle restoredQuestion;
@@ -166,6 +169,7 @@ public final class MainActivity extends Activity {
   @Override
   protected void onStart() {
     super.onStart();
+    visibleActivity=true;
     app.observer = this::scheduleRender;
     app.setForeground(true);
     if (app.connected) { app.refreshThreads(false); app.pollReadOnly(); }
@@ -177,9 +181,11 @@ public final class MainActivity extends Activity {
   @Override
   protected void onStop() {
     super.onStop();
+    visibleActivity=false;
     app.observer = null;
     app.setForeground(false, pendingImageGeneration >= 0);
     app.main.removeCallbacks(ticker);
+    if(resumeSpinner!=null)resumeSpinner.stop();if(reconnectSpinner!=null)reconnectSpinner.stop();
   }
 
   @Override
@@ -199,6 +205,7 @@ public final class MainActivity extends Activity {
 
   @Override
   protected void onDestroy() {
+    if(resumeSpinner!=null)resumeSpinner.stop();if(reconnectSpinner!=null)reconnectSpinner.stop();
     app.main.removeCallbacks(refreshMedia);
     for(MediaTile tile:mediaTiles)tile.release();
     if (scroll != null) scroll.removeCallbacks(pinLatest);
@@ -347,11 +354,13 @@ public final class MainActivity extends Activity {
     center.addView(usageLabel);
     readOnlyBar = column();
     readOnlyBar.setPadding(dp(16), dp(2), dp(16), dp(6));
-    TextView readonly = text("只读历史 · 尚未取得写入权限", 13, muted);
-    readonly.setPadding(dp(4), dp(6), dp(4), dp(6));
-    readOnlyBar.addView(readonly);
+    readOnlyLabel = text("只读历史 · 尚未取得写入权限", 13, muted);
+    readOnlyLabel.setPadding(dp(4), dp(6), dp(4), dp(6));
+    readOnlyBar.addView(readOnlyLabel);
     LinearLayout roActions = row();
-    TextView[] readOnlyControls = {action("刷新", app::refreshReadOnly), action("接续", () -> app.resume(app.threadId)), action("新对话", this::startNewChat)};
+    refreshButton=action("刷新",app::refreshReadOnly);resumeButton=action("接续",()->app.resume(app.threadId));newChatButton=action("新对话",this::startNewChat);
+    resumeButton.setContentDescription("接续");resumeSpinner=new LoadingSpinner(fg,dp(16));
+    TextView[] readOnlyControls = {refreshButton,resumeButton,newChatButton};
     for (int i=0;i<readOnlyControls.length;i++) {
       readOnlyControls[i].setSingleLine(true); readOnlyControls[i].setEllipsize(TextUtils.TruncateAt.END);
       readOnlyControls[i].setPadding(dp(8),dp(12),dp(8),dp(12));
@@ -360,7 +369,8 @@ public final class MainActivity extends Activity {
     }
     readOnlyBar.addView(roActions);
     LinearLayout.LayoutParams reconnectParams=new LinearLayout.LayoutParams(-1,-2); reconnectParams.topMargin=dp(3);
-    readOnlyBar.addView(action("重连并接续", app::reconnectAndResume),reconnectParams);
+    reconnectButton=action("重连并接续",app::reconnectAndResume);reconnectButton.setContentDescription("重连并接续");reconnectSpinner=new LoadingSpinner(fg,dp(16));
+    readOnlyBar.addView(reconnectButton,reconnectParams);
     readOnlyBar.setVisibility(View.GONE);
     center.addView(readOnlyBar);
     error = text("", 13, isDark() ? Color.rgb(255, 151, 137) : Color.rgb(165, 47, 36));
@@ -460,7 +470,7 @@ public final class MainActivity extends Activity {
     LinearLayout controls = row();
     composer.addView(controls);
     controls.addView(
-        icon("plus", "添加图片", this::pickImage),
+        icon("plus", "添加附件", this::pickImage),
         new LinearLayout.LayoutParams(dp(40), dp(40)));
     modelButton = text("默认模型", 12, fg);
     modelButton.setPadding(dp(4), dp(6), dp(4), dp(6));
@@ -540,7 +550,14 @@ public final class MainActivity extends Activity {
     projectLabel.setVisibility(app.profile == null ? View.GONE : View.VISIBLE);
     usageLabel.setText(app.usage.summary());
     usageLabel.setVisibility(app.connected ? View.VISIBLE : View.GONE);
-    readOnlyBar.setVisibility(app.readOnly ? View.VISIBLE : View.GONE);
+    boolean recovering=app.recoveryInProgress();
+    readOnlyBar.setVisibility(app.readOnly || app.connecting || recovering ? View.VISIBLE : View.GONE);
+    readOnlyLabel.setText(app.connecting || recovering ? app.recoveryStatus() : "只读历史 · 尚未取得写入权限");
+    boolean available=app.connected && !app.connecting && !recovering;
+    refreshButton.setEnabled(available && !app.busy);newChatButton.setEnabled(available);
+    resumeButton.setEnabled(available && app.readOnly);reconnectButton.setEnabled(!app.connecting && !recovering && !app.busy);
+    updateRecoveryButton(resumeButton,resumeSpinner,recovering,app.replaying?"同步中":"接续中","接续");
+    updateRecoveryButton(reconnectButton,reconnectSpinner,app.connecting,"连接中","重连并接续");
     input.setEnabled(!app.readOnly);
     input.setHint(app.readOnly ? "此线程只读，请接续或新建对话" : "发送消息");
     status.setText(app.connected ? "●  " + app.profile.title() + "  ·  SSH" : app.state);
@@ -641,6 +658,12 @@ public final class MainActivity extends Activity {
     showPending();
   }
 
+  private void updateRecoveryButton(TextView button,LoadingSpinner spinner,boolean active,String busyText,String idleText) {
+    button.setText(active?busyText:idleText);button.setTooltipText(active?app.recoveryStatus():idleText);
+    button.setCompoundDrawablePadding(dp(4));button.setCompoundDrawables(active?spinner:null,null,null,null);
+    if(active && visibleActivity)spinner.start();else spinner.stop();
+  }
+
   private String toolTitle(ChatItem m) {
     String symbol = m.status.equals("completed") ? "✓" : m.status.equals("failed") ? "!" : "›";
     return symbol + "  " + m.text.replaceAll("\\s+", " ") + "  ›";
@@ -731,24 +754,27 @@ public final class MainActivity extends Activity {
           });
     }
     if (item.type.equals("agentMessage") || item.type.equals("plan")) {
-      boolean progress=item.phase.equals("commentary"),plan=item.type.equals("plan");
+      boolean plan=item.type.equals("plan"),progress=!plan && item.phase.equals("commentary");
       wrap.setBackground(rounded(progress?bg:Color.parseColor(isDark()?(plan?"#202020":"#161616"):(plan?"#F2F2F2":"#FAFAFA")),18));
       wrap.setPadding(dp(progress?4:14),dp(progress?2:6),dp(progress?4:14),dp(8));
-      LinearLayout heading=row();TextView kind=text(plan?"计划":progress?"进展":"回复",12,muted);heading.addView(kind,new LinearLayout.LayoutParams(0,-2,1));
-      IconView copyButton=icon("copy",plan?"复制计划":"复制回复",()->{ChatItem latest=currentItems.get(item.id);if(latest!=null)copy(latest.text);});
-      heading.addView(copyButton,new LinearLayout.LayoutParams(dp(48),dp(48)));wrap.addView(heading);
+      if(!progress) {
+        LinearLayout heading=row();TextView kind=text(plan?"计划":"回复",12,muted);heading.addView(kind,new LinearLayout.LayoutParams(0,-2,1));
+        IconView copyButton=icon("copy",plan?"复制计划":"复制回复",()->{ChatItem latest=currentItems.get(item.id);if(latest!=null)copy(latest.text);});
+        heading.addView(copyButton,new LinearLayout.LayoutParams(dp(48),dp(48)));wrap.addView(heading);
+      }
       MessageBodyView messageBody = new MessageBodyView(this,progress?muted:fg,muted,Color.parseColor(isDark()?"#2B2B2B":"#ECECEC"),this::openLink,this::copy);
       messageBodies.put(item.id,messageBody); wrap.addView(messageBody,new LinearLayout.LayoutParams(-1,-2));
+    } else if(item.user()) {
+      LinearLayout bubbleRow=row();bubbleRow.setGravity(Gravity.END|Gravity.BOTTOM);
+      IconView copyButton=icon("copy", "复制消息", () -> {ChatItem latest=currentItems.get(item.id);if(latest!=null)copy(latest.text);});
+      copyButton.alignBottomEnd=true;
+      bubbleRow.addView(copyButton,new LinearLayout.LayoutParams(dp(48),dp(48)));
+      bubbleRow.addView(content,new LinearLayout.LayoutParams(-2,-2));
+      wrap.addView(bubbleRow,new LinearLayout.LayoutParams(-1,-2));
     } else wrap.addView(content, new LinearLayout.LayoutParams(item.prose() ? -2 : -1, -2));
     LinearLayout media = column();
     mediaRows.put(item.id, media);
     wrap.addView(media, new LinearLayout.LayoutParams(-1, -2));
-    if (item.user()) {
-      LinearLayout actions = row();
-      IconView copy = icon("copy", "复制消息", () -> {ChatItem latest=currentItems.get(item.id);if(latest!=null)copy(latest.text);});
-      actions.addView(copy, new LinearLayout.LayoutParams(dp(48), dp(48)));
-      wrap.addView(actions);
-    }
     if (animate) {
       wrap.setAlpha(0);
       wrap.setTranslationY(dp(6));
@@ -759,12 +785,13 @@ public final class MainActivity extends Activity {
   private void updateSend() {
     if (send == null) return;
     boolean hasText = !input.getText().toString().trim().isEmpty();
-    boolean stop = app.busy && !hasText;
+    boolean hasContent=hasText || !app.draftImages.isEmpty() || !app.draftFiles.isEmpty();
+    boolean stop = app.busy && !hasContent;
     send.icon = stop ? "stop" : "arrow";
     boolean enabled =
         !app.replaying && !app.readOnly
             && !app.attaching
-            && (app.busy ? (stop || app.canSteer()) : (app.connected && (hasText || !app.draftImages.isEmpty())));
+            && (app.busy ? (stop || app.canSteer()) : (app.connected && !app.recoveryInProgress() && hasContent));
     send.setAlpha(enabled ? 1 : .28f);
     send.color = bg;
     send.setBackground(rounded(fg, 24));
@@ -778,9 +805,10 @@ public final class MainActivity extends Activity {
       toast("此线程正在其他客户端运行，请先接续或新建对话");
       return;
     }
+    if (app.attaching) { toast("附件正在上传，请稍候"); return; }
     if (app.busy) {
       String guidance = input.getText().toString().trim();
-      if (guidance.isEmpty()) app.interrupt();
+      if (guidance.isEmpty() && app.draftImages.isEmpty() && app.draftFiles.isEmpty()) app.interrupt();
       else showRunningSendOptions(guidance);
       return;
     }
@@ -789,8 +817,7 @@ public final class MainActivity extends Activity {
       return;
     }
     String s = input.getText().toString().trim();
-    if (app.attaching) { toast("图片正在上传，请稍候"); return; }
-    if (s.isEmpty() && app.draftImages.isEmpty()) return;
+    if (s.isEmpty() && app.draftImages.isEmpty() && app.draftFiles.isEmpty()) return;
     app.send(s);
     input.setText("");
     ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
@@ -801,7 +828,7 @@ public final class MainActivity extends Activity {
     final String thread = app.threadId, turn = app.turnId;
     LinearLayout options = column();
     options.setPadding(dp(20), 0, dp(20), dp(8));
-    TextView preview = text(text, 14, muted);
+    TextView preview = text(text.isEmpty()?"发送已选择的附件":text, 14, muted);
     preview.setMaxLines(2); preview.setEllipsize(TextUtils.TruncateAt.END);
     preview.setPadding(dp(8), dp(4), dp(8), dp(16)); options.addView(preview);
     Dialog[] holder = new Dialog[1];
@@ -812,7 +839,7 @@ public final class MainActivity extends Activity {
       holder[0].dismiss();
     }));
     TextView later = action("稍后发送", () -> {
-      if (thread.equals(app.threadId) && turn.equals(app.turnId) && app.queueMessage(text)) {
+      if (thread.equals(app.threadId) && turn.equals(app.turnId) && app.queueMessage(text,true)) {
         if (input.getText().toString().trim().equals(text)) input.setText("");
       } else toast(app.queuedMessage().isEmpty() ? "本轮状态已变化，请重新发送" : "已有待发消息，请先取消或发送");
       holder[0].dismiss();
@@ -837,11 +864,10 @@ public final class MainActivity extends Activity {
   }
 
   private void pickImage() {
-    if (!app.connected || app.busy || app.readOnly || app.attaching) { toast("请先连接并等待当前操作完成"); return; }
-    if (app.draftImages.size() >= MediaFiles.MAX_ATTACHMENTS) { toast("每条消息最多 " + MediaFiles.MAX_ATTACHMENTS + " 张图片"); return; }
-    if (pendingImageGeneration >= 0) { toast("请先完成当前选图"); return; }
+    if (!app.canAttach()) { toast(app.attachmentUnavailable()); return; }
+    if (pendingImageGeneration >= 0) { toast("请先完成当前附件选择"); return; }
     LinearLayout choices = column(); choices.setPadding(dp(20), 0, dp(20), dp(16));
-    TextView hint = text("可多选，目前还能添加 " + (MediaFiles.MAX_ATTACHMENTS - app.draftImages.size()) + " 张。相册的搜索和多选由相册 App 提供；不支持时可使用系统选择器。", 13, muted);
+    TextView hint = text("图片可多选，也可通过文件管理器选择文档、压缩包等文件。每条消息最多 4 张图片和 8 个文件；文件每个最多 100 MiB。", 13, muted);
     hint.setPadding(dp(4), 0, dp(4), dp(12)); choices.addView(hint);
     Dialog[] holder = new Dialog[1];
     String[] labels = {"手机相册", "其他相册 / 图片 App", "系统选择器"};
@@ -852,7 +878,8 @@ public final class MainActivity extends Activity {
       LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2); params.bottomMargin = dp(8);
       choices.addView(option, params);
     }
-    holder[0] = sheet("选择图片来源", choices);
+    choices.addView(action("选择文件",()->{holder[0].dismiss();launchFilePicker();}));
+    holder[0] = sheet("添加附件", choices);
   }
 
   private String imageProject() {
@@ -860,10 +887,8 @@ public final class MainActivity extends Activity {
   }
 
   private void launchImagePicker(ImagePicker.Source source) {
-    if (!app.connected || app.busy || app.readOnly || app.attaching || app.profile == null) {
-      toast("请先连接并等待当前操作完成"); return;
-    }
-    int remaining = MediaFiles.MAX_ATTACHMENTS - app.draftImages.size();
+    if (!app.canAttach() || app.profile == null) {toast(app.attachmentUnavailable()); return;}
+    int remaining = app.remainingImages();
     if (remaining <= 0) { toast("每条消息最多 " + MediaFiles.MAX_ATTACHMENTS + " 张图片"); return; }
     pendingImageGeneration = app.connectionGeneration(); pendingImageHost = app.profile.id;
     pendingImageThread = app.threadId; pendingImageProject = imageProject();
@@ -872,17 +897,43 @@ public final class MainActivity extends Activity {
     }
   }
 
+  private void launchFilePicker() {
+    if(!app.canAttach() || app.profile==null){toast(app.attachmentUnavailable());return;}
+    int remaining=app.remainingFiles();
+    if(remaining<=0){toast("每条消息最多 "+FileAttachment.MAX_FILES+" 个文件");return;}
+    pendingImageGeneration=app.connectionGeneration();pendingImageHost=app.profile.id;
+    pendingImageThread=app.threadId;pendingImageProject=imageProject();
+    if(!FilePicker.launch(this,remaining)){pendingImageGeneration=-1;toast("没有可用的文件管理器，请安装或启用文件 App");}
+  }
+
+  private void addFileAttachment(FileAttachment file) {
+    LinearLayout tile=row();tile.setGravity(Gravity.CENTER_VERTICAL);tile.setBackground(rounded(bg,8));
+    tile.setPadding(dp(10),dp(6),0,dp(6));
+    LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(dp(210),dp(88));params.setMarginEnd(dp(8));
+    attachmentStrip.addView(tile,params);
+    TextView label=text(file.name+"\n"+android.text.format.Formatter.formatShortFileSize(this,file.size),13,fg);
+    label.setMaxLines(3);label.setEllipsize(TextUtils.TruncateAt.END);label.setContentDescription("待发送文件 "+file.name);
+    tile.addView(label,new LinearLayout.LayoutParams(0,-2,1));
+    IconView remove=icon("close","移除文件 "+file.name,()->{
+      if(app.steering || app.attaching || (app.busy && app.turnId.isEmpty()))return;
+      app.draftFiles.remove(file);app.changed();
+    });
+    remove.setEnabled(!app.steering && !app.attaching && (!app.busy || !app.turnId.isEmpty()));
+    tile.addView(remove,new LinearLayout.LayoutParams(dp(48),dp(48)));
+  }
+
   private void renderAttachments() {
     attachmentStrip.removeAllViews();
-    attachmentScroll.setVisibility(app.attaching || !app.draftImages.isEmpty() ? View.VISIBLE : View.GONE);
+    attachmentScroll.setVisibility(app.attaching || !app.draftImages.isEmpty() || !app.draftFiles.isEmpty() ? View.VISIBLE : View.GONE);
     int index = 0;
     for (String path : new ArrayList<>(app.draftImages)) {
       addAttachmentPreview(app.draftImagePreviews.get(path), path, ++index);
     }
+    for(FileAttachment file:new ArrayList<>(app.draftFiles))addFileAttachment(file);
     if (app.attaching) {
-      addAttachmentPreview(app.pendingImagePreview, null, index + 1);
-      TextView uploading = text("图片上传中…" + (app.imageUploadCount > 1 ? "（" + app.imageUploadIndex + " / " + app.imageUploadCount + "）" : ""), 13, muted);
-      uploading.setContentDescription("图片上传中…"); attachmentStrip.addView(uploading);
+      if(!app.attachingFiles)addAttachmentPreview(app.pendingImagePreview, null, index + 1);
+      TextView uploading = text((app.attachingFiles?"文件上传中…":"图片上传中…") + (app.imageUploadCount > 1 ? "（" + app.imageUploadIndex + " / " + app.imageUploadCount + "）" : ""), 13, muted);
+      uploading.setContentDescription(app.attachingFiles?"文件上传中…":"图片上传中…"); attachmentStrip.addView(uploading);
     }
   }
 
@@ -906,13 +957,13 @@ public final class MainActivity extends Activity {
     }
     if (path != null) {
       IconView remove = icon("close", "移除图片 " + index, () -> {
-        if (app.busy) return;
+        if (app.steering || app.attaching || (app.busy && app.turnId.isEmpty())) return;
         app.draftImages.remove(path);
         app.draftImagePreviews.remove(path);
         app.changed();
       });
       remove.setBackground(rounded(panel, 8));
-      remove.setEnabled(!app.busy);
+      remove.setEnabled(!app.steering && !app.attaching && (!app.busy || !app.turnId.isEmpty()));
       tile.addView(remove, new FrameLayout.LayoutParams(dp(40), dp(40), Gravity.TOP | Gravity.END));
     }
   }
@@ -1768,7 +1819,7 @@ public final class MainActivity extends Activity {
   @Override
   protected void onActivityResult(int request, int result, Intent data) {
     super.onActivityResult(request, result, data);
-    if (request == ImagePicker.REQUEST) {
+    if (request == ImagePicker.REQUEST || request == FilePicker.REQUEST) {
       boolean sameContext = pendingImageGeneration >= 0 && pendingImageGeneration == app.connectionGeneration()
           && app.profile != null && pendingImageHost.equals(app.profile.id) && pendingImageThread.equals(app.threadId)
           && pendingImageProject.equals(imageProject());
@@ -1776,7 +1827,8 @@ public final class MainActivity extends Activity {
       if (result == RESULT_OK && data != null) {
         List<android.net.Uri> selected = ImagePicker.selected(data);
         if (!selected.isEmpty()) {
-          if (!sameContext) toast("连接或对话已改变，请在当前对话重新选择图片");
+          if (!sameContext) toast("连接或对话已改变，请在当前对话重新选择附件");
+          else if(request==FilePicker.REQUEST)app.attachFiles(selected);
           else app.attachImages(selected);
         }
       }

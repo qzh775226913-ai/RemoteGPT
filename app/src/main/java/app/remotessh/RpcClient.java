@@ -37,8 +37,14 @@ public final class RpcClient implements AutoCloseable {
   }
 
   public CompletableFuture<JSONObject> request(String method, JSONObject params) {
+    return request(method,params,null);
+  }
+
+  /** Install completion before writing, so even immediate replies precede live events. */
+  public CompletableFuture<JSONObject> request(String method, JSONObject params, java.util.function.BiConsumer<JSONObject,Throwable> completion) {
     long id = ids.incrementAndGet();
     CompletableFuture<JSONObject> f = new CompletableFuture<>();
+    if(completion!=null)f.whenComplete(completion);
     if (closed) {
       f.completeExceptionally(new IOException("SSH 已断开"));
       return f;

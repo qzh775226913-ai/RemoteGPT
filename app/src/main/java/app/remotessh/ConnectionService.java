@@ -57,7 +57,7 @@ public final class ConnectionService extends Service {
 
   static String summary(RemoteApp app) {
     if (!app.connected) return app.state;
-    if (app.replaying) return "正在恢复断线期间的消息…";
+    if (app.recoveryInProgress()) return app.recoveryStatus();
     if (!app.approvals.isEmpty()) {
       String detail = LiveStatusNotifications.details(app);
       detail = detail.replaceAll("\\s+", " ");

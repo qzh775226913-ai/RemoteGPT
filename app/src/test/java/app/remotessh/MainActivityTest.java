@@ -96,7 +96,7 @@ public class MainActivityTest {
     RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
     app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     documentImagePickerAvailable();
-    find(content(), "添加图片").performClick();
+    find(content(), "添加附件").performClick();
     View sheet = org.robolectric.shadows.ShadowDialog.getLatestDialog().getWindow().getDecorView();
     assertNotNull(find(sheet, "手机相册")); assertNotNull(find(sheet, "其他相册 / 图片 App"));
     assertNotNull(find(sheet, "系统选择器")); captureView(sheet, "image-source-picker");
@@ -107,15 +107,37 @@ public class MainActivityTest {
     assertTrue(started.intent.getBooleanExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE, false));
     activity.onActivityResult(ImagePicker.REQUEST, android.app.Activity.RESULT_CANCELED, null);
     assertTrue(app.draftImages.isEmpty()); assertFalse(app.attaching);
-    find(content(), "添加图片").performClick();
+    find(content(), "添加附件").performClick();
     assertTrue(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());
+  }
+
+  @Test public void runningAttachmentPickerOffersFilesAndImageOnlySendDoesNotStop() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.busy=true;app.threadId="run";app.turnId="turn";
+    app.draftImages.add("/existing.png");app.draftFiles.add(new FileAttachment("报告.pdf","/remote/report.pdf",1000));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertNotNull(find(content(),"发送引导消息"));assertNull(find(content(),"停止生成"));
+    find(content(),"添加附件").performClick();View panel=org.robolectric.shadows.ShadowDialog.getLatestDialog().getWindow().getDecorView();
+    assertNotNull(find(panel,"手机相册"));assertNotNull(find(panel,"选择文件"));
+    android.content.pm.ResolveInfo info=new android.content.pm.ResolveInfo();info.activityInfo=new android.content.pm.ActivityInfo();
+    info.activityInfo.packageName="test.documents";info.activityInfo.name="test.documents.Picker";info.activityInfo.exported=true;
+    shadowOf(activity.getPackageManager()).addResolveInfoForIntent(FilePicker.documentIntent(7),info);
+    captureView(panel,"attachment-source-picker");find(panel,"选择文件").performClick();
+    var started=shadowOf(activity).getNextStartedActivityForResult();assertEquals(FilePicker.REQUEST,started.requestCode);
+    assertEquals("*/*",started.intent.getType());assertTrue(started.intent.getBooleanExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE,false));
+    controller.recreate();activity=controller.get();app.threadId="other";
+    activity.onActivityResult(FilePicker.REQUEST,android.app.Activity.RESULT_OK,new android.content.Intent().setData(android.net.Uri.parse("content://documents/report")));
+    assertFalse(app.attaching);assertEquals(1,app.draftFiles.size());
+    app.threadId="run";app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    find(content(),"移除图片 1").performClick();assertTrue(app.draftImages.isEmpty());
+    find(content(),"移除文件 报告.pdf").performClick();assertTrue(app.draftFiles.isEmpty());
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));assertNotNull(find(content(),"停止生成"));
   }
 
   @Test public void multiImageResultSurvivesRotationAndRejectsChangedConversation() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile(); app.threadId = "original";
     app.draftImages.addAll(java.util.Arrays.asList("/1.png", "/2.png", "/3.png"));
     app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100)); documentImagePickerAvailable();
-    find(content(), "添加图片").performClick();
+    find(content(), "添加附件").performClick();
     find(org.robolectric.shadows.ShadowDialog.getLatestDialog().getWindow().getDecorView(), "系统选择器").performClick();
     controller.recreate(); activity = controller.get();
     android.content.ClipData clip = android.content.ClipData.newUri(app.getContentResolver(), "images", android.net.Uri.parse("content://album/1"));
@@ -125,7 +147,7 @@ public class MainActivityTest {
     assertTrue("Unexpected result after rotation: " + app.error + ", thread=" + app.threadId + ", images=" + app.draftImages.size(), app.error.contains("还能添加 1 张"));
     assertEquals(3, app.draftImages.size()); assertFalse(app.attaching);
     app.error = ""; app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
-    documentImagePickerAvailable(); find(content(), "添加图片").performClick();
+    documentImagePickerAvailable(); find(content(), "添加附件").performClick();
     find(org.robolectric.shadows.ShadowDialog.getLatestDialog().getWindow().getDecorView(), "系统选择器").performClick();
     app.threadId = "another-conversation";
     activity.onActivityResult(ImagePicker.REQUEST, android.app.Activity.RESULT_OK,
@@ -551,7 +573,7 @@ public class MainActivityTest {
     app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     capture(screenshot);
     TextView model = (TextView) find(content(), "选择模型与推理强度");
-    View plus = find(content(), "添加图片");
+    View plus = find(content(), "添加附件");
     View permission = find(content(), "权限：沿用远端权限");
     View send = find(content(), "发送消息");
     assertEquals(0, plus.getLeft());
@@ -986,17 +1008,53 @@ public class MainActivityTest {
     app.interactions.answered(req,Json.obj("answers",Json.obj("q0",Json.obj("answers",new org.json.JSONArray().put("B")))));
     ChatItem progress=InteractionHistoryTest.message("progress","agentMessage","t1","正在检查项目结构。"),result=InteractionHistoryTest.message("result","agentMessage","t1","输出结果：\n```text\n版本 1.0.35\n```" );
     progress.phase="commentary";result.phase="final_answer";
-    app.items.add(InteractionHistoryTest.message("u","userMessage","t1","请检查项目"));app.items.add(progress);
+    String userText="请检查项目，并确认交互式提问的显示和回答状态是否正常。";
+    app.items.add(InteractionHistoryTest.message("u","userMessage","t1",userText));app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));
+    capture("user-message-copy-position-"+((activity.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?"dark":"light"));
+    find(content(),"复制消息").performClick();
+    android.content.ClipboardManager clipboard=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+    assertEquals(userText,clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+    app.items.add(progress);
     ChatItem reasoning=InteractionHistoryTest.message("reason","reasoning","t1","思考过程");reasoning.detail="优先检查关键流程";reasoning.status="completed";app.items.add(reasoning);
     app.items.add(result);app.items.add(InteractionHistoryTest.message("a","userMessage","t2","回答上一轮的问题：\n选择方案\nB\n\n"));app.changed();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));capture("typed-conversation-history-"+((activity.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?"dark":"light"));
-    assertNotNull(find(content(),"进展"));assertNotNull(find(content(),"回复"));assertNotNull(find(content(),"交互提问 · 已回答"));assertNull(find(content(),"你的回答"));assertNull(find(content(),"复制问答回答"));
+    assertNull(find(content(),"进展"));assertNotNull(find(content(),"正在检查项目结构。"));assertNotNull(find(content(),"回复"));assertNotNull(find(content(),"交互提问 · 已回答"));assertNull(find(content(),"你的回答"));assertNull(find(content(),"复制问答回答"));
     assertNotNull(find(content(),"✓  B"));assertNotNull(find(content(),"✓  思考过程  ›"));
     find(content(),"复制交互问答").performClick();
-    android.content.ClipboardManager clipboard=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
     assertEquals("选择方案\n○ A — 优先兼容\n✓ B\n回答：B",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
     find(content(),"复制内容块 1").performClick();assertEquals("版本 1.0.35\n",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
     controller.recreate();activity=controller.get();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));assertNotNull(find(content(),"交互提问 · 已回答"));assertNull(find(content(),"你的回答"));
+  }
+
+  @Test public void recoveryButtonsAnimateUntilHistoryAndReplayAreReady() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.readOnly=true;app.threadId="chat";
+    java.lang.reflect.Field loading=RemoteApp.class.getDeclaredField("loadingThread");loading.setAccessible(true);loading.set(app,"chat");
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    TextView button=(TextView)find(content(),"接续");assertEquals("接续中",button.getText().toString());assertFalse(button.isEnabled());
+    LoadingSpinner spinner=(LoadingSpinner)button.getCompoundDrawables()[0];assertTrue(spinner.isRunning());
+    assertNotNull(find(content(),ConnectionService.summary(app)));capture("resume-progress");
+    app.replaying=true;app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));assertEquals("同步中",button.getText().toString());
+    assertEquals("正在同步离线消息…",ConnectionService.summary(app));
+    controller.pause().stop();assertFalse(spinner.isRunning());controller.start().resume();
+    app.replaying=false;loading.set(app,"");app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertEquals("接续",button.getText().toString());assertTrue(button.isEnabled());assertNull(button.getCompoundDrawables()[0]);assertFalse(spinner.isRunning());
+  }
+
+  @Test public void browserConnectionStagesMatchNotificationWithoutRebuildingList() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.vault.profiles.add(app.profile);app.connecting=true;app.state="正在验证 SSH 身份…";
+    RemoteBrowser browser=new RemoteBrowser(activity,app,false,new RemoteBrowser.Actions(){
+      public void connect(Profile p){}public void add(){}public void settings(){}public void directories(){}public void diagnostics(){}public void chat(){}
+    });browser.show();
+    android.app.Dialog dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();View shell=dialog.getWindow().getDecorView();
+    TextView status=(TextView)find(shell,"远端版本与更新");assertTrue(status.getText().toString().contains(ConnectionService.summary(app)));
+    View chip=find(shell,"○ "+app.profile.title());assertNotNull(chip);
+    app.state="正在启动远端 Codex…";browser.refresh();
+    assertTrue(status.getText().toString().contains(ConnectionService.summary(app)));assertSame(chip,find(shell,"○ "+app.profile.title()));
+    captureView(shell,"connecting-progress-browser");browser.dismiss();
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    TextView reconnect=(TextView)find(content(),"重连并接续");assertEquals("连接中",reconnect.getText().toString());assertTrue(((LoadingSpinner)reconnect.getCompoundDrawables()[0]).isRunning());
+    app.connecting=false;app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));assertNull(reconnect.getCompoundDrawables()[0]);
   }
 
   @Test @Config(qualifiers="w411dp-h891dp-night-xhdpi")

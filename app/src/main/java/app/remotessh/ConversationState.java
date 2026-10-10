@@ -18,6 +18,7 @@ final class ConversationState {
   final List<ChatItem> items = new ArrayList<>();
   final List<JSONObject> approvals = new ArrayList<>();
   final List<String> images = new ArrayList<>();
+  final List<FileAttachment> files = new ArrayList<>();
   final Map<String, android.graphics.Bitmap> previews = new HashMap<>();
   void capture(RemoteApp a) {
     threadId=a.threadId; turnId=a.turnId; title=a.threadTitle; cwd=a.threadCwd; state=a.state; error=a.error;
@@ -29,6 +30,7 @@ final class ConversationState {
     interactions=a.interactions;savedInteractionRevision=a.savedInteractionRevision;
     items.clear(); items.addAll(a.items); approvals.clear(); approvals.addAll(a.approvals);
     images.clear(); images.addAll(a.draftImages); previews.clear(); previews.putAll(a.draftImagePreviews);
+    files.clear();files.addAll(a.draftFiles);
   }
   void apply(RemoteApp a) {
     a.threadId=threadId; a.turnId=turnId; a.threadTitle=title; a.threadCwd=cwd; a.state=state; a.error=error;
@@ -40,5 +42,6 @@ final class ConversationState {
     a.interactions=interactions;a.savedInteractionRevision=savedInteractionRevision;
     a.items.clear(); a.items.addAll(items); a.approvals.clear(); a.approvals.addAll(approvals);
     a.draftImages.clear(); a.draftImages.addAll(images); a.draftImagePreviews.clear(); a.draftImagePreviews.putAll(previews);
+    a.draftFiles.clear();a.draftFiles.addAll(files);
   }
 }

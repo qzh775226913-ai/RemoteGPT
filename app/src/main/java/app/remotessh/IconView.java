@@ -11,6 +11,7 @@ public final class IconView extends View {
 
   public String icon;
   public int color;
+  public boolean alignBottomEnd;
   private final Paint p = new Paint(3);
   private final Path folder = new Path();
 
@@ -25,7 +26,8 @@ public final class IconView extends View {
     super.onDraw(canvas);
     canvas.save();
     float size = Math.min(getWidth(), getHeight()) * .48f;
-    canvas.translate((getWidth() - size) / 2, (getHeight() - size) / 2);
+    canvas.translate(alignBottomEnd ? getWidth()-size-4*getResources().getDisplayMetrics().density : (getWidth()-size)/2,
+        alignBottomEnd ? getHeight()-size : (getHeight()-size)/2);
     canvas.scale(size / 24, size / 24);
     p.setColor(color);
     p.setStrokeWidth(1.8f);

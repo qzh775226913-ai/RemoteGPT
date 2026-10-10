@@ -188,6 +188,12 @@ final class RemoteBrowser {
 
   void refresh() {
     if (!isShowing()) return;
+    subtitle.setText(
+        app.connecting || app.recoveryInProgress()
+            ? (app.profile==null?"":app.profile.title()+" · ")+ConnectionService.summary(app)
+            : app.connected
+                ? app.profile.title()+" · 已连接 · "+app.remoteVersion.label()+(project.isEmpty()?"":"\n"+project)
+                : "选择一台电脑，查看项目和对话");
     String signature = signature();
     if (signature.equals(renderedSignature)) return;
     renderedSignature = signature;
@@ -227,10 +233,6 @@ final class RemoteBrowser {
         });
       }
     }
-    subtitle.setText(
-        app.connected
-            ? app.profile.title() + " · 已连接 · " + app.remoteVersion.label() + (project.isEmpty() ? "" : "\n" + project)
-            : app.connecting ? "正在连接…" : "选择一台电脑，查看项目和对话");
     refreshList();
   }
 

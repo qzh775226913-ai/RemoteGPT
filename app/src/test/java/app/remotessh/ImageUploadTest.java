@@ -123,4 +123,40 @@ public class ImageUploadTest {
     assertFalse(app.attaching); assertEquals(Collections.singletonList("/existing.png"), app.draftImages);
     assertTrue(app.error.contains("还能添加 3 张"));
   }
+  @Test public void runningTurnStillAcceptsPicturesAndOrdinaryFiles() throws Exception {
+    app.busy=true;app.turnId="running";
+    byte[] picture=png(Color.RED);
+    app.attachImages(Collections.singletonList(image("running",picture)));
+    waitUntil(()->!app.attaching);verifyUploaded(0,picture);
+    byte[] binary={0,1,-1,10,13,42};
+    Uri document=image("中文报告.pdf",binary), archive=image("archive.zip",new byte[]{80,75,3,4});
+    app.attachFiles(Arrays.asList(document,document,archive));assertTrue(app.attachingFiles);
+    waitUntil(()->!app.attaching);
+    assertEquals(2,app.draftFiles.size());assertEquals("中文报告.pdf",app.draftFiles.get(0).name);
+    assertTrue(app.draftFiles.get(0).path.endsWith("-中文报告.pdf"));assertEquals(binary.length,app.draftFiles.get(0).size);
+    ByteArrayOutputStream out=new ByteArrayOutputStream();transport.download(app.draftFiles.get(0).path,out,100);
+    assertArrayEquals(binary,out.toByteArray());assertTrue(app.busy);assertEquals("running",app.turnId);
+  }
+
+  @Test public void failedFileLeavesSuccessfulDocumentsAndRejectsExcessCount() throws Exception {
+    Uri unreadable=Uri.parse("content://fixture.album/unreadable");
+    shadowOf(app.getContentResolver()).registerInputStream(unreadable,new InputStream(){public int read()throws IOException{throw new IOException("provider unavailable");}});
+    app.attachFiles(Arrays.asList(image("good.txt",new byte[]{65,66}),unreadable,image("good.zip",new byte[]{80,75})));
+    waitUntil(()->!app.attaching);assertEquals(2,app.draftFiles.size());assertTrue(app.error.contains("成功的文件已保留"));
+    List<Uri> tooMany=new ArrayList<>();for(int i=0;i<7;i++)tooMany.add(Uri.parse("content://fixture.files/"+i));
+    app.attachFiles(tooMany);assertFalse(app.attaching);assertEquals(2,app.draftFiles.size());assertTrue(app.error.contains("还能添加 6 个"));
+  }
+
+  @Test public void oversizedDocumentIsNotUploadedAndTemporaryCopyIsRemoved() throws Exception {
+    Uri uri=Uri.parse("content://fixture.files/oversize.bin");
+    shadowOf(app.getContentResolver()).registerInputStream(uri,new InputStream(){
+      long left=FileAttachment.LIMIT+1;
+      public int read(){if(left==0)return -1;left--;return 0;}
+      public int read(byte[] bytes,int offset,int length){if(left==0)return -1;int n=(int)Math.min(left,length);Arrays.fill(bytes,offset,offset+n,(byte)0);left-=n;return n;}
+    });
+    app.attachFiles(Collections.singletonList(uri));waitUntil(()->!app.attaching);
+    assertTrue(app.draftFiles.isEmpty());assertTrue(app.error.contains("大小限制"));
+    assertEquals(0,Objects.requireNonNull(app.getCacheDir().listFiles((dir,name)->name.startsWith("file-attachment-"))).length);
+  }
+
 }

@@ -49,9 +49,11 @@ public final class RemoteApp extends Application {
         if (this.observer != null) this.observer.run();
       };
   public final List<String> draftImages = new ArrayList<>();
+  final List<FileAttachment> draftFiles = new ArrayList<>();
   public final Map<String, android.graphics.Bitmap> draftImagePreviews = new HashMap<>();
   public android.graphics.Bitmap pendingImagePreview;
   public boolean attaching;
+  boolean attachingFiles;
   public int imageUploadIndex, imageUploadCount;
   public final List<ChatItem> items = new ArrayList<>();
   public final List<JSONObject> approvals = new ArrayList<>();
@@ -68,9 +70,9 @@ public final class RemoteApp extends Application {
   public boolean replaying;
   public String trustHost = "", trustFingerprint = "";
   private CompletableFuture<Boolean> trustAnswer;
-  private SshTransport transport;
+  private volatile SshTransport transport;
   private RpcClient rpc;
-  private int generation;
+  private volatile int generation;
   int connectionGeneration() { return generation; }
   public LiveStatusNotifications liveStatus;
   private final Map<JSONObject, String> approvalTokens = new IdentityHashMap<>();
@@ -90,6 +92,8 @@ public final class RemoteApp extends Application {
   private boolean scopeChanged;
   private final ArrayDeque<String> restoreQueue = new ArrayDeque<>();
   private String restoringThread = "", pendingNavigation = "", loadingThread = "", replayThread = "";
+  private String loadingStage="";
+  private ThreadSnapshot preparedThread;
   private boolean multiSessionHost = true;
 
   void checkpoint() {
@@ -124,6 +128,17 @@ public final class RemoteApp extends Application {
 
   boolean canSwitchConversation() {
     return connected && !restartingRemote && !attaching && !(busy && threadId.isEmpty()) && restoringThread.isEmpty() && loadingThread.isEmpty() && restoreQueue.isEmpty();
+  }
+
+  boolean recoveryInProgress() {
+    return connected && (!loadingThread.isEmpty() || !restoringThread.isEmpty() || !restoreQueue.isEmpty() || !replayThread.isEmpty() || replaying);
+  }
+
+  String recoveryStatus() {
+    if(connecting)return state;
+    if(!replayThread.isEmpty() || replaying)return "正在同步离线消息…";
+    if(!loadingThread.isEmpty())return loadingStage.isEmpty()?"正在获取对话历史…":loadingStage;
+    return recoveryInProgress()?"正在恢复其他对话…":"";
   }
 
   private void select(String id) {
@@ -193,20 +208,23 @@ public final class RemoteApp extends Application {
       if (!pendingNavigation.isEmpty()) { String id=pendingNavigation; pendingNavigation=""; viewConversation(id); }
       return;
     }
-    String id = restoreQueue.removeFirst(); restoringThread=id; loadingThread=id;
+    String id = restoreQueue.removeFirst(); restoringThread=id; loadingThread=id;loadingStage="正在检查对话状态…";
     inConversation(id, () -> {
-      busy=true;
-      request("thread/read", Json.obj("threadId", id, "includeTurns", true), snapshot -> {
+      busy=true;changed();
+      request("thread/read", Json.obj("threadId", id, "includeTurns", false), snapshot -> {
         if (Json.object(Json.object(snapshot, "thread"), "status").optString("type").equals("active")) {
+          loadingStage="正在接续对话…";changed();
           request("thread/resume", Json.obj("threadId", id), r -> {
             applyThread(r, id, false);
             if (!r.optBoolean("remoteReplay")) { restoringThread=""; main.post(this::restoreNext); }
           });
         } else {
-          applyThread(snapshot, id, true);
-          restoringThread="";
-          request("thread/unsubscribe", Json.obj("threadId", id), ignored -> {});
-          main.post(this::restoreNext);
+          loadingStage="正在获取对话历史…";changed();
+          request("thread/read",Json.obj("threadId",id,"includeTurns",true),history->{
+            applyThread(history,id,true);restoringThread="";
+            request("thread/unsubscribe", Json.obj("threadId", id), ignored -> {});
+            main.post(this::restoreNext);
+          });
         }
       });
     });
@@ -252,7 +270,7 @@ public final class RemoteApp extends Application {
     boolean loaded = loadedThreads.contains(id);
     select(id);
     if (loaded) { changed(); return; }
-    busy = true; loadingThread = id; changed();
+    busy = true; loadingThread = id; loadingStage="正在获取对话历史…";changed();
     readThread(id, true);
   }
 
@@ -295,17 +313,22 @@ public final class RemoteApp extends Application {
     final RpcClient c = rpc;
     final long revision = statusRevision;
     readPolling = true;
-    worker.execute(() -> c.request("thread/read", Json.obj("threadId", id, "includeTurns", true))
-        .whenComplete((r, e) -> main.post(() -> {
+    worker.execute(() -> c.request("thread/read", Json.obj("threadId", id, "includeTurns", true), (r, e) -> {
+          ThreadSnapshot snapshot=e==null?new ThreadSnapshot(r):null;
+          main.post(() -> {
           if (g != generation) return;
           readPolling = false;
           if (!id.equals(threadId) || !readOnly || busy || revision != statusRevision) return;
-          if (e == null) applyThread(r, id, true);
+          if (e == null && snapshot.failure==null) {
+            ThreadSnapshot previous=preparedThread;preparedThread=snapshot;
+            try {applyThread(r,id,true);}finally{preparedThread=previous;}
+          }
           else {
             state = "历史自动刷新失败，可手动重试";
             changed();
           }
-        })));
+        });
+        }));
   }
 
   void pollConversationJournals() {
@@ -520,9 +543,10 @@ public final class RemoteApp extends Application {
     inheritedTierKnown = false; tierOverrideApplied = false; serviceTierProtocol = false;
     modelSettings = new ModelSettings();
     draftImages.clear();
+    draftFiles.clear();
     draftImagePreviews.clear();
     pendingImagePreview = null;
-    attaching = false;
+    attaching = false; attachingFiles = false;
     threadId = "";
     threadTitle = "";
     threadCwd = "";
@@ -789,6 +813,7 @@ public final class RemoteApp extends Application {
           String draft = unsentText;
           String savedDraft = draftText, savedModel = model, savedEffort = reasoningEffort;
           List<String> savedImages = new ArrayList<>(draftImages);
+          List<FileAttachment> savedFiles = new ArrayList<>(draftFiles);
           Map<String, android.graphics.Bitmap> savedPreviews = new HashMap<>(draftImagePreviews);
           disconnect();
           state = "正在重启远端 Codex…"; changed();
@@ -798,7 +823,7 @@ public final class RemoteApp extends Application {
             connect(target); reconnectThread = previousThread; unsentText = draft;
             resumeDraftThread = previousThread;
             draftText = savedDraft; model = savedModel; reasoningEffort = savedEffort;
-            draftImages.addAll(savedImages); draftImagePreviews.putAll(savedPreviews);
+            draftImages.addAll(savedImages); draftImagePreviews.putAll(savedPreviews); draftFiles.addAll(savedFiles);
           }, persistent ? 1200 : 0);
         });
       } catch (Exception e) {
@@ -1015,13 +1040,14 @@ public final class RemoteApp extends Application {
     replaying = false;
     readyMessages.clear();
     restoreQueue.clear(); restoringThread=""; pendingNavigation=""; loadingThread=""; replayThread="";
+    loadingStage="";preparedThread=null;
     conversations.clear();
     remoteRunning = false;
     reconnectThread = "";
     resumeDraftThread = "";
     loadedThreads.clear();
     usage.clear();
-    attaching = false;
+    attaching = false; attachingFiles = false;
     if (trustAnswer != null) trustAnswer.complete(false);
     trustAnswer = null;
     trustHost = "";
@@ -1087,12 +1113,15 @@ public final class RemoteApp extends Application {
         || method.startsWith("turn/");
     worker.execute(
         () ->
-            c.request(method, params)
-                .whenComplete(
-                    (r, e) ->
+            c.request(method, params,
+                    (r, failureCause) -> {
+                        ThreadSnapshot snapshot=failureCause==null && (method.equals("thread/resume") || (method.equals("thread/read") && params.optBoolean("includeTurns"))) ? new ThreadSnapshot(r) : null;
+                        Throwable e=failureCause!=null?failureCause:snapshot==null?null:snapshot.failure;
                         main.post(
                             () -> {
                               if (g != generation) return;
+                              ThreadSnapshot previous=preparedThread;preparedThread=snapshot;
+                              try {
                               Runnable completion = () -> {
                               if (e != null) {
                                 if(failure!=null)failure.accept(e);
@@ -1132,7 +1161,9 @@ public final class RemoteApp extends Application {
                               if (e != null && requestThread.equals(restoringThread) && !isWriterConflict(e)) {
                                 restoringThread=""; main.post(this::restoreNext);
                               }
-                            })));
+                              } finally {preparedThread=previous;}
+                            });
+                    }));
   }
 
   public void refreshThreads(boolean more) {
@@ -1205,12 +1236,14 @@ public final class RemoteApp extends Application {
     String id = threadId.isEmpty() ? profile.lastThread : threadId;
     String draft = unsentText;
     List<String> images = new ArrayList<>(draftImages);
+    List<FileAttachment> files = new ArrayList<>(draftFiles);
     Map<String, android.graphics.Bitmap> previews = new HashMap<>(draftImagePreviews);
     connect(profile);
     reconnectThread = id;
     resumeDraftThread = id;
     unsentText = draft;
     draftImages.addAll(images);
+    draftFiles.addAll(files);
     draftImagePreviews.putAll(previews);
   }
 
@@ -1225,8 +1258,9 @@ public final class RemoteApp extends Application {
     busy=false; stopping=false; steering=false; replaying=false;
     approvals.clear();
     draftImages.clear();
+    draftFiles.clear();
     draftImagePreviews.clear();
-    attaching = false;
+    attaching = false; attachingFiles = false;
     threadId = "";
     threadTitle = "";
     threadCwd = "";
@@ -1246,7 +1280,7 @@ public final class RemoteApp extends Application {
     boolean cached = conversations.containsKey(id) && loadedThreads.contains(id);
     select(id);
     if (cached) { changed(); return; }
-    error=""; busy=true; loadingThread=id; changed();
+    error=""; busy=true; loadingThread=id; loadingStage="正在接续对话…";changed();
     request("thread/resume", Json.obj("threadId", id), r -> applyThread(r, id, false));
   }
 
@@ -1273,7 +1307,7 @@ public final class RemoteApp extends Application {
 
   public void refreshReadOnly() {
     if (connected && readOnly && !busy) {
-      busy = true;
+      busy = true;loadingThread=threadId;loadingStage="正在刷新对话历史…";
       changed();
       readThread(threadId, true);
     }
@@ -1317,6 +1351,7 @@ public final class RemoteApp extends Application {
   }
 
   private void applyThread(JSONObject r, String id, boolean readonly) {
+    ThreadSnapshot snapshot=preparedThread!=null && preparedThread.response==r ? preparedThread : new ThreadSnapshot(r);
     JSONObject thread = Json.object(r, "thread");
     for (int n = 0; n < threads.length(); n++) {
       JSONObject listed = threads.optJSONObject(n);
@@ -1325,6 +1360,7 @@ public final class RemoteApp extends Application {
     }
     if (!id.equals(threadId) && !id.equals(resumeDraftThread)) {
       draftImages.clear();
+      draftFiles.clear();
       draftImagePreviews.clear();
     }
     resumeDraftThread = "";
@@ -1364,22 +1400,15 @@ public final class RemoteApp extends Application {
       for (int i = 0; i < turns.length(); i++) {
         JSONObject turn = turns.optJSONObject(i);
         if (turn == null) continue;
-        JSONArray list = turn.optJSONArray("items");
-        if (list != null)
-          for (int k = 0; k < list.length(); k++) {
-            JSONObject item = list.optJSONObject(k);
-            if (item != null) {
-              ChatItem incoming = ChatItem.from(item);
-              incoming.turnId=turn.optString("id");
-              if (incoming.type.equals("reasoning")) {
-                preserveReasoning(incoming, knownReasoning.get(incoming.id));
-                if (incoming.status.isEmpty()) incoming.status =
-                    i == turns.length() - 1 && turn.optString("status").equals("inProgress")
-                        && (thread.optJSONObject("status") == null || remoteRunning) ? "inProgress" : "completed";
-              }
-              items.add(incoming);
-            }
+        for (ChatItem incoming : snapshot.turns.get(i)) {
+          if (incoming.type.equals("reasoning")) {
+            preserveReasoning(incoming, knownReasoning.get(incoming.id));
+            if (incoming.status.isEmpty()) incoming.status =
+                i == turns.length() - 1 && turn.optString("status").equals("inProgress")
+                    && (thread.optJSONObject("status") == null || remoteRunning) ? "inProgress" : "completed";
           }
+          items.add(incoming);
+        }
         if (turn.optJSONObject("error") != null)
           historicalError(turn.optString("id"), Json.object(turn, "error").optString("message"));
         if (!readonly && i == turns.length() - 1
@@ -1423,12 +1452,13 @@ public final class RemoteApp extends Application {
     changed();
   }
 
-  public void send(String text) { send(text, false); }
+  public void send(String text) {
+    sendPayload(text,new ArrayList<>(draftImages),new ArrayList<>(draftFiles));
+  }
 
-  private void send(String text, boolean textOnly) {
-    if (restartingRemote || replaying || !connected || busy || readOnly || attaching || (text.trim().isEmpty() && draftImages.isEmpty())) return;
+  private void sendPayload(String text,List<String> attachments,List<FileAttachment> files) {
+    if (restartingRemote || recoveryInProgress() || replaying || !connected || busy || readOnly || attaching || (text.trim().isEmpty() && attachments.isEmpty() && files.isEmpty())) return;
     if (!validateServiceTier()) return;
-    final List<String> attachments = textOnly ? new ArrayList<>() : new ArrayList<>(draftImages);
     busy = true;
     stopping = false;
     unsentText = text;
@@ -1478,54 +1508,96 @@ public final class RemoteApp extends Application {
             loadedThreads.add(threadId);
             threadTitle = text;
             save();
-            startTurn(text, attachments);
+            startTurn(FileAttachment.message(text,files), attachments,()->draftFiles.removeAll(files),null);
           });
-    } else startTurn(text, attachments);
+    } else startTurn(FileAttachment.message(text,files), attachments,()->draftFiles.removeAll(files),null);
   }
 
-  private final Map<String, String> pendingMessages = new HashMap<>();
+  private static final class PendingMessage {
+    final String text;
+    final List<String> images;
+    final List<FileAttachment> files;
+    final Map<String,android.graphics.Bitmap> previews;
+    PendingMessage(String text,List<String> images,List<FileAttachment> files,Map<String,android.graphics.Bitmap> previews) {
+      this.text=text;this.images=images;this.files=files;this.previews=previews;
+    }
+    String preview(){return text.isEmpty()?"附件 · "+images.size()+" 张图片、"+files.size()+" 个文件":text;}
+  }
+  private final Map<String, PendingMessage> pendingMessages = new HashMap<>();
   private final Set<String> readyMessages = new HashSet<>();
 
   private String queueKey() { return (profile == null ? "" : profile.id) + ":" + threadId; }
-  public String queuedMessage() { return pendingMessages.getOrDefault(queueKey(), ""); }
-  public boolean queueMessage(String text) {
-    if (!canSteer() || text.trim().isEmpty() || !queuedMessage().isEmpty()) return false;
-    pendingMessages.put(queueKey(), text);
+  public String queuedMessage() {
+    PendingMessage message=pendingMessages.get(queueKey());return message==null?"":message.preview();
+  }
+  public boolean queueMessage(String text) {return queueMessage(text,false);}
+  public boolean queueMessage(String text,boolean includeAttachments) {
+    List<String> images=includeAttachments?new ArrayList<>(draftImages):new ArrayList<>();
+    List<FileAttachment> files=includeAttachments?new ArrayList<>(draftFiles):new ArrayList<>();
+    if (!canSteer() || (text.trim().isEmpty() && images.isEmpty() && files.isEmpty()) || !queuedMessage().isEmpty()) return false;
+    Map<String,android.graphics.Bitmap> previews=new HashMap<>();
+    for(String path:images)if(draftImagePreviews.containsKey(path))previews.put(path,draftImagePreviews.get(path));
+    pendingMessages.put(queueKey(),new PendingMessage(text,images,files,previews));
+    draftImages.removeAll(images);draftFiles.removeAll(files);for(String path:images)draftImagePreviews.remove(path);
     readyMessages.remove(queueKey());
-    changed();
-    return true;
+    changed();return true;
+  }
+  private void restoreQueuedAttachments(PendingMessage message) {
+    if(message==null)return;
+    for(String path:message.images)if(!draftImages.contains(path))draftImages.add(path);
+    for(FileAttachment file:message.files)if(!draftFiles.contains(file))draftFiles.add(file);
+    draftImagePreviews.putAll(message.previews);
   }
   public void cancelQueuedMessage() {
-    pendingMessages.remove(queueKey()); readyMessages.remove(queueKey()); changed();
+    restoreQueuedAttachments(pendingMessages.remove(queueKey()));readyMessages.remove(queueKey());changed();
   }
   public void sendQueuedMessage() {
-    if (!connected || busy || readOnly || attaching || steering || threadId.isEmpty()) return;
-    String text = pendingMessages.remove(queueKey());
-    readyMessages.remove(queueKey());
-    if (text != null) send(text, true);
+    if (!connected || busy || readOnly || attaching || steering || restartingRemote || recoveryInProgress() || threadId.isEmpty() || !validateServiceTier()) return;
+    PendingMessage message=pendingMessages.remove(queueKey());readyMessages.remove(queueKey());
+    if(message!=null) {
+      restoreQueuedAttachments(message);
+      sendPayload(message.text,message.images,message.files);
+    }
+  }
+  int remainingImages() {
+    PendingMessage message=pendingMessages.get(queueKey());
+    return Math.max(0,MediaFiles.MAX_ATTACHMENTS-draftImages.size()-(message==null?0:message.images.size()));
+  }
+  int remainingFiles() {
+    PendingMessage message=pendingMessages.get(queueKey());
+    return Math.max(0,FileAttachment.MAX_FILES-draftFiles.size()-(message==null?0:message.files.size()));
   }
   private void drainQueuedMessage() {
     if (readyMessages.contains(queueKey())) sendQueuedMessage();
   }
 
   public boolean canSteer() {
-    return !replaying && connected && busy && !readOnly && !steering && !stopping && !turnId.isEmpty();
+    return !replaying && !recoveryInProgress() && !attaching && connected && busy && !readOnly && !steering && !stopping && !turnId.isEmpty();
   }
 
   public boolean steer(String text) {
-    if (!canSteer() || text.trim().isEmpty()) return false;
+    if (!canSteer() || (text.trim().isEmpty() && draftImages.isEmpty() && draftFiles.isEmpty())) return false;
+    List<String> attachments=new ArrayList<>(draftImages);
+    List<FileAttachment> files=new ArrayList<>(draftFiles);
+    String body=FileAttachment.message(text,files);
+    JSONArray content=new JSONArray();
+    if(!body.isEmpty())content.put(Json.obj("type","text","text",body));
+    for(String path:attachments)content.put(Json.obj("type","localImage","path",path));
     steering = true;
     unsentText = text;
     final String target = threadId;
     Set<String> previous = new HashSet<>();
     for (ChatItem item : items) previous.add(item.id);
     request("turn/steer", Json.obj("threadId", target, "expectedTurnId", turnId,
-        "input", new JSONArray().put(Json.obj("type", "text", "text", text))), r -> {
+        "input", content), r -> {
       steering = false;
       if (threadId.equals(target)) {
         boolean echoed = false;
-        for (ChatItem item : items) if (!previous.contains(item.id) && item.user() && item.text.equals(text)) echoed = true;
-        if (!echoed) items.add(new ChatItem("local-" + UUID.randomUUID(), "userMessage", text));
+        for (ChatItem item : items) if (!previous.contains(item.id) && item.user() && item.text.equals(body) && item.images.equals(attachments)) echoed = true;
+        if (!echoed) {
+          ChatItem item=new ChatItem("local-"+UUID.randomUUID(),"userMessage",body);item.images.addAll(attachments);items.add(item);
+        }
+        draftImages.removeAll(attachments);for(String path:attachments)draftImagePreviews.remove(path);draftFiles.removeAll(files);
         if (unsentText.equals(text)) unsentText = "";
       }
       changed();
@@ -1596,16 +1668,16 @@ public final class RemoteApp extends Application {
     List<android.net.Uri> uris = new ArrayList<>(new LinkedHashSet<>(selected));
     uris.removeAll(Collections.singleton(null));
     if (uris.isEmpty()) return;
-    if (!connected || busy || readOnly || attaching) {
-      error = "请先连接并等待当前操作完成，再添加图片"; changed(); return;
+    if (!canAttach()) {
+      error = attachmentUnavailable(); changed(); return;
     }
-    int remaining = MediaFiles.MAX_ATTACHMENTS - draftImages.size();
+    int remaining = remainingImages();
     if (uris.size() > remaining) {
       error = "每条消息最多 " + MediaFiles.MAX_ATTACHMENTS + " 张图片，目前还能添加 " + Math.max(0, remaining) + " 张，请重新选择";
       changed(); return;
     }
     if (transport == null) { error = "请先连接 SSH 主机"; changed(); return; }
-    attaching = true;
+    attaching = true; attachingFiles=false;
     pendingImagePreview = null;
     imageUploadIndex = 1; imageUploadCount = uris.size();
     final int token = generation;
@@ -1648,7 +1720,62 @@ public final class RemoteApp extends Application {
         pendingImagePreview = null; attaching = false; imageUploadIndex = imageUploadCount = 0;
         if (!failures.isEmpty()) error = (failures.size() == uris.size() ? "图片上传失败" : "部分图片上传失败，成功的图片已保留")
             + "\n" + android.text.TextUtils.join("\n", failures);
-        changed();
+        changed();drainQueuedMessage();
+      });
+    });
+  }
+
+  boolean canAttach() {
+    return connected && !readOnly && !attaching && !steering && !stopping && !restartingRemote
+        && !recoveryInProgress() && (!busy || !turnId.isEmpty());
+  }
+  String attachmentUnavailable() {
+    if(!connected)return "请先连接服务器";
+    if(readOnly)return "此对话只读，请先接续";
+    if(attaching)return "附件正在上传，请稍候";
+    return "正在接续或提交消息，请稍候再添加附件";
+  }
+  public void attachFiles(List<android.net.Uri> selected) {
+    List<android.net.Uri> uris=new ArrayList<>(new LinkedHashSet<>(selected));uris.removeAll(Collections.singleton(null));
+    if(uris.isEmpty())return;
+    if(!canAttach()){error=attachmentUnavailable();changed();return;}
+    if(uris.size()>remainingFiles()) {
+      error="每条消息最多 "+FileAttachment.MAX_FILES+" 个文件，目前还能添加 "+remainingFiles()+" 个，请重新选择";
+      changed();return;
+    }
+    if(transport==null){error="请先连接 SSH 主机";changed();return;}
+    attaching=true;attachingFiles=true;pendingImagePreview=null;imageUploadIndex=1;imageUploadCount=uris.size();
+    final int token=generation;final SshTransport current=transport;changed();
+    worker.execute(()->{
+      List<String> failures=new ArrayList<>();
+      for(int i=0;i<uris.size();i++) {
+        final int index=i+1;
+        CompletableFuture<Boolean> active=new CompletableFuture<>();
+        main.post(()->active.complete(token==generation && connected && attaching && transport==current));
+        try {if(!active.get())break;}catch(Exception canceled){break;}
+        java.io.File file=null;
+        try {
+          main.post(()->{if(token==generation){imageUploadIndex=index;changed();}});
+          String name=FileAttachment.displayName(getContentResolver(),uris.get(i));
+          file=java.io.File.createTempFile("file-attachment-",".tmp",getCacheDir());
+          // Stream directly to disk; documents are never decoded as images or buffered entirely in memory.
+          try(java.io.InputStream in=getContentResolver().openInputStream(uris.get(i));
+              java.io.OutputStream out=new java.io.FileOutputStream(file)) {
+            if(in==null)throw new java.io.IOException("无法读取文件");
+            MediaFiles.copy(in,out,FileAttachment.LIMIT,()->token==generation && transport==current);
+          }
+          long size=file.length();String path=current.uploadFile(file,name);
+          FileAttachment attachment=new FileAttachment(name,path,size);
+          main.post(()->{if(token==generation){draftFiles.add(attachment);changed();}});
+        }catch(Exception failure){failures.add("第 "+index+" 个文件："+ConnectionFailure.reason(failure));}
+        finally{if(file!=null)file.delete();}
+      }
+      main.post(()->{
+        if(token!=generation)return;
+        attaching=false;attachingFiles=false;imageUploadIndex=imageUploadCount=0;
+        if(!failures.isEmpty())error=(failures.size()==uris.size()?"文件上传失败":"部分文件上传失败，成功的文件已保留")
+            +"\n"+android.text.TextUtils.join("\n",failures);
+        changed();drainQueuedMessage();
       });
     });
   }
@@ -2028,7 +2155,7 @@ public final class RemoteApp extends Application {
       ChatItem old = find(incoming.id);
       if (old == null && incoming.user())
         for (ChatItem m : items)
-          if (m.id.startsWith("local-") && m.text.equals(incoming.text)) {
+          if (m.id.startsWith("local-") && m.text.equals(incoming.text) && m.images.equals(incoming.images)) {
             old = m;
             break;
           }
