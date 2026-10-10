@@ -990,13 +990,13 @@ public class MainActivityTest {
     ChatItem reasoning=InteractionHistoryTest.message("reason","reasoning","t1","思考过程");reasoning.detail="优先检查关键流程";reasoning.status="completed";app.items.add(reasoning);
     app.items.add(result);app.items.add(InteractionHistoryTest.message("a","userMessage","t2","回答上一轮的问题：\n选择方案\nB\n\n"));app.changed();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));capture("typed-conversation-history-"+((activity.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?"dark":"light"));
-    assertNotNull(find(content(),"进展"));assertNotNull(find(content(),"回复"));assertNotNull(find(content(),"交互提问 · 已回答"));assertNotNull(find(content(),"你的回答"));
+    assertNotNull(find(content(),"进展"));assertNotNull(find(content(),"回复"));assertNotNull(find(content(),"交互提问 · 已回答"));assertNull(find(content(),"你的回答"));assertNull(find(content(),"复制问答回答"));
     assertNotNull(find(content(),"✓  B"));assertNotNull(find(content(),"✓  思考过程  ›"));
-    find(content(),"复制问答回答").performClick();
+    find(content(),"复制交互问答").performClick();
     android.content.ClipboardManager clipboard=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-    assertEquals("选择方案\n回答：B",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+    assertEquals("选择方案\n○ A — 优先兼容\n✓ B\n回答：B",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
     find(content(),"复制内容块 1").performClick();assertEquals("版本 1.0.35\n",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
-    controller.recreate();activity=controller.get();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));assertNotNull(find(content(),"你的回答"));
+    controller.recreate();activity=controller.get();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));assertNotNull(find(content(),"交互提问 · 已回答"));assertNull(find(content(),"你的回答"));
   }
 
   @Test @Config(qualifiers="w411dp-h891dp-night-xhdpi")

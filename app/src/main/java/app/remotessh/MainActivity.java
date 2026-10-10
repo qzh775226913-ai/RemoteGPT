@@ -401,14 +401,14 @@ public final class MainActivity extends Activity {
     conversation.addView(empty, new LinearLayout.LayoutParams(-1, -1));
     historyButton=action("加载更早的消息",this::loadOlderMessages);
     historyButton.setContentDescription("加载更早的消息");
-    LinearLayout.LayoutParams historyParams=new LinearLayout.LayoutParams(-1,dp(48));historyParams.setMargins(dp(24),dp(8),dp(24),0);
+    LinearLayout.LayoutParams historyParams=new LinearLayout.LayoutParams(-1,dp(48));historyParams.setMargins(dp(16),dp(8),dp(16),0);
     conversation.addView(historyButton,historyParams);historyButton.setVisibility(View.GONE);
     messages = column();
-    messages.setPadding(dp(24), dp(20), dp(24), dp(12));
+    messages.setPadding(dp(16), dp(20), dp(16), dp(12));
     conversation.addView(
         messages, new LinearLayout.LayoutParams(wide ? dp(Math.min(740, available)) : -1, -2));
     busyLabel = text("正在处理…", 14, muted);
-    busyLabel.setPadding(dp(24), dp(8), dp(24), dp(20));
+    busyLabel.setPadding(dp(16), dp(8), dp(16), dp(20));
     conversation.addView(
         busyLabel, new LinearLayout.LayoutParams(wide ? dp(Math.min(740, available)) : -1, -2));
     jump = icon("arrow", "滚动到最新消息", () -> { historyLimit=60;scroll.follow(); render(); followLatest(); });
@@ -610,7 +610,7 @@ public final class MainActivity extends Activity {
         if (!sameContent(item,rendered.get(item.id))) {
           rendered.put(item.id, item);
           QuestionHistoryView questionCard=questionCards.get(item.id);
-          if(questionCard!=null && item.interaction!=null)questionCard.bind(item.interaction,item.type.equals("questionAnswer"));
+          if(questionCard!=null && item.interaction!=null)questionCard.bind(item.interaction);
           MessageBodyView messageBody = messageBodies.get(item.id);
           if (messageBody != null) messageBody.setSource(item.text);
           TextView view = texts.get(item.id);
@@ -697,10 +697,9 @@ public final class MainActivity extends Activity {
     LinearLayout.LayoutParams wp = new LinearLayout.LayoutParams(-1, -2);
     wp.bottomMargin = dp(item.prose() ? 28 : 2);
     messages.addView(wrap, wp);
-    if(item.type.equals("question") || item.type.equals("questionAnswer")) {
-      boolean answer=item.type.equals("questionAnswer");
+    if(item.type.equals("question")) {
       QuestionHistoryView card=new QuestionHistoryView(this,fg,muted,
-          Color.parseColor(isDark()?(answer?"#262626":"#1C1C1C"):(answer?"#EDEDED":"#F5F5F5")),
+          Color.parseColor(isDark()?"#1C1C1C":"#F5F5F5"),
           fg,this::copy);
       questionCards.put(item.id,card);currentItems.put(item.id,item);
       LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);wp.bottomMargin=dp(18);wrap.addView(card,cp);

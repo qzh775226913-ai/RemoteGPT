@@ -15,7 +15,7 @@ public final class ChatItem {
   }
 
   public boolean user() {
-    return type.equals("userMessage") || type.equals("questionAnswer");
+    return type.equals("userMessage");
   }
 
   public boolean prose() {

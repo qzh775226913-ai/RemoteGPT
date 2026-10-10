@@ -105,31 +105,43 @@ final class InteractionHistory {
     Map<String,String> nativeCopies=new HashMap<>();
     for(JSONObject entry:entries.values())if(entry.optString("id").startsWith("native:"))nativeCopies.put(entry.optString("turnId")+":"+String.valueOf(entry.optJSONArray("questions")),entry.optString("id"));
     Map<String,JSONObject> unique=new LinkedHashMap<>();
+    Map<String,String> identities=new HashMap<>();
     for(JSONObject entry:entries.values()){
       if(entry.optString("status").equals("unavailable"))continue;
       String signature=entry.optString("turnId")+":"+String.valueOf(entry.optJSONArray("questions"));
       String identity=entry.optString("id").startsWith("native:")?entry.optString("id"):nativeCopies.getOrDefault(signature,entry.optString("id"));
+      identities.put(entry.optString("id"),identity);
       JSONObject previous=unique.get(identity);
       if(previous==null || rank(entry.optString("status"))>rank(previous.optString("status")))unique.put(identity,entry);
+    }
+    // Fold App-formatted answer messages into their question card. Only suppress a
+    // duplicate when its question is present; retain the canonical model history.
+    Map<String,JSONObject> textAnswers=new HashMap<>();Set<String> duplicates=new HashSet<>(),precedingTurns=new HashSet<>();
+    for(ChatItem m:messages) {
+      if(m.user()) {
+        JSONObject answer=matchTextAnswer(m.text,precedingTurns);
+        if(answer!=null) {
+          String identity=identities.get(answer.optString("id"));JSONObject entry=unique.get(identity);
+          if(entry!=null && ends.containsKey(entry.optString("turnId"))) {textAnswers.put(identity,answer);duplicates.add(m.id);}
+        }
+      }
+      if(!m.turnId.isEmpty())precedingTurns.add(m.turnId);
     }
     for(Map.Entry<String,JSONObject> displayed:unique.entrySet()) {
       JSONObject entry=displayed.getValue();
       if(entry.optString("status").equals("unavailable"))continue;
       String turn=entry.optString("turnId");Integer at=finals.getOrDefault(turn,ends.get(turn));
       if(at==null)continue; // Never attach a different thread's record to the current history.
+      JSONObject answer=textAnswers.get(displayed.getKey());
+      if(answer!=null)try {entry=new JSONObject(entry.toString());entry.put("status","answered");entry.put("answers",Json.object(answer,"answers"));}catch(JSONException ignored){}
       ChatItem q=new ChatItem("interaction-"+displayed.getKey(),"question","");q.interaction=entry;q.turnId=turn;q.status=entry.optString("status");
       insertions.computeIfAbsent(at,k->new ArrayList<>()).add(q);
     }
-    List<ChatItem> result=new ArrayList<>();Set<String> precedingTurns=new HashSet<>();
+    List<ChatItem> result=new ArrayList<>();
     for(int i=0;i<=messages.size();i++) {
       result.addAll(insertions.getOrDefault(i,Collections.emptyList()));if(i==messages.size())break;
       ChatItem m=messages.get(i);
-      if(m.user()) {
-        JSONObject answer=matchTextAnswer(m.text,precedingTurns);
-        if(answer!=null){ChatItem display=new ChatItem(m.id,"questionAnswer",m.text);display.turnId=m.turnId;display.interaction=answer;display.status="answered";result.add(display);if(!m.turnId.isEmpty())precedingTurns.add(m.turnId);continue;}
-      }
-      result.add(m);
-      if(!m.turnId.isEmpty())precedingTurns.add(m.turnId);
+      if(!duplicates.contains(m.id))result.add(m);
     }
     return result;
   }
