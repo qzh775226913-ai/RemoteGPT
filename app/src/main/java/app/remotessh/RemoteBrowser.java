@@ -14,6 +14,8 @@ final class RemoteBrowser {
 
     default void version() {}
 
+    default void manage(Profile profile) {}
+
     void add();
 
     void settings();
@@ -77,8 +79,7 @@ final class RemoteBrowser {
     subtitle = ui.text("", 13);
     subtitle.setTextColor(ui.muted);
     subtitle.setPadding(ui.dp(20), 0, ui.dp(20), ui.dp(12));
-    subtitle.setContentDescription("远端版本与更新");
-    subtitle.setOnClickListener(v -> { if (app.connected) actions.version(); });
+    subtitle.setContentDescription("服务器连接进展");
     root.addView(subtitle);
     ScrollView scroll = new ScrollView(activity);
     list = ui.column();
@@ -91,7 +92,7 @@ final class RemoteBrowser {
     search.setTextSize(16);
     search.setTextColor(ui.fg);
     search.setHintTextColor(ui.muted);
-    search.setHint("搜索项目和对话");
+    search.setHint("搜索");
     search.setContentDescription("搜索项目和对话");
     search.setSingleLine(true);
     search.setPadding(ui.dp(18), ui.dp(12), ui.dp(18), ui.dp(12));
@@ -99,7 +100,7 @@ final class RemoteBrowser {
     footer.addView(search, new LinearLayout.LayoutParams(0, ui.dp(54), 1));
     primary =
         ui.button(
-            "新项目",
+            "选择／新建项目",
             true,
             () -> {
               if (project.isEmpty()) actions.directories();
@@ -117,7 +118,17 @@ final class RemoteBrowser {
     LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(-2, ui.dp(54));
     pp.leftMargin = ui.dp(10);
     footer.addView(primary, pp);
+    primary.setMaxLines(1);primary.setEllipsize(TextUtils.TruncateAt.END);
+    primary.setPadding(ui.dp(10),ui.dp(12),ui.dp(10),ui.dp(12));
+    primary.setMaxWidth(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.6f));
     root.addView(footer);
+    LinearLayout utilities=ui.row();utilities.setPadding(ui.dp(20),0,ui.dp(20),ui.dp(8));
+    TextView manage=ui.button("连接管理",false,()->{
+      Profile selected=selectedProfile();if(selected!=null)actions.manage(selected);
+      else Toast.makeText(activity,"请先添加服务器连接",Toast.LENGTH_SHORT).show();
+    });
+    LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(0,-2,1);mp.setMarginEnd(ui.dp(8));utilities.addView(manage,mp);
+    utilities.addView(ui.button("设置",false,actions::settings),new LinearLayout.LayoutParams(0,-2,1));root.addView(utilities);
     search.addTextChangedListener(
         new TextWatcher() {
           public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -130,31 +141,23 @@ final class RemoteBrowser {
         });
   }
 
+  private Profile selectedProfile() {
+    for(Profile profile:app.vault.profiles)if(profile.id.equals(filter))return profile;
+    return app.profile;
+  }
+
   String[] menuLabels() {
-    return project.isEmpty()
-        ? new String[] {"添加连接", "选择路径 / 新建项目", "刷新项目与对话", "设置", "最近一次错误"}
-        : new String[] {"在此项目新建对话", "刷新项目对话", "复制项目路径"};
+    return project.isEmpty()?new String[]{"添加连接"}:new String[]{"复制项目路径"};
   }
 
   private void showMenu() {
-    new AlertDialog.Builder(ui.activity).setTitle(project.isEmpty() ? "远程控制" : "项目")
-        .setItems(menuLabels(), (d, w) -> {
-          if (!project.isEmpty()) {
-            if (w == 0) {
-              if (!app.canSwitchConversation()) { Toast.makeText(ui.activity, "正在恢复会话或上传附件，请稍候", Toast.LENGTH_SHORT).show(); return; }
-              if (app.useProject(project)) { dialog.dismiss(); actions.chat(); }
-            } else if (w == 1) app.refreshThreads(false);
-            else {
-              ((android.content.ClipboardManager) ui.activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE))
-                  .setPrimaryClip(android.content.ClipData.newPlainText("项目路径", project));
-              Toast.makeText(ui.activity, "已复制项目路径", Toast.LENGTH_SHORT).show();
-            }
-          } else {
-            if (w == 0) actions.add();
-            else if (w == 1) actions.directories();
-            else if (w == 2) app.refreshThreads(false);
-            else if (w == 3) actions.settings();
-            else actions.diagnostics();
+    new AlertDialog.Builder(ui.activity).setTitle(project.isEmpty()?"远程控制":"项目")
+        .setItems(menuLabels(),(d,w)->{
+          if(project.isEmpty())actions.add();
+          else {
+            ((android.content.ClipboardManager)ui.activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE))
+                .setPrimaryClip(android.content.ClipData.newPlainText("项目路径",project));
+            Toast.makeText(ui.activity,"已复制项目路径",Toast.LENGTH_SHORT).show();
           }
         }).show();
   }
@@ -192,7 +195,7 @@ final class RemoteBrowser {
         app.connecting || app.recoveryInProgress()
             ? (app.profile==null?"":app.profile.title()+" · ")+ConnectionService.summary(app)
             : app.connected
-                ? app.profile.title()+" · 已连接 · "+app.remoteVersion.label()+(project.isEmpty()?"":"\n"+project)
+                ? app.profile.title()+" · 已连接 · "+app.remoteVersion.label().replace(" · 点击检查更新","")+(project.isEmpty()?"":"\n"+project)
                 : "选择一台电脑，查看项目和对话");
     String signature = signature();
     if (signature.equals(renderedSignature)) return;
@@ -200,7 +203,7 @@ final class RemoteBrowser {
     heading.setText(project.isEmpty() ? "远程控制" : RemoteDirectory.name(project));
     heading.setMaxLines(1);
     heading.setEllipsize(TextUtils.TruncateAt.END);
-    primary.setText(project.isEmpty() ? "新项目" : "聊天");
+    primary.setText(project.isEmpty() ? "选择／新建项目" : "新对话");
     ((View)hosts.getParent()).setVisibility(project.isEmpty()?View.VISIBLE:View.GONE);
     hosts.removeAllViews();
     for (Profile p : app.vault.profiles) {
@@ -308,7 +311,7 @@ final class RemoteBrowser {
         note.setTextColor(ui.muted);
         note.setPadding(0, 0, 0, ui.dp(12));
         list.addView(note);
-        list.addView(ui.button("选择路径 / 新建项目", false, actions::directories));
+
       }
       section("最近");
     }

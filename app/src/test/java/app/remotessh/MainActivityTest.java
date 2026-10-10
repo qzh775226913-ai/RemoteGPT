@@ -15,7 +15,7 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.*;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 35, qualifiers = "w411dp-h891dp-xhdpi")
+@Config(sdk = 35, qualifiers = "w411dp-h891dp-xhdpi",shadows=RegionDecoderShadow.class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class MainActivityTest {
   private ActivityController<MainActivity> controller;
@@ -287,7 +287,7 @@ public class MainActivityTest {
     assertEquals(conversation.getHeight() - sc.getHeight(), sc.getScrollY());
   }
 
-  @Test public void browserStatusShowsVersionsAndOffersManualUpdateEntry() throws Exception {
+  @Test public void browserStatusShowsVersionsAndManagementOffersUpdateEntry() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
     app.profile.name = "开发电脑"; app.vault.profiles.add(app.profile);
     app.remoteVersion.running = "0.156.1";
@@ -296,15 +296,15 @@ public class MainActivityTest {
     RemoteBrowser browser = new RemoteBrowser(activity, app, false, new RemoteBrowser.Actions() {
       public void connect(Profile p) {} public void add() {} public void settings() {}
       public void directories() {} public void diagnostics() {} public void chat() {}
-      public void version() { clicked[0] = true; }
+      public void manage(Profile p) { assertSame(app.profile,p);clicked[0] = true; }
     });
     browser.show();
     android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog();
     View shell = dialog.getWindow().getDecorView();
-    TextView status = (TextView) find(shell, "远端版本与更新");
+    TextView status = (TextView) find(shell, "服务器连接进展");
     assertTrue(status.getText().toString().contains("已连接 · Codex 0.156.1"));
     assertTrue(status.getText().toString().contains("待更新（现版本 0.156.1 → 最新版 0.160.0）"));
-    status.performClick(); assertTrue(clicked[0]);
+    assertFalse(status.performClick());find(shell,"连接管理").performClick();assertTrue(clicked[0]);
     captureView(shell, "remote-version-browser");
     app.remoteVersion.updating = true; browser.refresh();
     assertTrue(status.getText().toString().contains("正在更新至 0.160.0"));
@@ -609,9 +609,13 @@ public class MainActivityTest {
   @Config(qualifiers = "w360dp-h720dp-xhdpi")
   public void fontSizeChoicePersistsAndScalesNewActivity() throws Exception {
     float originalScale = activity.getResources().getConfiguration().fontScale;
-    find(content(), "对话菜单").performClick();
-    android.app.AlertDialog menu = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-    menu.getListView().performItemClick(null, 7, 7);
+    find(content(), "打开连接和聊天记录").performClick();
+    android.app.Dialog nav=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    find(nav.getWindow().getDecorView(),"设置").performClick();
+    android.app.Dialog settings=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    find(settings.getWindow().getDecorView(),"外观与字体").performClick();
+    android.app.Dialog appearance=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    find(appearance.getWindow().getDecorView(),"字体大小").performClick();
     android.app.AlertDialog sizes = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
     sizes.getListView().performItemClick(null, 4, 4);
     assertEquals(1.3f, activity.getSharedPreferences("display", 0).getFloat("fontScale", 0), .001f);
@@ -689,7 +693,7 @@ public class MainActivityTest {
     assertEquals("git status\necho ready\n",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
     View refresh=find(content(),"刷新"), resume=find(content(),"接续"), reconnect=find(content(),"重连并接续");
     assertTrue(((LinearLayout.LayoutParams)refresh.getLayoutParams()).getMarginEnd()>0);
-    assertTrue(((LinearLayout.LayoutParams)resume.getLayoutParams()).getMarginEnd()>0);
+    assertEquals(0,((LinearLayout.LayoutParams)resume.getLayoutParams()).getMarginEnd());
     assertTrue(((LinearLayout.LayoutParams)reconnect.getLayoutParams()).topMargin>0);
     assertTrue(((View)refresh.getParent().getParent()).getPaddingLeft()>0);
     capture("copy-blocks-readonly-spaced");
@@ -737,7 +741,8 @@ public class MainActivityTest {
     assertNotNull(find(content(), "项目 · /home/me/projects/remotesshapp"));
     assertNotNull(find(content(), "剩余用量 · 5小时 75% · 7天 90%"));
     capture("conversation-context-usage");
-    ((View) find(content(), "接续远端对话").getParent()).performClick();
+    assertFalse(((View)find(content(),"接续远端对话").getParent()).performClick());
+    find(content(),"项目 · /home/me/projects/remotesshapp").performClick();
     android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
     assertTrue(org.robolectric.Shadows.shadowOf(dialog).getMessage().toString().contains("conversation-123"));
     dialog.dismiss();
@@ -804,8 +809,12 @@ public class MainActivityTest {
     View root = find(browser.getWindow().getDecorView(), "远程控制项目列表");
     assertNotNull(find(root, "remotesshapp"));
     captureView(root, "remote-projects");
+    TextView primary=(TextView)find(root,"选择／新建项目");assertTrue(primary.getWidth()>0);
+    Bitmap actionBitmap=Bitmap.createBitmap(primary.getWidth(),primary.getHeight(),Bitmap.Config.ARGB_8888);primary.draw(new Canvas(actionBitmap));int visibleText=0;
+    for(int y=0;y<actionBitmap.getHeight();y++)for(int x=0;x<actionBitmap.getWidth();x++){int pixel=actionBitmap.getPixel(x,y);if(Color.alpha(pixel)>0 && Color.red(pixel)>240 && Color.green(pixel)>240 && Color.blue(pixel)>240)visibleText++;}
+    assertTrue("Project action text must remain visible on a narrow screen; layout="+primary.getLayout().getHeight()+", height="+primary.getHeight(),visibleText>20);actionBitmap.recycle();
     ((View) find(root, "remotesshapp").getParent()).performClick();
-    assertNotNull(find(root, "聊天"));
+    assertNotNull(find(root, "新对话"));
     captureView(root, "remote-project-threads");
     browser.dismiss();
     DirectoryPicker picker = new DirectoryPicker(activity, app, true, path -> {});
@@ -940,12 +949,56 @@ public class MainActivityTest {
   public void darkLayoutRenders() throws Exception {
     capture("phone-dark");
   }
-  @Test public void conversationMenuDoesNotOpenNavigation() throws Exception {
-    find(content(), "对话菜单").performClick();
-    android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-    assertEquals("新对话", dialog.getListView().getAdapter().getItem(0));
-    assertEquals("选择模型", dialog.getListView().getAdapter().getItem(1));
-    captureView(dialog.getWindow().getDecorView(), "conversation-menu");
+  @Test public void conversationHasDirectNewChatAndNoOverflowDuplicates() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.profile.cwd="/work";app.connected=true;app.readOnly=true;
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertNull(find(content(),"对话菜单"));assertTrue(find(content(),"新对话") instanceof IconView);
+    assertEquals(2,((ViewGroup)find(content(),"接续").getParent()).getChildCount());
+    capture("conversation-direct-actions");
+  }
+
+  @Test public void navigationAndSettingsKeepCurrentWriterDraftAndApprovalMode() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.vault.profiles.add(app.profile);app.connected=true;
+    app.profile.name="开发工作站";app.profile.user="developer";app.profile.host="100.100.100.100";app.state="已连接";
+    app.threadId="writer";app.threadCwd="/work";app.readOnly=false;app.permissionMode=PermissionMode.FULL;
+    app.model="gpt-6.1-sol";app.draftText="未发送草稿";app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    find(content(),"打开连接和聊天记录").performClick();
+    android.app.Dialog nav=org.robolectric.shadows.ShadowDialog.getLatestDialog();View shell=nav.getWindow().getDecorView();
+    find(shell,"设置").performClick();android.app.Dialog settings=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    View options=settings.getWindow().getDecorView();assertNotNull(find(options,"外观与字体"));assertNotNull(find(options,"后台运行"));assertNotNull(find(options,"通知、流体云与气泡"));
+    captureView(options,"app-settings");settings.dismiss();
+    find(shell,"连接管理").performClick();android.app.Dialog management=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    assertNotNull(find(management.getWindow().getDecorView(),"编辑连接"));assertNotNull(find(management.getWindow().getDecorView(),"远端 Codex 版本与更新"));
+    assertNotNull(find(management.getWindow().getDecorView(),"连接诊断"));assertNotNull(find(management.getWindow().getDecorView(),"断开连接"));
+    assertNull(find(management.getWindow().getDecorView(),"字体大小"));captureView(management.getWindow().getDecorView(),"server-management");
+    management.dismiss();nav.dismiss();assertEquals("writer",app.threadId);assertFalse(app.readOnly);assertEquals("gpt-6.1-sol",app.model);
+    assertEquals(PermissionMode.FULL,app.permissionMode);assertEquals("未发送草稿",app.draftText);
+  }
+
+  @Test @Config(qualifiers="w320dp-h640dp-night-xhdpi")
+  public void largeFontBrowserKeepsPrimaryActionAndSettingsVisible() throws Exception {
+    activity.getSharedPreferences("display",0).edit().putFloat("fontScale",1.3f).apply();
+    activity.recreate();shadowOf(android.os.Looper.getMainLooper()).idle();activity=controller.get();
+    find(content(),"打开连接和聊天记录").performClick();
+    android.app.Dialog nav=org.robolectric.shadows.ShadowDialog.getLatestDialog();View root=find(nav.getWindow().getDecorView(),"远程控制项目列表");
+    captureView(root,"browser-large-font");TextView primary=(TextView)find(root,"选择／新建项目");
+    assertEquals(1,primary.getLineCount());assertTrue(primary.getLayout().getHeight()<=primary.getHeight()-primary.getCompoundPaddingTop()-primary.getCompoundPaddingBottom());
+    View settings=find(root,"设置");int[] position=new int[2];settings.getLocationOnScreen(position);
+    assertTrue(position[1]>=0 && position[1]+settings.getHeight()<=root.getHeight());settings.performClick();
+    android.app.Dialog panel=org.robolectric.shadows.ShadowDialog.getLatestDialog();View options=panel.getWindow().getDecorView();
+    assertNotNull(find(options,"通知、流体云与气泡"));captureView(options,"settings-large-font");panel.dismiss();nav.dismiss();
+  }
+
+  @Test @Config(qualifiers="w1024dp-h768dp-night-xhdpi")
+  public void tabletSettingsRemainReachableWithLongHistory() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.vault.profiles.add(app.profile);app.connected=true;
+    for(int i=0;i<100;i++)app.threads.put(Json.obj("id","item"+i,"name","历史对话 "+i));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));capture("tablet-navigation");
+    View settings=find(content(),"设置");int[] position=new int[2];settings.getLocationOnScreen(position);
+    assertTrue(position[1]>=0 && position[1]+settings.getHeight()<=content().getHeight());
+    assertNotNull(find(content(),"项目与对话"));settings.performClick();
+    android.app.Dialog panel=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    assertNotNull(find(panel.getWindow().getDecorView(),"外观与字体"));panel.dismiss();
   }
 
   @Test public void projectMenuDiffersFromHostMenu() throws Exception {
@@ -957,8 +1010,8 @@ public class MainActivityTest {
     });
     assertEquals("添加连接", browser.menuLabels()[0]);
     browser.openProject("/work/project");
-    assertEquals("在此项目新建对话", browser.menuLabels()[0]);
-    assertEquals(3, browser.menuLabels().length);
+    assertEquals("复制项目路径", browser.menuLabels()[0]);
+    assertEquals(1, browser.menuLabels().length);
   }
 
   @Test public void tailscaleModePassesCredentialValidation() {
@@ -997,8 +1050,8 @@ public class MainActivityTest {
     assertNotNull(preview.getDrawable());
     capture("image-and-download");
     preview.performClick();
-    android.app.AlertDialog largeImage=(android.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
-    largeImage.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+    android.app.Dialog largeImage=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    find(largeImage.getWindow().getDecorView(),"保存图片").performClick();
     shadowOf(android.os.Looper.getMainLooper()).idle();
     org.robolectric.shadows.ShadowActivity.IntentForResult request = shadowOf(activity).getNextStartedActivityForResult();
     assertEquals(android.content.Intent.ACTION_CREATE_DOCUMENT, request.intent.getAction());
@@ -1029,12 +1082,13 @@ public class MainActivityTest {
     app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     assertTrue(find(content(),"待发送图片 1").performClick());
     android.app.Dialog dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();assertTrue(dialog.isShowing());
-    ImageView image=(ImageView)find(dialog.getWindow().getDecorView(),"原图预览");
-    for(int i=0;i<150 && image.getDrawable()==null;i++){Thread.sleep(10);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));}
-    assertNotNull(image.getDrawable());Bitmap displayed=((android.graphics.drawable.BitmapDrawable)image.getDrawable()).getBitmap();
+    ZoomImageView image=(ZoomImageView)find(dialog.getWindow().getDecorView(),"原图预览");
+    ImageDocument document=null;
+    for(int i=0;i<150 && document==null;i++){Thread.sleep(10);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));document=org.robolectric.util.ReflectionHelpers.getField(image,"document");}
+    assertNotNull(document);Bitmap displayed=document.overview;
     assertEquals(900,displayed.getWidth());assertEquals(450,displayed.getHeight());assertFalse(thumbnail.isRecycled());
     assertEquals(1,app.draftImages.size());assertTrue(app.busy);captureView(dialog.getWindow().getDecorView(),"draft-original-preview");
-    dialog.dismiss();shadowOf(android.os.Looper.getMainLooper()).idle();assertTrue(displayed.isRecycled());assertFalse(thumbnail.isRecycled());
+    dialog.dismiss();shadowOf(android.os.Looper.getMainLooper()).idle();for(int i=0;i<150 && !displayed.isRecycled();i++)Thread.sleep(10);assertTrue(displayed.isRecycled());assertFalse(thumbnail.isRecycled());
     app.draftImagePreviews.clear();app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     assertTrue("Restored drafts with no cached thumbnail also open the original",find(content(),"待发送图片 1").performClick());
     dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();assertTrue(dialog.isShowing());dialog.dismiss();
@@ -1144,7 +1198,7 @@ public class MainActivityTest {
       public void connect(Profile p){}public void add(){}public void settings(){}public void directories(){}public void diagnostics(){}public void chat(){}
     });browser.show();
     android.app.Dialog dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();View shell=dialog.getWindow().getDecorView();
-    TextView status=(TextView)find(shell,"远端版本与更新");assertTrue(status.getText().toString().contains(ConnectionService.summary(app)));
+    TextView status=(TextView)find(shell,"服务器连接进展");assertTrue(status.getText().toString().contains(ConnectionService.summary(app)));
     View chip=find(shell,"○ "+app.profile.title());assertNotNull(chip);
     app.state="正在启动远端 Codex…";browser.refresh();
     assertTrue(status.getText().toString().contains(ConnectionService.summary(app)));assertSame(chip,find(shell,"○ "+app.profile.title()));

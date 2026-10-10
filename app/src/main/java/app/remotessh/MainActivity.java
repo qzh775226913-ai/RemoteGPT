@@ -26,7 +26,9 @@ public final class MainActivity extends Activity {
   private String renderedThread = "";
   private TextView status, title, error, busyLabel, modelButton, projectLabel, usageLabel;
   private EditText input, keyEditor;
-  private IconView send, permissionButton;
+  private IconView send, permissionButton, newChatButton;
+  private ImageViewer imageViewer;
+  private final List<Dialog> sheets=new ArrayList<>();
   private ProgressBar runningIndicator;
   private LinearLayout attachmentStrip, queuedBar;
   private HorizontalScrollView attachmentScroll;
@@ -57,7 +59,7 @@ public final class MainActivity extends Activity {
   private RemoteBrowser browser;
   private DirectoryPicker directoryPicker;
   private LinearLayout readOnlyBar;
-  private TextView readOnlyLabel,resumeButton,reconnectButton,refreshButton,newChatButton;
+  private TextView readOnlyLabel,resumeButton,reconnectButton,refreshButton;
   private LoadingSpinner resumeSpinner,reconnectSpinner;
   private boolean visibleActivity;
   private String shownApproval = "";
@@ -216,6 +218,8 @@ public final class MainActivity extends Activity {
     if (browser != null) browser.dismiss();
     if (versionDialog != null) versionDialog.dismiss();
     if (directoryPicker != null) directoryPicker.dismiss();
+    if (imageViewer != null) imageViewer.dismiss();
+    for(Dialog sheet:new ArrayList<>(sheets))sheet.dismiss();sheets.clear();
     super.onDestroy();
   }
 
@@ -308,7 +312,13 @@ public final class MainActivity extends Activity {
       navigationScroll.setFillViewport(true);
       navigationScroll.setBackgroundColor(panel);
       navigationScroll.addView(sidebar);
-      body.addView(navigationScroll, new LinearLayout.LayoutParams(dp(260), -1));
+      LinearLayout navigation=column();navigation.setBackgroundColor(panel);
+      LinearLayout projects=column();projects.setPadding(dp(16),dp(8),dp(16),0);
+      projects.addView(action("项目与对话",this::showDrawer));navigation.addView(projects);
+      navigation.addView(navigationScroll,new LinearLayout.LayoutParams(-1,0,1));
+      LinearLayout utility=column();utility.setPadding(dp(16),dp(8),dp(16),dp(12));
+      utility.addView(action("设置",this::appSettings));navigation.addView(utility);
+      body.addView(navigation, new LinearLayout.LayoutParams(dp(260), -1));
     }
     LinearLayout center = column();
     body.addView(center, new LinearLayout.LayoutParams(0, -1, 1));
@@ -329,17 +339,13 @@ public final class MainActivity extends Activity {
     status.setEllipsize(TextUtils.TruncateAt.END);
     heading.addView(status);
     bar.addView(heading, new LinearLayout.LayoutParams(0, -2, 1));
-    clickable(heading, this::conversationInfo);
+
     runningIndicator = new ProgressBar(this);
     runningIndicator.setIndeterminate(true);
     runningIndicator.setContentDescription("当前对话正在运行");
     bar.addView(runningIndicator, new LinearLayout.LayoutParams(dp(20), dp(20)));
-    bar.addView(
-        icon(
-            "more",
-            "对话菜单",
-            this::chatMenu),
-        new LinearLayout.LayoutParams(dp(48), dp(48)));
+    newChatButton = icon("new", "新对话", this::startNewChat);
+    bar.addView(newChatButton, new LinearLayout.LayoutParams(dp(48), dp(48)));
     projectLabel = text("", 12, muted);
     projectLabel.setPadding(dp(20), 0, dp(20), dp(2));
     projectLabel.setMaxLines(1);
@@ -358,9 +364,9 @@ public final class MainActivity extends Activity {
     readOnlyLabel.setPadding(dp(4), dp(6), dp(4), dp(6));
     readOnlyBar.addView(readOnlyLabel);
     LinearLayout roActions = row();
-    refreshButton=action("刷新",app::refreshReadOnly);resumeButton=action("接续",()->app.resume(app.threadId));newChatButton=action("新对话",this::startNewChat);
+    refreshButton=action("刷新",app::refreshReadOnly);resumeButton=action("接续",()->app.resume(app.threadId));
     resumeButton.setContentDescription("接续");resumeSpinner=new LoadingSpinner(fg,dp(16));
-    TextView[] readOnlyControls = {refreshButton,resumeButton,newChatButton};
+    TextView[] readOnlyControls = {refreshButton,resumeButton};
     for (int i=0;i<readOnlyControls.length;i++) {
       readOnlyControls[i].setSingleLine(true); readOnlyControls[i].setEllipsize(TextUtils.TruncateAt.END);
       readOnlyControls[i].setPadding(dp(8),dp(12),dp(8),dp(12));
@@ -554,7 +560,9 @@ public final class MainActivity extends Activity {
     readOnlyBar.setVisibility(app.readOnly || app.connecting || recovering ? View.VISIBLE : View.GONE);
     readOnlyLabel.setText(app.connecting || recovering ? app.recoveryStatus() : "只读历史 · 尚未取得写入权限");
     boolean available=app.connected && !app.connecting && !recovering;
-    refreshButton.setEnabled(available && !app.busy);newChatButton.setEnabled(available);
+    refreshButton.setEnabled(available && !app.busy);
+    newChatButton.setEnabled(!app.connecting && (!app.connected || app.canSwitchConversation()));
+    newChatButton.setAlpha(newChatButton.isEnabled()?1:.4f);
     resumeButton.setEnabled(available && app.readOnly);reconnectButton.setEnabled(!app.connecting && !recovering && !app.busy);
     updateRecoveryButton(resumeButton,resumeSpinner,recovering,app.replaying?"同步中":"接续中","接续");
     updateRecoveryButton(reconnectButton,reconnectSpinner,app.connecting,"连接中","重连并接续");
@@ -976,13 +984,13 @@ public final class MainActivity extends Activity {
       preview.setImageBitmap(bitmap);
       preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
       preview.setContentDescription("待发送图片 " + index);
-      if(path!=null){preview.setOnClickListener(v->openImage(path));PressFeedback.apply(preview,isDark());}
+      if(path!=null){preview.setOnClickListener(v->openImages(new ArrayList<>(app.draftImages),path));PressFeedback.apply(preview,isDark());}
       tile.addView(preview, new FrameLayout.LayoutParams(-1, -1));
     } else {
       TextView label = text("图片 " + index, 12, muted);
       label.setGravity(Gravity.CENTER);
       label.setContentDescription("待发送图片 " + index);
-      if(path!=null){label.setOnClickListener(v->openImage(path));PressFeedback.apply(label,isDark());}
+      if(path!=null){label.setOnClickListener(v->openImages(new ArrayList<>(app.draftImages),path));PressFeedback.apply(label,isDark());}
       tile.addView(label, new FrameLayout.LayoutParams(-1, -1));
     }
     if (path != null) {
@@ -1020,7 +1028,7 @@ public final class MainActivity extends Activity {
       preview.setContentDescription("消息图片，点击查看大图");imageArea.addView(preview,new FrameLayout.LayoutParams(-1,-1));
       label=text("图片 · 滚动到此处加载",12,muted);label.setMinHeight(dp(48));label.setSingleLine(true);label.setEllipsize(TextUtils.TruncateAt.END);label.setGravity(Gravity.CENTER);
       imageArea.addView(label,new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER));
-      tile.setLayoutParams(tp);preview.setOnClickListener(v->{if(loaded)openImage(source);else load();});
+      tile.setLayoutParams(tp);preview.setOnClickListener(v->{if(loaded)openImages(mediaSources.get(itemId),source);else load();});
       label.setOnClickListener(v->load());PressFeedback.apply(preview,isDark());PressFeedback.apply(label,isDark());
     }
     boolean valid() {return !isDestroyed() && generation==app.connectionGeneration() && app.profile!=null && host.equals(app.profile.id) && mediaRows.get(itemId)==row && tile.getParent()!=null;}
@@ -1052,17 +1060,20 @@ public final class MainActivity extends Activity {
     for(MediaTile tile:mediaTiles)if(tile.visible)tile.load();
   }
 
-  private void openImage(String source) {
-    LinearLayout view=column();ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.FIT_CENTER);
-    image.setContentDescription("原图预览");
-    view.addView(image,new LinearLayout.LayoutParams(-1,dp(420)));TextView loading=text("正在加载大图…",13,muted);view.addView(loading);
-    Dialog dialog=new AlertDialog.Builder(this).setView(view).setPositiveButton("保存图片",(d,w)->saveMedia(source)).setNegativeButton("关闭",null).show();
-    int generation=app.connectionGeneration();
-    mediaWorker.execute(()->{
-      try {ByteArrayOutputStream bytes=new ByteArrayOutputStream();app.readMedia(source,bytes,MediaFiles.IMAGE_LIMIT);android.graphics.Bitmap bitmap=MediaFiles.decode(bytes.toByteArray());
-        app.main.post(()->{if(isDestroyed() || !dialog.isShowing() || generation!=app.connectionGeneration()){bitmap.recycle();return;}image.setImageBitmap(bitmap);loading.setVisibility(View.GONE);dialog.setOnDismissListener(d->{image.setImageDrawable(null);bitmap.recycle();});});
-      }catch(Exception e){app.main.post(()->{if(dialog.isShowing())loading.setText("图片加载失败，请关闭后重试");});}
-    });
+  private void openImages(List<String> group,String selected) {
+    List<String> sources=new ArrayList<>();
+    if(group!=null)for(String source:group) {
+      try{sources.add(source.startsWith("data:") || source.startsWith("https://")?source:MediaFiles.remotePath(source,app.currentProject()));}catch(Exception ignored){}
+    }
+    if(!sources.contains(selected))sources.add(selected);
+    if(imageViewer!=null)imageViewer.dismiss();
+    int generation=app.connectionGeneration();String host=app.profile==null?"":app.profile.id;
+    imageViewer=new ImageViewer(this,sources,sources.indexOf(selected),
+        (source,out,active)->app.readMedia(source,out,MediaFiles.IMAGE_LIMIT,active),
+        ()->!isDestroyed() && generation==app.connectionGeneration() && host.equals(app.profile==null?"":app.profile.id),
+        source->{android.graphics.Bitmap preview=app.draftImagePreviews.get(source);if(preview!=null)return preview;
+          for(MediaTile tile:mediaTiles)if(tile.source.equals(source) && tile.loaded && tile.preview.getDrawable() instanceof BitmapDrawable)return ((BitmapDrawable)tile.preview.getDrawable()).getBitmap();return null;},
+        this::saveMedia);
   }
 
   private void renderMedia(ChatItem item) {
@@ -1125,7 +1136,7 @@ public final class MainActivity extends Activity {
     ScrollView sc = new ScrollView(this);
     sc.addView(detail);
     new AlertDialog.Builder(this)
-        .setTitle("连接信息")
+        .setTitle("连接诊断")
         .setView(sc)
         .setNegativeButton("复制诊断", (d, w) -> copy(diagnostic))
         .setNeutralButton(
@@ -1276,7 +1287,7 @@ public final class MainActivity extends Activity {
   }
 
   private Dialog sheet(String heading, View content) {
-    Dialog dialog = new Dialog(this);
+    Dialog dialog = new Dialog(this);dialog.setOwnerActivity(this);sheets.add(dialog);
     LinearLayout shell = column();
     shell.setBackground(rounded(bg, 24));
     shell.setPadding(dp(8), dp(8), dp(8), dp(20));
@@ -1316,7 +1327,7 @@ public final class MainActivity extends Activity {
                 connectProfile(p);
               }
 
-              public void version() { showRemoteVersion(); }
+              public void manage(Profile p) { connectionMenu(p); }
 
               public void add() {
                 browser.dismiss();
@@ -1335,32 +1346,8 @@ public final class MainActivity extends Activity {
                 startNewChat();
               }
 
-              public void settings() {
-                new AlertDialog.Builder(MainActivity.this)
-                    .setItems(
-                        new String[] {"编辑当前连接", "外观"},
-                        (d, w) -> {
-                          if (w == 0) {
-                            if (app.profile != null) editProfile(app.profile, false);
-                            else editProfile(new Profile(), true);
-                          } else
-                            new AlertDialog.Builder(MainActivity.this)
-                                .setTitle("外观")
-                                .setSingleChoiceItems(
-                                    new String[] {"跟随系统", "浅色", "深色"},
-                                    getPreferences(0).getInt("theme", 0),
-                                    (a, b) -> {
-                                      getPreferences(0).edit().putInt("theme", b).apply();
-                                      a.dismiss();
-                                      recreate();
-                                    })
-                                .setNegativeButton("取消", null)
-                                .show();
-                        })
-                    .show();
-              }
+              public void settings() { appSettings(); }
             });
-    app.leaveIdleConversation();
     browser.show();
   }
 
@@ -1431,7 +1418,7 @@ public final class MainActivity extends Activity {
           });
       r.addView(t, new LinearLayout.LayoutParams(0, -2, 1));
       r.addView(
-          icon("chevron", "编辑 " + p.title(), () -> editProfile(p, false)),
+          icon("chevron", "管理 " + p.title(), () -> connectionMenu(p)),
           new LinearLayout.LayoutParams(dp(44), dp(48)));
       nav.addView(r);
     }
@@ -1476,39 +1463,41 @@ public final class MainActivity extends Activity {
               app.nextCursor.isEmpty() ? "刷新对话" : "加载更多",
               () -> app.refreshThreads(!app.nextCursor.isEmpty())));
     }
-    TextView theme =
-        action(
-            "外观",
-            () ->
-                new AlertDialog.Builder(this)
-                    .setTitle("外观")
-                    .setSingleChoiceItems(
-                        new String[] {"跟随系统", "浅色", "深色"},
-                        getPreferences(0).getInt("theme", 0),
-                        (d, w) -> {
-                          getPreferences(0).edit().putInt("theme", w).apply();
-                          d.dismiss();
-                          recreate();
-                        })
-                    .setNegativeButton("取消", null)
-                    .show());
-    LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, -2);
-    tp.topMargin = dp(20);
-    nav.addView(theme, tp);
   }
 
-  private void chatMenu() {
-    new AlertDialog.Builder(this).setTitle("对话")
-        .setItems(new String[] {"新对话", "选择模型", "连接信息", "最近一次错误", "当前项目与对话", "剩余用量", "后台连接设置", "字体大小"}, (d, w) -> {
-          if (w == 0) startNewChat();
-          else if (w == 1) chooseModel();
-          else if (w == 2) connectionMenu();
-          else if (w == 3) showConnectionError();
-          else if (w == 4) conversationInfo();
-          else if (w == 5) usageInfo();
-          else if (w == 6) backgroundSettings();
-          else chooseFontSize();
-        }).show();
+  private void settingAction(LinearLayout options,String label,Runnable click) {
+    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);if(options.getChildCount()>0)lp.topMargin=dp(3);
+    options.addView(action(label,click),lp);
+  }
+
+  private Dialog settingsSheet(String heading,LinearLayout options) {
+    int width=wide?dp(500):getResources().getDisplayMetrics().widthPixels-dp(16);
+    options.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
+    ScrollView scroller=new ScrollView(this);scroller.addView(options);
+    LinearLayout wrapper=column();wrapper.addView(scroller,new LinearLayout.LayoutParams(-1,Math.min(options.getMeasuredHeight(),Math.max(dp(80),getResources().getDisplayMetrics().heightPixels-dp(180)))));
+    return sheet(heading,wrapper);
+  }
+
+  private void appSettings() {
+    LinearLayout options=column();
+    settingAction(options,"外观与字体",this::appearanceSettings);
+    settingAction(options,"后台运行",this::backgroundSettings);
+    settingAction(options,"通知、流体云与气泡",this::liveStatusSettings);
+    settingsSheet("设置",options);
+  }
+
+  private void appearanceSettings() {
+    LinearLayout options=column();
+    settingAction(options,"主题",this::chooseTheme);
+    settingAction(options,"字体大小",this::chooseFontSize);
+    settingsSheet("外观与字体",options);
+  }
+
+  private void chooseTheme() {
+    new AlertDialog.Builder(this).setTitle("主题")
+        .setSingleChoiceItems(new String[]{"跟随系统","浅色","深色"},getPreferences(0).getInt("theme",0),(d,w)->{
+          getPreferences(0).edit().putInt("theme",w).apply();d.dismiss();recreate();})
+        .setNegativeButton("取消",null).show();
   }
 
   private void chooseFontSize() {
@@ -1525,13 +1514,13 @@ public final class MainActivity extends Activity {
   }
 
   private void backgroundSettings() {
-    new AlertDialog.Builder(this).setTitle("后台连接")
+    new AlertDialog.Builder(this).setTitle("后台运行")
         .setMessage("连接期间会显示常驻通知并保持 CPU 唤醒。请在系统设置中允许 RemoteGPT 后台运行，并将电池策略设为不受限制。若使用 Tailscale，也需允许其后台联网。断开连接后会释放唤醒锁。\n\n开启远端持久会话后，杀掉 App 或断网不会主动停止远端任务；重连会补回消息。等待审批时任务会暂停，直到你重新连接并处理。远端重启或程序崩溃仍会中断。Android 11 及以上可在通知设置中允许气泡；通知权限或气泡关闭时可点通知回到对话。")
         .setPositiveButton("打开系统设置", (d, w) -> {
           try { startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
               android.net.Uri.parse("package:" + getPackageName()))); }
           catch (ActivityNotFoundException e) { toast("请在系统应用设置中打开 Remote"); }
-        }).setNeutralButton("通知与流体云", (d, w) -> liveStatusSettings()).setNegativeButton("返回", null).show();
+        }).setNegativeButton("返回", null).show();
   }
 
   private void liveStatusSettings() {
@@ -1555,7 +1544,7 @@ public final class MainActivity extends Activity {
       getSharedPreferences("background", MODE_PRIVATE).edit().putBoolean("liveStatus", checked).apply();
       app.liveStatus.update();
     });
-    new AlertDialog.Builder(this).setTitle("流体云与通知").setView(panelView)
+    new AlertDialog.Builder(this).setTitle("通知、流体云与气泡").setView(panelView)
         .setPositiveButton("打开系统通知设置", (d, w) -> {
           try { startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
               .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())); }
@@ -1598,18 +1587,21 @@ public final class MainActivity extends Activity {
   }
 
   private void connectionMenu() {
-    if (!app.connected && !app.connecting) {
-      showDrawer();
-      return;
-    }
-    new AlertDialog.Builder(this)
-        .setTitle(app.profile.title())
-        .setMessage(
-            app.profile.user + "@" + app.profile.host + ":" + app.profile.port + "\n" + app.state)
-        .setPositiveButton("返回", null)
-        .setNeutralButton("编辑连接", (d, w) -> editProfile(app.profile, false))
-        .setNegativeButton("断开连接", (d, w) -> app.disconnect())
-        .show();
+    if(app.profile==null){showDrawer();return;}connectionMenu(app.profile);
+  }
+
+  private void connectionMenu(Profile profile) {
+    boolean current=app.profile!=null && app.profile.id.equals(profile.id);
+    LinearLayout options=column();
+    TextView detail=text(profile.title()+"\n"+profile.user+"@"+profile.host+":"+profile.port+"\n"+(current?app.state:"未连接"),14,muted);
+    detail.setTextIsSelectable(true);detail.setPadding(dp(12),dp(8),dp(12),dp(12));options.addView(detail);
+    Dialog[] holder=new Dialog[1];
+    settingAction(options,"编辑连接",()->editProfile(profile,false));
+    if(current && app.connected)settingAction(options,"远端 Codex 版本与更新",this::showRemoteVersion);
+    if(current)settingAction(options,"连接诊断",this::showConnectionError);
+    if(current && (app.connected || app.connecting))settingAction(options,"断开连接",()->{holder[0].dismiss();app.disconnect();});
+    else settingAction(options,"连接此服务器",()->{holder[0].dismiss();connectProfile(profile);});
+    holder[0]=settingsSheet("连接管理",options);
   }
 
   private void connectProfile(Profile p) {
