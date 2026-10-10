@@ -11,7 +11,7 @@ final class LoadingSpinner extends Drawable implements Animatable {
   private long started;
   private final Runnable frame=()->{if(running){invalidateSelf();scheduleSelf(this.frame,SystemClock.uptimeMillis()+32);}};
   LoadingSpinner(int color,int size) {
-    paint.setColor(color);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(size/10f);paint.setStrokeCap(Paint.Cap.ROUND);
+    paint.setColor(color);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(size*AppIcons.STROKE_WIDTH/24f);paint.setStrokeCap(Paint.Cap.ROUND);
     setBounds(0,0,size,size);
   }
   public void draw(Canvas canvas) {

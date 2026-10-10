@@ -32,7 +32,8 @@ final class QuestionHistoryView extends LinearLayout {
       if(options!=null)for(int n=0;n<options.length();n++) {
         JSONObject option=options.optJSONObject(n);if(option==null)continue;String name=option.optString("label"),description=option.optString("description");
         boolean chosen=!q.optBoolean("isSecret") && answer.equals(name);
-        TextView value=text((chosen?"✓  ":"○  ")+name+(description.isEmpty()?"":"\n    "+description),chosen?selected:muted,14);value.setPadding(dp(6),dp(4),0,dp(4));addView(value);
+        TextView value=text((chosen?"✓  ":"○  ")+name+(description.isEmpty()?"":"\n    "+description),chosen?selected:muted,14);
+        value.setText(AppIcons.label(getContext(),value.getText(),chosen?"check":"radio",null,chosen?selected:muted,dp(16)));value.setPadding(dp(6),dp(4),0,dp(4));addView(value);
         plain.append(chosen?"✓ ":"○ ").append(name).append(description.isEmpty()?"":" — "+description).append('\n');
       }
       if(!answer.isEmpty()) {TextView value=text("回答："+answer.trim(),selected,15);value.setPadding(0,dp(8),0,0);addView(value);plain.append("回答：").append(answer).append('\n');}

@@ -560,7 +560,7 @@ public final class MainActivity extends Activity {
     updateRecoveryButton(reconnectButton,reconnectSpinner,app.connecting,"连接中","重连并接续");
     input.setEnabled(!app.readOnly);
     input.setHint(app.readOnly ? "此线程只读，请接续或新建对话" : "发送消息");
-    status.setText(app.connected ? "●  " + app.profile.title() + "  ·  SSH" : app.state);
+    status.setText(app.connected ? AppIcons.label(this,"●  " + app.profile.title() + "  ·  SSH","status",null,Color.rgb(48,148,112),dp(14)) : app.state);
     status.setTextColor(app.connected ? Color.rgb(48, 148, 112) : muted);
     error.setText(app.error.isEmpty() ? "" : app.error.split("\n", 2)[0] + "\n点按查看原因和诊断信息");
     error.setVisibility(app.error.isEmpty() ? View.GONE : View.VISIBLE);
@@ -665,14 +665,15 @@ public final class MainActivity extends Activity {
     if(active && visibleActivity)spinner.start();else spinner.stop();
   }
 
-  private String toolTitle(ChatItem m) {
+  private CharSequence toolTitle(ChatItem m) {
     String symbol = m.status.equals("completed") ? "✓" : m.status.equals("failed") ? "!" : "›";
-    return symbol + "  " + m.text.replaceAll("\\s+", " ") + "  ›";
+    String icon=m.status.equals("completed")?"check":m.status.equals("failed")?"error":"chevron";
+    return AppIcons.label(this,symbol + "  " + m.text.replaceAll("\\s+", " ") + "  ›",icon,"chevron",muted,dp(15));
   }
 
   private void renderEmpty() {
     empty.removeAllViews();
-    IconView mark = new IconView(this, "computer", fg);
+    IconView mark = new IconView(this, "brand", fg);
     mark.setBackground(rounded(panel, 28));
     empty.addView(mark, new LinearLayout.LayoutParams(dp(88), dp(88)));
     TextView h = text(app.connected ? "想在远端做些什么？" : "你的电脑，随时连接", 26, fg);
@@ -696,6 +697,7 @@ public final class MainActivity extends Activity {
                   input.setSelection(suggestion.length());
                   input.requestFocus();
                 });
+        chip.setText(AppIcons.label(this,chip.getText().toString(),null,"arrowUpRight",fg,dp(18)));
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(wide ? dp(340) : -1, -2);
         cp.bottomMargin = dp(10);
         empty.addView(chip, cp);
@@ -1418,6 +1420,7 @@ public final class MainActivity extends Activity {
               14,
               fg);
       t.setPadding(dp(8), dp(12), dp(8), dp(12));
+      t.setText(AppIcons.label(this,t.getText().toString(),app.connected && app.profile.id.equals(p.id)?"status":"computer",null,fg,dp(18)));
       t.setMaxLines(2);
       clickable(
           t,
@@ -1432,7 +1435,8 @@ public final class MainActivity extends Activity {
           new LinearLayout.LayoutParams(dp(44), dp(48)));
       nav.addView(r);
     }
-    nav.addView(action("＋ 添加 SSH 连接", () -> editProfile(new Profile(), true)));
+    TextView addConnection=action("＋ 添加 SSH 连接", () -> editProfile(new Profile(), true));
+    addConnection.setText(AppIcons.label(this,addConnection.getText().toString(),"plus",null,fg,dp(18)));nav.addView(addConnection);
     TextView history = text("最近的对话", 12, muted);
     history.setPadding(dp(4), dp(28), 0, dp(12));
     nav.addView(history);
@@ -1534,6 +1538,7 @@ public final class MainActivity extends Activity {
     LinearLayout panelView = column();
     panelView.setPadding(dp(20), dp(8), dp(20), dp(8));
     CheckBox enabled = new CheckBox(this);
+    AppIcons.selection(enabled,fg,muted,false);
     enabled.setText("显示任务状态与审批流体云");
     enabled.setTextColor(fg);
     enabled.setChecked(getSharedPreferences("background", MODE_PRIVATE).getBoolean("liveStatus", true));
@@ -1670,16 +1675,19 @@ public final class MainActivity extends Activity {
     auth.setOrientation(LinearLayout.VERTICAL);
     auth.setPadding(0, dp(12), 0, dp(4));
     RadioButton passwordAuth = new RadioButton(this);
+    AppIcons.selection(passwordAuth,fg,muted,true);
     passwordAuth.setId(R.id.auth_password);
     passwordAuth.setText("密码登录");
     passwordAuth.setTextColor(fg);
     RadioButton keyAuth = new RadioButton(this);
+    AppIcons.selection(keyAuth,fg,muted,true);
     keyAuth.setId(R.id.auth_key);
     keyAuth.setText("私钥登录");
     keyAuth.setTextColor(fg);
     auth.addView(passwordAuth);
     auth.addView(keyAuth);
     RadioButton tailscaleAuth = new RadioButton(this);
+    AppIcons.selection(tailscaleAuth,fg,muted,true);
     tailscaleAuth.setId(R.id.auth_tailscale);
     tailscaleAuth.setText("Tailscale SSH（免密码）");
     tailscaleAuth.setTextColor(fg);
@@ -1718,6 +1726,7 @@ public final class MainActivity extends Activity {
         });
     auth.check(draft.tailscaleSsh ? R.id.auth_tailscale : draft.privateKey.isEmpty() ? R.id.auth_password : R.id.auth_key);
     TextView advanced = action("项目与启动设置 ⌄", () -> {});
+    advanced.setText(AppIcons.label(this, advanced.getText(), null, "chevronDown", fg, dp(18)));
     LinearLayout.LayoutParams advancedLayout = new LinearLayout.LayoutParams(-1, -2);
     advancedLayout.topMargin = dp(12);
     form.addView(advanced, advancedLayout);
@@ -1731,6 +1740,7 @@ public final class MainActivity extends Activity {
     EditText cwd = field(extra, "远端项目目录", draft.cwd, "/home/me/project（可选）", false),
         command = field(extra, "远端启动命令", draft.command, "codex app-server", false);
     CheckBox persistent = new CheckBox(this);
+    AppIcons.selection(persistent,fg,muted,false);
     persistent.setText("远端持久会话（需 Python 3，断线后继续运行）");
     persistent.setTextColor(fg);
     persistent.setChecked(draft.persistent);
@@ -1739,6 +1749,7 @@ public final class MainActivity extends Activity {
     note.setPadding(dp(4), dp(10), dp(4), dp(10));
     extra.addView(note);
     CheckBox remember = new CheckBox(this);
+    AppIcons.selection(remember,fg,muted,false);
     remember.setText("在此设备加密保存凭据");
     remember.setTextColor(fg);
     remember.setTextSize(13);

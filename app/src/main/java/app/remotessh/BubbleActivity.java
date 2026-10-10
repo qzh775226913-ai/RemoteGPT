@@ -68,6 +68,7 @@ public final class BubbleActivity extends Activity {
     title.setContentDescription("气泡标题");
     header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
     TextView open = new TextView(this); open.setText("打开 ›"); open.setTextSize(12); open.setTextColor(foreground);
+    open.setText(AppIcons.label(this,open.getText().toString(),null,"chevron",foreground,dp(14)));
     open.setPadding(dp(12), 0, 0, 0); header.addView(open);
     PressFeedback.apply(header, foreground != android.graphics.Color.parseColor("#171717"));
     header.setContentDescription("打开对话"); header.setOnClickListener(v -> openConversation());

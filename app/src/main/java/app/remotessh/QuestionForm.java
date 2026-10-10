@@ -50,6 +50,7 @@ final class QuestionForm extends LinearLayout {
           JSONObject option=options.optJSONObject(k);if(option==null)continue;
           String name=option.optString("label"),description=option.optString("description");
           RadioButton button=new RadioButton(context);button.setId(View.generateViewId());button.setText(name+(description.isEmpty()?"":"\n"+description));
+          AppIcons.selection(button,fg,muted,true);
           button.setTextSize(14);button.setTextColor(fg);button.setContentDescription(name);button.setMinHeight(dp(56));
           button.setPadding(dp(8),dp(12),dp(12),dp(12));button.setBackground(background(panel));
           RadioGroup.LayoutParams bp=new RadioGroup.LayoutParams(-1,-2);bp.bottomMargin=dp(10);answer.choices.addView(button,bp);
@@ -57,6 +58,7 @@ final class QuestionForm extends LinearLayout {
         }
         if(q.optBoolean("isOther")) {
           RadioButton other=new RadioButton(context);other.setId(View.generateViewId());other.setText("自己填写");other.setTextColor(fg);other.setMinHeight(dp(48));
+          AppIcons.selection(other,fg,muted,true);
           answer.other=other.getId();answer.choices.addView(other);
         }
         answer.text.setVisibility(GONE);

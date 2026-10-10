@@ -222,6 +222,7 @@ final class RemoteBrowser {
                 }
                 refresh();
               });
+      chip.setText(AppIcons.label(ui.activity,chip.getText().toString(),active?"status":"radio",null,filter.equals(p.id)?android.graphics.Color.WHITE:ui.fg,ui.dp(16)));
       LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
       lp.leftMargin = ui.dp(8);
       hosts.addView(chip, lp);

@@ -100,7 +100,7 @@ public final class ConnectionService extends Service {
         .setContentIntent(open).setOnlyAlertOnce(true).setVisibility(Notification.VISIBILITY_PRIVATE);
     if (android.os.Build.VERSION.SDK_INT >= 30) {
       String title = LiveStatusNotifications.title(app);
-      android.graphics.drawable.Icon icon = android.graphics.drawable.Icon.createWithResource(this, R.mipmap.ic_desktop);
+      android.graphics.drawable.Icon icon = android.graphics.drawable.Icon.createWithResource(this, R.mipmap.ic_launcher);
       Person remote = new Person.Builder().setName("RemoteGPT").setKey("remote-gpt").setBot(true).setIcon(icon).build();
       Intent bubble = app.conversationIntent(BubbleActivity.class, app.threadId);
       String shortcutId = "conversation-" + (app.profile == null ? "" : app.profile.id) + "-" + app.threadId;
