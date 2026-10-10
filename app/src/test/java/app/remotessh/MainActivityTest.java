@@ -1075,6 +1075,55 @@ public class MainActivityTest {
     capture("progress-paragraph-spacing-"+((activity.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?"dark":"light"));
   }
 
+  private View messageWrap(String id) throws Exception {
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("order");field.setAccessible(true);
+    java.util.List<?> order=(java.util.List<?>)field.get(activity);
+    field=MainActivity.class.getDeclaredField("messages");field.setAccessible(true);
+    return ((LinearLayout)field.get(activity)).getChildAt(order.indexOf(id));
+  }
+  private void assertGap(String before,String after,int gap) throws Exception {
+    View a=messageWrap(before),b=messageWrap(after);float density=activity.getResources().getDisplayMetrics().density;
+    assertEquals(before+" → "+after,Math.round(gap*density),b.getTop()-a.getBottom());
+  }
+  private void verifyConversationSpacing(String screenshot) throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="spacing";
+    app.threadCwd="/home/example/AI-Workspace/装修效果图";
+    app.usage.update(Json.obj("rateLimits",Json.obj("primary",Json.obj("usedPercent",76,"windowDurationMins",300),"secondary",Json.obj("usedPercent",78,"windowDurationMins",10080))),true);
+    for(int i=0;i<60;i++){ChatItem hidden=InteractionHistoryTest.message("hidden"+i,"reasoning","old","思考过程");hidden.status="completed";app.items.add(hidden);}
+    ChatItem first=InteractionHistoryTest.message("first","commandExecution","q-turn","检查项目路径"),second=InteractionHistoryTest.message("second","commandExecution","q-turn","读取已有记录");
+    first.status=second.status="completed";app.items.add(first);app.items.add(second);
+    org.json.JSONObject req=Json.obj("method",ConversationJournal.METHOD,"params",Json.obj("callId","spacing-q","turnId","q-turn","questions",new org.json.JSONArray().put(Json.obj("id","q0","question","请补充房屋所在城市，以及是否有地暖。没有量过的部分可写暂不清楚。"))));
+    app.interactions.question(req);app.interactions.answered(req,Json.obj("answers",Json.obj("q0",Json.obj("answers",new org.json.JSONArray().put("有地暖，房在西安。其他不清楚。")))));
+    ChatItem third=InteractionHistoryTest.message("third","commandExecution","work","检查尺寸与管线"),fourth=InteractionHistoryTest.message("fourth","commandExecution","work","更新方案");third.status=fourth.status="completed";
+    ChatItem progress=InteractionHistoryTest.message("paragraph","agentMessage","work","\n\n已记录城市与地暖信息，窗宽先按可调整的估算建模，并明确标注。\n\n\n灯光以 3000K 为基础，厨房和书桌补充任务光。\n\n");progress.phase="commentary";
+    ChatItem reply=InteractionHistoryTest.message("reply","agentMessage","work","\n\n方案已经更新。\n\n请核对尺寸。\n\n");reply.phase="final_answer";
+    ChatItem user=InteractionHistoryTest.message("user","userMessage","next","先按这个方案继续。");
+    app.items.add(third);app.items.add(progress);app.items.add(fourth);app.items.add(reply);app.items.add(user);
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));capture(screenshot);
+    ConversationScrollView scroll=(ConversationScrollView)find(content(),"对话消息");scroll.scrollTo(0,0);captureLaidOutView(content(),screenshot);
+    assertGap("first","second",2);assertGap("second","interaction-call:spacing-q",8);assertGap("interaction-call:spacing-q","third",8);
+    assertGap("third","paragraph",6);assertGap("paragraph","fourth",6);assertGap("fourth","reply",8);assertGap("reply","user",8);
+    android.graphics.Rect history=new android.graphics.Rect(),firstRect=new android.graphics.Rect();find(content(),"加载更早的消息").getGlobalVisibleRect(history);messageWrap("first").getGlobalVisibleRect(firstRect);
+    assertEquals("History button has the same compact gap as cards",Math.round(8*activity.getResources().getDisplayMetrics().density),firstRect.top-history.bottom);
+    assertEquals("History button aligns with the messages",firstRect.left,history.left);assertEquals(firstRect.right,history.right);
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("projectLabel");field.setAccessible(true);TextView path=(TextView)field.get(activity);
+    field=MainActivity.class.getDeclaredField("usageLabel");field.setAccessible(true);TextView usage=(TextView)field.get(activity);
+    assertEquals(Math.round(4*activity.getResources().getDisplayMetrics().density),path.getPaddingBottom()+usage.getPaddingTop());
+    assertNotNull(find(content(),"交互提问 · 已回答"));assertNotNull(find(content(),"复制消息"));assertNotNull(find(content(),"复制回复"));
+    scroll.follow();app.items.get(10).status="inProgress";app.items.get(10).detail="读取上下文";app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));capture(screenshot+"-reasoning-update");
+    assertEquals(View.VISIBLE,messageWrap("hidden10").getVisibility());assertGap("hidden10","first",2);
+    assertGap("second","interaction-call:spacing-q",8);assertGap("interaction-call:spacing-q","third",8);
+  }
+  @Test public void conversationSpacingIsBalancedAcrossCardsParagraphsAndHistory() throws Exception {verifyConversationSpacing("conversation-spacing-light");}
+  @Test @Config(qualifiers="w411dp-h891dp-night-xhdpi")
+  public void conversationSpacingIsBalancedInDarkTheme() throws Exception {verifyConversationSpacing("conversation-spacing-dark");}
+  @Test @Config(qualifiers="w360dp-h720dp-night-xhdpi")
+  public void conversationSpacingOnSmallPhoneWithLargeText() throws Exception {
+    activity.getSharedPreferences("display",0).edit().putFloat("fontScale",1.3f).apply();controller.recreate();activity=controller.get();verifyConversationSpacing("conversation-spacing-large-text");
+  }
+  @Test @Config(qualifiers="w1280dp-h800dp-mdpi")
+  public void conversationSpacingIsBalancedOnTablet() throws Exception {verifyConversationSpacing("conversation-spacing-tablet");}
+
   @Test public void recoveryButtonsAnimateUntilHistoryAndReplayAreReady() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.readOnly=true;app.threadId="chat";
     java.lang.reflect.Field loading=RemoteApp.class.getDeclaredField("loadingThread");loading.setAccessible(true);loading.set(app,"chat");

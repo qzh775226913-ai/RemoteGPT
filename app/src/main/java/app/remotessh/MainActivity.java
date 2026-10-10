@@ -341,13 +341,13 @@ public final class MainActivity extends Activity {
             this::chatMenu),
         new LinearLayout.LayoutParams(dp(48), dp(48)));
     projectLabel = text("", 12, muted);
-    projectLabel.setPadding(dp(20), 0, dp(20), dp(4));
+    projectLabel.setPadding(dp(20), 0, dp(20), dp(2));
     projectLabel.setMaxLines(1);
     projectLabel.setEllipsize(TextUtils.TruncateAt.MIDDLE);
     clickable(projectLabel, this::conversationInfo);
     center.addView(projectLabel);
     usageLabel = text("", 12, muted);
-    usageLabel.setPadding(dp(20), dp(4), dp(20), dp(8));
+    usageLabel.setPadding(dp(20), dp(2), dp(20), dp(8));
     usageLabel.setMaxLines(2);
     usageLabel.setEllipsize(TextUtils.TruncateAt.END);
     clickable(usageLabel, this::usageInfo);
@@ -411,14 +411,14 @@ public final class MainActivity extends Activity {
     conversation.addView(empty, new LinearLayout.LayoutParams(-1, -1));
     historyButton=action("加载更早的消息",this::loadOlderMessages);
     historyButton.setContentDescription("加载更早的消息");
-    LinearLayout.LayoutParams historyParams=new LinearLayout.LayoutParams(-1,dp(48));historyParams.setMargins(dp(16),dp(8),dp(16),0);
+    LinearLayout.LayoutParams historyParams=new LinearLayout.LayoutParams(wide?dp(Math.min(740,available)-32):-1,dp(48));historyParams.setMargins(dp(16),dp(8),dp(16),0);
     conversation.addView(historyButton,historyParams);historyButton.setVisibility(View.GONE);
     messages = column();
-    messages.setPadding(dp(16), dp(20), dp(16), dp(12));
+    messages.setPadding(dp(16), dp(8), dp(16), dp(8));
     conversation.addView(
         messages, new LinearLayout.LayoutParams(wide ? dp(Math.min(740, available)) : -1, -2));
     busyLabel = text("正在处理…", 14, muted);
-    busyLabel.setPadding(dp(16), dp(8), dp(16), dp(20));
+    busyLabel.setPadding(dp(16), 0, dp(16), dp(8));
     conversation.addView(
         busyLabel, new LinearLayout.LayoutParams(wide ? dp(Math.min(740, available)) : -1, -2));
     jump = icon("arrow", "滚动到最新消息", () -> { historyLimit=60;scroll.follow(); render(); followLatest(); });
@@ -643,6 +643,7 @@ public final class MainActivity extends Activity {
         }
         renderMedia(item);
       }
+      updateMessageSpacing();
       if (!visibleItems.isEmpty() && !historyRender) followLatest();
       scheduleMedia();
       firstRender = false;
@@ -718,14 +719,13 @@ public final class MainActivity extends Activity {
     LinearLayout wrap = column();
     wrap.setGravity(item.user() ? Gravity.END : Gravity.START);
     LinearLayout.LayoutParams wp = new LinearLayout.LayoutParams(-1, -2);
-    wp.bottomMargin = dp(item.prose() ? 28 : 2);
     messages.addView(wrap, wp);
     if(item.type.equals("question")) {
       QuestionHistoryView card=new QuestionHistoryView(this,fg,muted,
           Color.parseColor(isDark()?"#1C1C1C":"#F5F5F5"),
           fg,this::copy);
       questionCards.put(item.id,card);currentItems.put(item.id,item);
-      LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);wp.bottomMargin=dp(18);wrap.addView(card,cp);
+      LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);wrap.addView(card,cp);
       return;
     }
     TextView content = text("", item.prose() ? 16 : 13, item.prose() ? fg : muted);
@@ -755,8 +755,6 @@ public final class MainActivity extends Activity {
     }
     if (item.type.equals("agentMessage") || item.type.equals("plan")) {
       boolean plan=item.type.equals("plan"),progress=!plan && item.phase.equals("commentary");
-      // Account for the preceding summary gap and the prose font's leading whitespace.
-      if(progress){wp.topMargin=dp(4);wp.bottomMargin=dp(8);}
       LinearLayout proseCard=column();
       proseCard.setBackground(rounded(progress?bg:Color.parseColor(isDark()?(plan?"#202020":"#161616"):(plan?"#F2F2F2":"#FAFAFA")),18));
       proseCard.setPadding(dp(progress?4:14),dp(progress?3:6),dp(progress?4:14),dp(progress?3:8));
@@ -767,7 +765,6 @@ public final class MainActivity extends Activity {
         heading.addView(copyButton,new LinearLayout.LayoutParams(dp(48),dp(48)));proseCard.addView(heading);
       }
       MessageBodyView messageBody = new MessageBodyView(this,progress?muted:fg,muted,Color.parseColor(isDark()?"#2B2B2B":"#ECECEC"),this::openLink,this::copy);
-      if(progress)messageBody.compactProse();
       messageBodies.put(item.id,messageBody); proseCard.addView(messageBody,new LinearLayout.LayoutParams(-1,-2));
     } else if(item.user()) {
       LinearLayout bubbleRow=row();bubbleRow.setGravity(Gravity.END|Gravity.BOTTOM);
@@ -785,6 +782,29 @@ public final class MainActivity extends Activity {
       wrap.setTranslationY(dp(6));
       wrap.animate().alpha(1).translationY(0).setDuration(180).start();
     }
+  }
+
+  // One gap per visible boundary, rather than stacking each message's margins.
+  // Run after updates as empty reasoning items can become visible while streaming.
+  private void updateMessageSpacing() {
+    ChatItem previous=null;
+    for(int i=0;i<messages.getChildCount();i++) {
+      View wrap=messages.getChildAt(i);ChatItem item=currentItems.get(order.get(i));
+      boolean visible=wrap.getVisibility()!=View.GONE;
+      int gap=visible && previous!=null ? dp(messageGap(previous,item)) : 0;
+      LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)wrap.getLayoutParams();
+      if(params.topMargin!=gap || params.bottomMargin!=0){params.topMargin=gap;params.bottomMargin=0;wrap.setLayoutParams(params);}
+      if(visible)previous=item;
+    }
+  }
+  private static int messageGap(ChatItem before,ChatItem after) {
+    boolean beforeSummary=!before.prose() && !before.type.equals("question");
+    boolean afterSummary=!after.prose() && !after.type.equals("question");
+    if(beforeSummary && afterSummary)return 2;
+    boolean beforeProgress=before.type.equals("agentMessage") && before.phase.equals("commentary");
+    boolean afterProgress=after.type.equals("agentMessage") && after.phase.equals("commentary");
+    if((beforeSummary && afterProgress) || (beforeProgress && afterSummary))return 6;
+    return 8;
   }
 
   private void updateSend() {

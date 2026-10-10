@@ -4,6 +4,9 @@ import android.content.Context;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.text.method.LinkMovementMethod;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.LineHeightSpan;
 import android.widget.*;
 import java.util.*;
 import java.util.function.Consumer;
@@ -18,7 +21,6 @@ final class MessageBodyView extends LinearLayout {
   private final int fg, muted, panel;
   private final Consumer<String> open, copy;
   private String source;
-  private boolean compactProse;
 
   MessageBodyView(Context context, int fg, int muted, int panel, Consumer<String> open, Consumer<String> copy) {
     super(context); setOrientation(VERTICAL);
@@ -29,9 +31,26 @@ final class MessageBodyView extends LinearLayout {
     TextView view=new TextView(getContext()); view.setText(value); view.setTextSize(size); view.setTextColor(color);
     return view;
   }
-  void compactProse(){compactProse=true;}
   private CharSequence proseText(String value) {
-    return Markdown.render(compactProse?value.trim():value,muted,panel,open,copy);
+    // Display whitespace separately from the canonical source used for copying.
+    // A Markdown paragraph break is a small gap, not another full text line.
+    return paragraphText(Markdown.render(proseDisplay(value),muted,panel,open,copy),dp(4));
+  }
+  static String proseDisplay(String value) {
+    return value.trim().replace("\r\n","\n").replaceAll("\\n[\\t ]*\\n(?:[\\t ]*\\n)*","\n\n");
+  }
+  static CharSequence paragraphText(CharSequence value,int blankHeight) {
+    SpannableStringBuilder rendered=new SpannableStringBuilder(value);
+    for(int i=1;i<rendered.length();i++)if(rendered.charAt(i)=='\n' && rendered.charAt(i-1)=='\n')
+      rendered.setSpan(new ParagraphGap(blankHeight),i,i+1,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    return rendered;
+  }
+  private static final class ParagraphGap implements LineHeightSpan {
+    final int height;
+    ParagraphGap(int height){this.height=height;}
+    @Override public void chooseHeight(CharSequence text,int start,int end,int spanStartV,int v,android.graphics.Paint.FontMetricsInt fm) {
+      fm.ascent=fm.top=-height;fm.descent=fm.bottom=0;
+    }
   }
 
   static List<Block> blocks(String source) {
@@ -63,22 +82,22 @@ final class MessageBodyView extends LinearLayout {
     // Ordinary streaming prose keeps its existing selectable view.
     if(parts.size()==1 && !parts.get(0).code && getChildCount()==1 && getChildAt(0) instanceof TextView) {
       TextView prose=(TextView)getChildAt(0);CharSequence rendered=proseText(parts.get(0).text);
-      prose.setText(rendered);prose.setVisibility(compactProse && rendered.length()==0?GONE:VISIBLE);return;
+      prose.setText(rendered);prose.setVisibility(rendered.length()==0?GONE:VISIBLE);return;
     }
     removeAllViews(); int index=0;
     for (Block block : parts) {
       if (!block.code) {
         TextView prose=text("", 16, fg); prose.setLineSpacing(dp(5),1);
-        prose.setIncludeFontPadding(!compactProse);
+        prose.setIncludeFontPadding(false);
         CharSequence rendered=proseText(block.text);prose.setText(rendered);
-        prose.setVisibility(compactProse && rendered.length()==0?GONE:VISIBLE);
+        prose.setVisibility(rendered.length()==0?GONE:VISIBLE);
         prose.setTextIsSelectable(true); prose.setMovementMethod(LinkMovementMethod.getInstance());
         addView(prose,new LayoutParams(-1,-2)); continue;
       }
       LinearLayout box=new LinearLayout(getContext()); box.setOrientation(VERTICAL);
       GradientDrawable background=new GradientDrawable(); background.setColor(panel); background.setCornerRadius(dp(12));
       box.setBackground(background); box.setPadding(dp(12),dp(4),dp(12),dp(12));
-      LayoutParams bp=new LayoutParams(-1,-2); bp.topMargin=dp(8); bp.bottomMargin=dp(12); addView(box,bp);
+      LayoutParams bp=new LayoutParams(-1,-2); addView(box,bp);
       LinearLayout header=new LinearLayout(getContext()); header.setGravity(android.view.Gravity.CENTER_VERTICAL);
       TextView label=text(block.language.isEmpty() ? "文本" : block.language,12,muted);
       header.addView(label,new LayoutParams(0,-2,1));
@@ -90,6 +109,12 @@ final class MessageBodyView extends LinearLayout {
       code.setHorizontallyScrolling(true); code.setContentDescription("可复制内容块 " + index);
       HorizontalScrollView horizontal=new HorizontalScrollView(getContext()); horizontal.setFillViewport(true);
       horizontal.addView(code,new HorizontalScrollView.LayoutParams(-2,-2)); box.addView(horizontal,new LayoutParams(-1,-2));
+    }
+    boolean previous=false;
+    for(int i=0;i<getChildCount();i++) {
+      android.view.View child=getChildAt(i);LayoutParams params=(LayoutParams)child.getLayoutParams();
+      params.topMargin=child.getVisibility()!=GONE && previous?dp(8):0;
+      if(child.getVisibility()!=GONE)previous=true;
     }
   }
 }
