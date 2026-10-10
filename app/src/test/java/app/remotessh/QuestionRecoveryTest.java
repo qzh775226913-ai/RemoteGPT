@@ -35,6 +35,15 @@ public class QuestionRecoveryTest {
   JSONObject answer() {return Json.obj("answers",Json.obj("q0",Json.obj("answers",new JSONArray().put("B"))));}
   JSONObject snapshot() {return Json.obj("approvalPolicy","never","sandbox",Json.obj("type","dangerFullAccess"),"thread",Json.obj("id","thread","status",Json.obj("type","idle"),"turns",new JSONArray()));}
 
+  @Test public void resumingReadOnlyHistoryRetainsPreparedTextPicturesAndFilesWithoutAutoSend() throws Exception {
+    app.readOnly=true;app.draftText="预先输入";app.draftImages.add("/uploads/draft.png");
+    FileAttachment file=new FileAttachment("draft.pdf","/uploads/draft.pdf",10);app.draftFiles.add(file);
+    app.resume("thread");JSONObject request=outgoing("thread/resume");respond(request,snapshot(),false);
+    await(()->!app.recoveryInProgress() && !app.readOnly);
+    assertEquals("预先输入",app.draftText);assertEquals(Collections.singletonList("/uploads/draft.png"),app.draftImages);assertSame(file,app.draftFiles.get(0));
+    assertFalse(sent.toString("UTF-8").contains("turn/start"));assertFalse(app.busy);
+  }
+
   @Test public void completedAsyncQuestionShowsReminderAndSurvivesIdleSnapshot() throws Exception {
     app.busy=true;app.turnId="test";app.liveStatus.observe();
     event.invoke(app,Json.obj("method","turn/completed","params",Json.obj("threadId","thread","turn",Json.obj("status","completed"))));

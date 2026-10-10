@@ -18,6 +18,8 @@ final class RemoteBrowser {
 
     void settings();
 
+    default void edit() {}
+
     void directories();
 
     void diagnostics();
@@ -132,7 +134,7 @@ final class RemoteBrowser {
 
   String[] menuLabels() {
     return project.isEmpty()
-        ? new String[] {"添加连接", "刷新项目与对话", "设置"}
+        ? new String[] {"添加连接", "编辑当前连接", "刷新项目与对话", "设置"}
         : new String[] {"在此项目新建对话", "刷新项目对话", "复制项目路径"};
   }
 
@@ -151,7 +153,8 @@ final class RemoteBrowser {
             }
           } else {
             if (w == 0) actions.add();
-            else if (w == 1) app.refreshThreads(false);
+            else if (w == 1) actions.edit();
+            else if (w == 2) app.refreshThreads(false);
             else actions.settings();
           }
         }).show();

@@ -612,11 +612,11 @@ public class MainActivityTest {
     find(content(), "打开连接和聊天记录").performClick();
     android.app.Dialog nav=org.robolectric.shadows.ShadowDialog.getLatestDialog();
     find(nav.getWindow().getDecorView(),"远程控制菜单").performClick();
-    android.app.AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();menu.getListView().performItemClick(null,2,2);
+    android.app.AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();menu.getListView().performItemClick(null,3,3);
     android.app.AlertDialog settings=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-    assertEquals("后台连接设置",settings.getListView().getAdapter().getItem(2));
-    assertEquals("字体大小",settings.getListView().getAdapter().getItem(3));
-    settings.getListView().performItemClick(null,3,3);
+    assertEquals("后台连接设置",settings.getListView().getAdapter().getItem(1));
+    assertEquals("字体大小",settings.getListView().getAdapter().getItem(2));
+    settings.getListView().performItemClick(null,2,2);
     android.app.AlertDialog sizes = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
     sizes.getListView().performItemClick(null, 4, 4);
     assertEquals(1.3f, activity.getSharedPreferences("display", 0).getFloat("fontScale", 0), .001f);
@@ -962,10 +962,31 @@ public class MainActivityTest {
       public void connect(Profile p) {} public void add() {} public void settings() {}
       public void directories() {} public void diagnostics() {} public void chat() {}
     });
-    assertArrayEquals(new String[]{"添加连接","刷新项目与对话","设置"},browser.menuLabels());
+    assertArrayEquals(new String[]{"添加连接","编辑当前连接","刷新项目与对话","设置"},browser.menuLabels());
     browser.openProject("/work/project");
     assertEquals("在此项目新建对话", browser.menuLabels()[0]);
     assertEquals(3, browser.menuLabels().length);
+  }
+
+  @Test public void readOnlyHistoryAcceptsDraftAndAttachmentSelectionWithoutSending() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.readOnly=true;app.threadId="history";
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    EditText draft=(EditText)find(content(),"消息输入框");assertTrue(draft.isEnabled());draft.setText("接续前准备的消息");
+    assertEquals("接续前准备的消息",app.draftText);assertFalse(find(content(),"发送消息").isEnabled());
+    find(content(),"添加附件").performClick();android.app.Dialog picker=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    assertNotNull(find(picker.getWindow().getDecorView(),"选择文件"));picker.dismiss();assertTrue(app.readOnly);
+    controller.recreate();activity=controller.get();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertEquals("接续前准备的消息",((EditText)find(content(),"消息输入框")).getText().toString());assertTrue(app.readOnly);
+  }
+
+  @Test public void remoteControlSecondMenuItemEditsCurrentConnection() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.profile.host="100.100.100.100";
+    find(content(),"打开连接和聊天记录").performClick();android.app.Dialog browser=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    find(browser.getWindow().getDecorView(),"远程控制菜单").performClick();
+    android.app.AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertEquals("编辑当前连接",menu.getListView().getAdapter().getItem(1));menu.getListView().performItemClick(null,1,1);
+    android.app.Dialog editor=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    assertEquals("100.100.100.100",inputField(editor.findViewById(R.id.connection_editor),"主机").getText().toString());editor.dismiss();browser.dismiss();
   }
 
   @Test public void tailscaleModePassesCredentialValidation() {

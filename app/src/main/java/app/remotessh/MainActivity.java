@@ -557,11 +557,11 @@ public final class MainActivity extends Activity {
     readOnlyLabel.setText(app.connecting || recovering ? app.recoveryStatus() : "只读历史 · 尚未取得写入权限");
     boolean available=app.connected && !app.connecting && !recovering;
     refreshButton.setEnabled(available && !app.busy);newChatButton.setEnabled(available);
-    resumeButton.setEnabled(available && app.readOnly);reconnectButton.setEnabled(!app.connecting && !recovering && !app.busy);
+    resumeButton.setEnabled(available && app.readOnly && !app.attaching);reconnectButton.setEnabled(!app.connecting && !recovering && !app.busy);
     updateRecoveryButton(resumeButton,resumeSpinner,recovering,app.replaying?"同步中":"接续中","接续");
     updateRecoveryButton(reconnectButton,reconnectSpinner,app.connecting,"连接中","重连并接续");
-    input.setEnabled(!app.readOnly);
-    input.setHint(app.readOnly ? "此线程只读，请接续或新建对话" : "发送消息");
+    input.setEnabled(true);
+    input.setHint(app.readOnly ? "先准备消息，接续后发送" : "发送消息");
     status.setText(app.connected ? AppIcons.label(this,"●  " + app.profile.title() + "  ·  SSH","status",null,Color.rgb(48,148,112),dp(14)) : app.state);
     status.setTextColor(app.connected ? Color.rgb(48, 148, 112) : muted);
     error.setText(app.error.isEmpty() ? "" : app.error.split("\n", 2)[0] + "\n点按查看原因和诊断信息");
@@ -1343,17 +1343,18 @@ public final class MainActivity extends Activity {
                 startNewChat();
               }
 
+              public void edit() {
+                if(app.profile!=null)editProfile(app.profile,false);else editProfile(new Profile(),true);
+              }
+
               public void settings() {
                 new AlertDialog.Builder(MainActivity.this)
                     .setTitle("设置")
                     .setItems(
-                        new String[] {"编辑当前连接", "外观", "后台连接设置", "字体大小"},
+                        new String[] {"外观", "后台连接设置", "字体大小"},
                         (d, w) -> {
-                          if (w == 0) {
-                            if (app.profile != null) editProfile(app.profile, false);
-                            else editProfile(new Profile(), true);
-                          } else if(w==2) backgroundSettings();
-                          else if(w==3) chooseFontSize();
+                          if(w==1) backgroundSettings();
+                          else if(w==2) chooseFontSize();
                           else
                             new AlertDialog.Builder(MainActivity.this)
                                 .setTitle("外观")

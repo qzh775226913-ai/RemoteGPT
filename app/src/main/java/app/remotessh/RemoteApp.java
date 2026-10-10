@@ -1726,12 +1726,11 @@ public final class RemoteApp extends Application {
   }
 
   boolean canAttach() {
-    return connected && !readOnly && !attaching && !steering && !stopping && !restartingRemote
+    return connected && !attaching && !steering && !stopping && !restartingRemote
         && !recoveryInProgress() && (!busy || !turnId.isEmpty());
   }
   String attachmentUnavailable() {
     if(!connected)return "请先连接服务器";
-    if(readOnly)return "此对话只读，请先接续";
     if(attaching)return "附件正在上传，请稍候";
     return "正在接续或提交消息，请稍候再添加附件";
   }

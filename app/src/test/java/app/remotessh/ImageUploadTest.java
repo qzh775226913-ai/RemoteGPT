@@ -138,6 +138,15 @@ public class ImageUploadTest {
     assertArrayEquals(binary,out.toByteArray());assertTrue(app.busy);assertEquals("running",app.turnId);
   }
 
+  @Test public void readOnlyHistoryUploadsOriginalImagesAndFilesIntoDraftWithoutResuming() throws Exception {
+    app.readOnly=true;app.draftText="接续前的草稿";byte[] picture=png(Color.BLUE);
+    app.attachImages(Collections.singletonList(image("draft",picture)));waitUntil(()->!app.attaching);verifyUploaded(0,picture);
+    byte[] binary={0,1,-1,13,10};app.attachFiles(Collections.singletonList(image("预先上传.pdf",binary)));waitUntil(()->!app.attaching);
+    assertEquals(1,app.draftImages.size());assertEquals(1,app.draftFiles.size());
+    ByteArrayOutputStream out=new ByteArrayOutputStream();transport.download(app.draftFiles.get(0).path,out,100);assertArrayEquals(binary,out.toByteArray());
+    assertTrue(app.readOnly);assertFalse(app.busy);assertEquals("接续前的草稿",app.draftText);assertEquals("pictures",app.threadId);
+  }
+
   @Test public void failedFileLeavesSuccessfulDocumentsAndRejectsExcessCount() throws Exception {
     Uri unreadable=Uri.parse("content://fixture.album/unreadable");
     shadowOf(app.getContentResolver()).registerInputStream(unreadable,new InputStream(){public int read()throws IOException{throw new IOException("provider unavailable");}});
