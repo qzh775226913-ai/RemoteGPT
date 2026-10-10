@@ -15,7 +15,7 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.*;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 35, qualifiers = "w411dp-h891dp-xhdpi")
+@Config(sdk = 35, qualifiers = "w411dp-h891dp-xhdpi",shadows=RegionDecoderShadow.class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class MainActivityTest {
   private ActivityController<MainActivity> controller;
@@ -609,9 +609,14 @@ public class MainActivityTest {
   @Config(qualifiers = "w360dp-h720dp-xhdpi")
   public void fontSizeChoicePersistsAndScalesNewActivity() throws Exception {
     float originalScale = activity.getResources().getConfiguration().fontScale;
-    find(content(), "对话菜单").performClick();
-    android.app.AlertDialog menu = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-    menu.getListView().performItemClick(null, 7, 7);
+    find(content(), "打开连接和聊天记录").performClick();
+    android.app.Dialog nav=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    find(nav.getWindow().getDecorView(),"远程控制菜单").performClick();
+    android.app.AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();menu.getListView().performItemClick(null,2,2);
+    android.app.AlertDialog settings=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertEquals("后台连接设置",settings.getListView().getAdapter().getItem(2));
+    assertEquals("字体大小",settings.getListView().getAdapter().getItem(3));
+    settings.getListView().performItemClick(null,3,3);
     android.app.AlertDialog sizes = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
     sizes.getListView().performItemClick(null, 4, 4);
     assertEquals(1.3f, activity.getSharedPreferences("display", 0).getFloat("fontScale", 0), .001f);
@@ -944,7 +949,9 @@ public class MainActivityTest {
     find(content(), "对话菜单").performClick();
     android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
     assertEquals("新对话", dialog.getListView().getAdapter().getItem(0));
-    assertEquals("选择模型", dialog.getListView().getAdapter().getItem(1));
+    assertEquals("最近一次错误", dialog.getListView().getAdapter().getItem(1));
+    assertEquals("当前项目与对话",dialog.getListView().getAdapter().getItem(2));
+    assertEquals(3,dialog.getListView().getAdapter().getCount());
     captureView(dialog.getWindow().getDecorView(), "conversation-menu");
   }
 
@@ -955,7 +962,7 @@ public class MainActivityTest {
       public void connect(Profile p) {} public void add() {} public void settings() {}
       public void directories() {} public void diagnostics() {} public void chat() {}
     });
-    assertEquals("添加连接", browser.menuLabels()[0]);
+    assertArrayEquals(new String[]{"添加连接","刷新项目与对话","设置"},browser.menuLabels());
     browser.openProject("/work/project");
     assertEquals("在此项目新建对话", browser.menuLabels()[0]);
     assertEquals(3, browser.menuLabels().length);
@@ -1029,12 +1036,12 @@ public class MainActivityTest {
     app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     assertTrue(find(content(),"待发送图片 1").performClick());
     android.app.Dialog dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();assertTrue(dialog.isShowing());
-    ImageView image=(ImageView)find(dialog.getWindow().getDecorView(),"原图预览");
-    for(int i=0;i<150 && image.getDrawable()==null;i++){Thread.sleep(10);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));}
-    assertNotNull(image.getDrawable());Bitmap displayed=((android.graphics.drawable.BitmapDrawable)image.getDrawable()).getBitmap();
+    ZoomImageView image=(ZoomImageView)find(dialog.getWindow().getDecorView(),"原图预览");
+    for(int i=0;i<150 && org.robolectric.util.ReflectionHelpers.getField(image,"document")==null;i++){Thread.sleep(10);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));}
+    ImageDocument document=org.robolectric.util.ReflectionHelpers.getField(image,"document");assertNotNull(document);Bitmap displayed=document.overview;
     assertEquals(900,displayed.getWidth());assertEquals(450,displayed.getHeight());assertFalse(thumbnail.isRecycled());
     assertEquals(1,app.draftImages.size());assertTrue(app.busy);captureView(dialog.getWindow().getDecorView(),"draft-original-preview");
-    dialog.dismiss();shadowOf(android.os.Looper.getMainLooper()).idle();assertTrue(displayed.isRecycled());assertFalse(thumbnail.isRecycled());
+    dialog.dismiss();for(int i=0;i<150 && !displayed.isRecycled();i++){Thread.sleep(10);shadowOf(android.os.Looper.getMainLooper()).idle();}assertTrue(displayed.isRecycled());assertFalse(thumbnail.isRecycled());
     app.draftImagePreviews.clear();app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     assertTrue("Restored drafts with no cached thumbnail also open the original",find(content(),"待发送图片 1").performClick());
     dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();assertTrue(dialog.isShowing());dialog.dismiss();

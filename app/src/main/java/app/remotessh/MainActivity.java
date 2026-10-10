@@ -55,6 +55,7 @@ public final class MainActivity extends Activity {
   private Dialog versionDialog;
   private RemoteVersion shownVersion;
   private RemoteBrowser browser;
+  private ImageDialog imageDialog;
   private DirectoryPicker directoryPicker;
   private LinearLayout readOnlyBar;
   private TextView readOnlyLabel,resumeButton,reconnectButton,refreshButton,newChatButton;
@@ -216,6 +217,7 @@ public final class MainActivity extends Activity {
     if (browser != null) browser.dismiss();
     if (versionDialog != null) versionDialog.dismiss();
     if (directoryPicker != null) directoryPicker.dismiss();
+    if (imageDialog != null) imageDialog.dismiss();
     super.onDestroy();
   }
 
@@ -976,7 +978,7 @@ public final class MainActivity extends Activity {
       preview.setImageBitmap(bitmap);
       preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
       preview.setContentDescription("待发送图片 " + index);
-      if(path!=null){preview.setOnClickListener(v->openImage(path));PressFeedback.apply(preview,isDark());}
+      preview.setOnClickListener(v->{if(path!=null)openImage(path);else openImagePreview(bitmap);});PressFeedback.apply(preview,isDark());
       tile.addView(preview, new FrameLayout.LayoutParams(-1, -1));
     } else {
       TextView label = text("图片 " + index, 12, muted);
@@ -1020,7 +1022,7 @@ public final class MainActivity extends Activity {
       preview.setContentDescription("消息图片，点击查看大图");imageArea.addView(preview,new FrameLayout.LayoutParams(-1,-1));
       label=text("图片 · 滚动到此处加载",12,muted);label.setMinHeight(dp(48));label.setSingleLine(true);label.setEllipsize(TextUtils.TruncateAt.END);label.setGravity(Gravity.CENTER);
       imageArea.addView(label,new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER));
-      tile.setLayoutParams(tp);preview.setOnClickListener(v->{if(loaded)openImage(source);else load();});
+      tile.setLayoutParams(tp);preview.setOnClickListener(v->openImage(source));
       label.setOnClickListener(v->load());PressFeedback.apply(preview,isDark());PressFeedback.apply(label,isDark());
     }
     boolean valid() {return !isDestroyed() && generation==app.connectionGeneration() && app.profile!=null && host.equals(app.profile.id) && mediaRows.get(itemId)==row && tile.getParent()!=null;}
@@ -1052,17 +1054,23 @@ public final class MainActivity extends Activity {
     for(MediaTile tile:mediaTiles)if(tile.visible)tile.load();
   }
 
+  private void openImagePreview(android.graphics.Bitmap preview) {
+    showImage(null,preview);
+  }
+
   private void openImage(String source) {
-    LinearLayout view=column();ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.FIT_CENTER);
-    image.setContentDescription("原图预览");
-    view.addView(image,new LinearLayout.LayoutParams(-1,dp(420)));TextView loading=text("正在加载大图…",13,muted);view.addView(loading);
-    Dialog dialog=new AlertDialog.Builder(this).setView(view).setPositiveButton("保存图片",(d,w)->saveMedia(source)).setNegativeButton("关闭",null).show();
-    int generation=app.connectionGeneration();
-    mediaWorker.execute(()->{
-      try {ByteArrayOutputStream bytes=new ByteArrayOutputStream();app.readMedia(source,bytes,MediaFiles.IMAGE_LIMIT);android.graphics.Bitmap bitmap=MediaFiles.decode(bytes.toByteArray());
-        app.main.post(()->{if(isDestroyed() || !dialog.isShowing() || generation!=app.connectionGeneration()){bitmap.recycle();return;}image.setImageBitmap(bitmap);loading.setVisibility(View.GONE);dialog.setOnDismissListener(d->{image.setImageDrawable(null);bitmap.recycle();});});
-      }catch(Exception e){app.main.post(()->{if(dialog.isShowing())loading.setText("图片加载失败，请关闭后重试");});}
-    });
+    android.graphics.Bitmap preview=app.draftImagePreviews.get(source);
+    if(preview==null)for(MediaTile tile:mediaTiles)if(tile.source.equals(source) && tile.loaded && tile.preview.getDrawable() instanceof BitmapDrawable){preview=((BitmapDrawable)tile.preview.getDrawable()).getBitmap();break;}
+    showImage(source,preview);
+  }
+
+  private void showImage(String source,android.graphics.Bitmap preview) {
+    if(imageDialog!=null)imageDialog.dismiss();
+    int generation=app.connectionGeneration();String host=app.profile==null?"":app.profile.id;
+    imageDialog=new ImageDialog(this,isDark(),source,preview,
+        (path,out,active)->app.readMedia(path,out,MediaFiles.IMAGE_LIMIT,active),
+        ()->!isDestroyed() && generation==app.connectionGeneration() && host.equals(app.profile==null?"":app.profile.id),
+        this::saveMedia);
   }
 
   private void renderMedia(ChatItem item) {
@@ -1337,13 +1345,16 @@ public final class MainActivity extends Activity {
 
               public void settings() {
                 new AlertDialog.Builder(MainActivity.this)
+                    .setTitle("设置")
                     .setItems(
-                        new String[] {"编辑当前连接", "外观"},
+                        new String[] {"编辑当前连接", "外观", "后台连接设置", "字体大小"},
                         (d, w) -> {
                           if (w == 0) {
                             if (app.profile != null) editProfile(app.profile, false);
                             else editProfile(new Profile(), true);
-                          } else
+                          } else if(w==2) backgroundSettings();
+                          else if(w==3) chooseFontSize();
+                          else
                             new AlertDialog.Builder(MainActivity.this)
                                 .setTitle("外观")
                                 .setSingleChoiceItems(
@@ -1499,15 +1510,8 @@ public final class MainActivity extends Activity {
 
   private void chatMenu() {
     new AlertDialog.Builder(this).setTitle("对话")
-        .setItems(new String[] {"新对话", "选择模型", "连接信息", "最近一次错误", "当前项目与对话", "剩余用量", "后台连接设置", "字体大小"}, (d, w) -> {
-          if (w == 0) startNewChat();
-          else if (w == 1) chooseModel();
-          else if (w == 2) connectionMenu();
-          else if (w == 3) showConnectionError();
-          else if (w == 4) conversationInfo();
-          else if (w == 5) usageInfo();
-          else if (w == 6) backgroundSettings();
-          else chooseFontSize();
+        .setItems(new String[] {"新对话", "最近一次错误", "当前项目与对话"}, (d,w)->{
+          if(w==0)startNewChat();else if(w==1)showConnectionError();else conversationInfo();
         }).show();
   }
 
