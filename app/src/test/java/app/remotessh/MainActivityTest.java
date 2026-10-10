@@ -983,20 +983,23 @@ public class MainActivityTest {
     Paint paint = new Paint(); paint.setColor(Color.WHITE); paint.setTextSize(35);
     canvas.drawText("Image preview fixture", 45, 160, paint);
     ByteArrayOutputStream bytes = new ByteArrayOutputStream(); sample.compress(Bitmap.CompressFormat.PNG, 100, bytes); sample.recycle();
-    ChatItem image = new ChatItem("image", "imageGeneration", "生成图片");
+    ChatItem image = new ChatItem("image", "agentMessage", "这是生成的图片。");image.phase="final_answer";
     image.images.add("data:image/png;base64," + android.util.Base64.encodeToString(bytes.toByteArray(), android.util.Base64.NO_WRAP));
     app.items.add(image);
     app.items.add(new ChatItem("reply", "agentMessage", "[下载报告](sandbox:/mnt/data/report.pdf)"));
     app.changed();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));capture("image-placeholder");
-    for (int i = 0; i < 150 && find(content(), "保存图片") == null; i++) {
+    ImageView preview = (ImageView) find(content(), "消息图片，点击查看大图");
+    for (int i = 0; i < 150 && preview.getDrawable() == null; i++) {
       Thread.sleep(10); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));
     }
-    assertNotNull(find(content(), "保存图片"));
-    ImageView preview = (ImageView) find(content(), "消息图片，点击查看大图");
+    assertNull(find(content(), "保存图片"));
     assertNotNull(preview.getDrawable());
     capture("image-and-download");
-    find(content(), "保存图片").performClick();
+    preview.performClick();
+    android.app.AlertDialog largeImage=(android.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    largeImage.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+    shadowOf(android.os.Looper.getMainLooper()).idle();
     org.robolectric.shadows.ShadowActivity.IntentForResult request = shadowOf(activity).getNextStartedActivityForResult();
     assertEquals(android.content.Intent.ACTION_CREATE_DOCUMENT, request.intent.getAction());
     assertEquals(44, request.requestCode);
@@ -1025,6 +1028,13 @@ public class MainActivityTest {
     assertEquals("选择方案\n○ A — 优先兼容\n✓ B\n回答：B",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
     find(content(),"复制内容块 1").performClick();assertEquals("版本 1.0.35\n",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
     controller.recreate();activity=controller.get();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));assertNotNull(find(content(),"交互提问 · 已回答"));assertNull(find(content(),"你的回答"));
+    app.items.clear();app.interactions=new InteractionHistory();
+    ChatItem before=new ChatItem("before","fileChange","文件更改");before.status="completed";app.items.add(before);
+    ChatItem paragraph=new ChatItem("paragraph","agentMessage","关键回归检查已通过：运行中选附件、文件原样上传、附件单独发送、引导失败后的保留，以及排队附件与新草稿的隔离都正常。复制按钮的位置和接续动画也已核对；正在跑完整测试和安装包检查。");
+    paragraph.phase="commentary";app.items.add(paragraph);
+    ChatItem after=new ChatItem("after","commandExecution","检查安装包");after.status="completed";app.items.add(after);
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));
+    capture("progress-paragraph-spacing-"+((activity.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?"dark":"light"));
   }
 
   @Test public void recoveryButtonsAnimateUntilHistoryAndReplayAreReady() throws Exception {

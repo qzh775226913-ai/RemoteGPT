@@ -755,15 +755,18 @@ public final class MainActivity extends Activity {
     }
     if (item.type.equals("agentMessage") || item.type.equals("plan")) {
       boolean plan=item.type.equals("plan"),progress=!plan && item.phase.equals("commentary");
-      wrap.setBackground(rounded(progress?bg:Color.parseColor(isDark()?(plan?"#202020":"#161616"):(plan?"#F2F2F2":"#FAFAFA")),18));
-      wrap.setPadding(dp(progress?4:14),dp(progress?2:6),dp(progress?4:14),dp(8));
+      if(progress){wp.topMargin=dp(12);wp.bottomMargin=dp(14);}
+      LinearLayout proseCard=column();
+      proseCard.setBackground(rounded(progress?bg:Color.parseColor(isDark()?(plan?"#202020":"#161616"):(plan?"#F2F2F2":"#FAFAFA")),18));
+      proseCard.setPadding(dp(progress?4:14),dp(progress?4:6),dp(progress?4:14),dp(progress?4:8));
+      wrap.addView(proseCard,new LinearLayout.LayoutParams(-1,-2));
       if(!progress) {
         LinearLayout heading=row();TextView kind=text(plan?"计划":"回复",12,muted);heading.addView(kind,new LinearLayout.LayoutParams(0,-2,1));
         IconView copyButton=icon("copy",plan?"复制计划":"复制回复",()->{ChatItem latest=currentItems.get(item.id);if(latest!=null)copy(latest.text);});
-        heading.addView(copyButton,new LinearLayout.LayoutParams(dp(48),dp(48)));wrap.addView(heading);
+        heading.addView(copyButton,new LinearLayout.LayoutParams(dp(48),dp(48)));proseCard.addView(heading);
       }
       MessageBodyView messageBody = new MessageBodyView(this,progress?muted:fg,muted,Color.parseColor(isDark()?"#2B2B2B":"#ECECEC"),this::openLink,this::copy);
-      messageBodies.put(item.id,messageBody); wrap.addView(messageBody,new LinearLayout.LayoutParams(-1,-2));
+      messageBodies.put(item.id,messageBody); proseCard.addView(messageBody,new LinearLayout.LayoutParams(-1,-2));
     } else if(item.user()) {
       LinearLayout bubbleRow=row();bubbleRow.setGravity(Gravity.END|Gravity.BOTTOM);
       IconView copyButton=icon("copy", "复制消息", () -> {ChatItem latest=currentItems.get(item.id);if(latest!=null)copy(latest.text);});
@@ -982,13 +985,16 @@ public final class MainActivity extends Activity {
       this.itemId=itemId;this.source=source;this.row=row;
       host=app.profile==null?"":app.profile.id;generation=app.connectionGeneration();
       cacheHost=app.profile==null?"":host+":"+app.profile.host+":"+app.profile.port+":"+app.profile.user+":"+app.threadId+":"+itemId;
-      tile=column();tile.setBackground(rounded(panel,14));
+      tile=column();
       LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(multiple?0:-1,-2,multiple?1:0);tp.setMargins(0,dp(6),dp(multiple?6:0),dp(6));
       preview=new ImageView(MainActivity.this);preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
-      preview.setContentDescription("消息图片，点击查看大图");tile.addView(preview,new LinearLayout.LayoutParams(-1,dp(multiple?160:240)));
-      label=text("图片 · 滚动到此处加载",12,muted);label.setMinHeight(dp(48));label.setSingleLine(true);label.setEllipsize(TextUtils.TruncateAt.END);label.setGravity(Gravity.CENTER);tile.addView(label);
-      tile.setLayoutParams(tp);preview.setOnClickListener(v->openImage(source));
-      label.setOnClickListener(v->{if(loaded)saveMedia(source);else load();});PressFeedback.apply(preview,isDark());PressFeedback.apply(label,isDark());
+      FrameLayout imageArea=new FrameLayout(MainActivity.this);
+      tile.addView(imageArea,new LinearLayout.LayoutParams(-1,dp(multiple?160:240)));
+      preview.setContentDescription("消息图片，点击查看大图");imageArea.addView(preview,new FrameLayout.LayoutParams(-1,-1));
+      label=text("图片 · 滚动到此处加载",12,muted);label.setMinHeight(dp(48));label.setSingleLine(true);label.setEllipsize(TextUtils.TruncateAt.END);label.setGravity(Gravity.CENTER);
+      imageArea.addView(label,new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER));
+      tile.setLayoutParams(tp);preview.setOnClickListener(v->{if(loaded)openImage(source);else load();});
+      label.setOnClickListener(v->load());PressFeedback.apply(preview,isDark());PressFeedback.apply(label,isDark());
     }
     boolean valid() {return !isDestroyed() && generation==app.connectionGeneration() && app.profile!=null && host.equals(app.profile.id) && mediaRows.get(itemId)==row && tile.getParent()!=null;}
     void load() {
@@ -1002,11 +1008,11 @@ public final class MainActivity extends Activity {
           String key=ThumbnailCache.key(cacheHost,source);bitmap=app.thumbnails.images.get(key);
           if(bitmap==null){ByteArrayOutputStream bytes=new ByteArrayOutputStream();app.readMedia(source,bytes,MediaFiles.IMAGE_LIMIT,active);MediaFiles.check(active);bitmap=MediaFiles.decode(bytes.toByteArray(),640);if(!active.getAsBoolean()){bitmap.recycle();return;}app.thumbnails.images.put(key,bitmap);}
           android.graphics.Bitmap image=bitmap;
-          app.main.post(()->{if(version!=loadVersion)return;loading=false;job=null;if(!valid() || !visible)return;loaded=true;preview.setImageBitmap(image);label.setText("保存图片");});
+          app.main.post(()->{if(version!=loadVersion)return;loading=false;job=null;if(!valid() || !visible)return;loaded=true;preview.setImageBitmap(image);label.setVisibility(View.GONE);});
         }catch(Exception e){app.main.post(()->{if(version!=loadVersion)return;loading=false;job=null;if(valid() && visible)label.setText("图片加载失败 · 点按重试");});}
       });
     }
-    void release(){visible=false;loadVersion++;if(job!=null){job.discard();job=null;}loading=false;if(loaded){preview.setImageDrawable(null);loaded=false;}label.setText("图片 · 滚动到此处加载");}
+    void release(){visible=false;loadVersion++;if(job!=null){job.discard();job=null;}loading=false;if(loaded){preview.setImageDrawable(null);loaded=false;}label.setText("图片 · 滚动到此处加载");label.setVisibility(View.VISIBLE);}
   }
 
   private void scheduleMedia() {
