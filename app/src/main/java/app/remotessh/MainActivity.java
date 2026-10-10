@@ -755,10 +755,11 @@ public final class MainActivity extends Activity {
     }
     if (item.type.equals("agentMessage") || item.type.equals("plan")) {
       boolean plan=item.type.equals("plan"),progress=!plan && item.phase.equals("commentary");
-      if(progress){wp.topMargin=dp(12);wp.bottomMargin=dp(14);}
+      // Account for the preceding summary gap and the prose font's leading whitespace.
+      if(progress){wp.topMargin=dp(4);wp.bottomMargin=dp(8);}
       LinearLayout proseCard=column();
       proseCard.setBackground(rounded(progress?bg:Color.parseColor(isDark()?(plan?"#202020":"#161616"):(plan?"#F2F2F2":"#FAFAFA")),18));
-      proseCard.setPadding(dp(progress?4:14),dp(progress?4:6),dp(progress?4:14),dp(progress?4:8));
+      proseCard.setPadding(dp(progress?4:14),dp(progress?3:6),dp(progress?4:14),dp(progress?3:8));
       wrap.addView(proseCard,new LinearLayout.LayoutParams(-1,-2));
       if(!progress) {
         LinearLayout heading=row();TextView kind=text(plan?"计划":"回复",12,muted);heading.addView(kind,new LinearLayout.LayoutParams(0,-2,1));
@@ -766,6 +767,7 @@ public final class MainActivity extends Activity {
         heading.addView(copyButton,new LinearLayout.LayoutParams(dp(48),dp(48)));proseCard.addView(heading);
       }
       MessageBodyView messageBody = new MessageBodyView(this,progress?muted:fg,muted,Color.parseColor(isDark()?"#2B2B2B":"#ECECEC"),this::openLink,this::copy);
+      if(progress)messageBody.compactProse();
       messageBodies.put(item.id,messageBody); proseCard.addView(messageBody,new LinearLayout.LayoutParams(-1,-2));
     } else if(item.user()) {
       LinearLayout bubbleRow=row();bubbleRow.setGravity(Gravity.END|Gravity.BOTTOM);

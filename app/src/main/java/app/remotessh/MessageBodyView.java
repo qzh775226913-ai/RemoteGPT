@@ -18,6 +18,7 @@ final class MessageBodyView extends LinearLayout {
   private final int fg, muted, panel;
   private final Consumer<String> open, copy;
   private String source;
+  private boolean compactProse;
 
   MessageBodyView(Context context, int fg, int muted, int panel, Consumer<String> open, Consumer<String> copy) {
     super(context); setOrientation(VERTICAL);
@@ -27,6 +28,10 @@ final class MessageBodyView extends LinearLayout {
   private TextView text(String value, int size, int color) {
     TextView view=new TextView(getContext()); view.setText(value); view.setTextSize(size); view.setTextColor(color);
     return view;
+  }
+  void compactProse(){compactProse=true;}
+  private CharSequence proseText(String value) {
+    return Markdown.render(compactProse?value.trim():value,muted,panel,open,copy);
   }
 
   static List<Block> blocks(String source) {
@@ -57,13 +62,16 @@ final class MessageBodyView extends LinearLayout {
     source=value; List<Block> parts=blocks(value);
     // Ordinary streaming prose keeps its existing selectable view.
     if(parts.size()==1 && !parts.get(0).code && getChildCount()==1 && getChildAt(0) instanceof TextView) {
-      ((TextView)getChildAt(0)).setText(Markdown.render(parts.get(0).text,muted,panel,open,copy));return;
+      TextView prose=(TextView)getChildAt(0);CharSequence rendered=proseText(parts.get(0).text);
+      prose.setText(rendered);prose.setVisibility(compactProse && rendered.length()==0?GONE:VISIBLE);return;
     }
     removeAllViews(); int index=0;
     for (Block block : parts) {
       if (!block.code) {
         TextView prose=text("", 16, fg); prose.setLineSpacing(dp(5),1);
-        prose.setText(Markdown.render(block.text, muted, panel, open, copy));
+        prose.setIncludeFontPadding(!compactProse);
+        CharSequence rendered=proseText(block.text);prose.setText(rendered);
+        prose.setVisibility(compactProse && rendered.length()==0?GONE:VISIBLE);
         prose.setTextIsSelectable(true); prose.setMovementMethod(LinkMovementMethod.getInstance());
         addView(prose,new LayoutParams(-1,-2)); continue;
       }

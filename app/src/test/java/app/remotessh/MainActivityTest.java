@@ -1030,7 +1030,7 @@ public class MainActivityTest {
     controller.recreate();activity=controller.get();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));assertNotNull(find(content(),"交互提问 · 已回答"));assertNull(find(content(),"你的回答"));
     app.items.clear();app.interactions=new InteractionHistory();
     ChatItem before=new ChatItem("before","fileChange","文件更改");before.status="completed";app.items.add(before);
-    ChatItem paragraph=new ChatItem("paragraph","agentMessage","关键回归检查已通过：运行中选附件、文件原样上传、附件单独发送、引导失败后的保留，以及排队附件与新草稿的隔离都正常。复制按钮的位置和接续动画也已核对；正在跑完整测试和安装包检查。");
+    ChatItem paragraph=new ChatItem("paragraph","agentMessage","\n\n关键回归检查已通过：运行中选附件、文件原样上传、附件单独发送、引导失败后的保留，以及排队附件与新草稿的隔离都正常。复制按钮的位置和接续动画也已核对；正在跑完整测试和安装包检查。\n\n");
     paragraph.phase="commentary";app.items.add(paragraph);
     ChatItem after=new ChatItem("after","commandExecution","检查安装包");after.status="completed";app.items.add(after);
     app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));

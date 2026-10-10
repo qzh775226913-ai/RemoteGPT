@@ -29,8 +29,8 @@ public class ThumbnailLoaderTest {
     try {
       ThumbnailLoader.Job job=loader.submit(active->{
         started.countDown();
-        try {while(active.getAsBoolean())Thread.sleep(10);published.set(true);}
-        catch(InterruptedException expected) {Thread.currentThread().interrupt();}
+        try {while(active.getAsBoolean())Thread.sleep(10);MediaFiles.check(active);published.set(true);}
+        catch(InterruptedException | IOException expected) {Thread.currentThread().interrupt();}
         finally {finished.countDown();}
       });
       assertTrue(started.await(3,TimeUnit.SECONDS));job.discard();assertTrue(finished.await(3,TimeUnit.SECONDS));assertFalse(published.get());
