@@ -116,13 +116,13 @@ final class InteractionHistory {
     }
     // Fold App-formatted answer messages into their question card. Only suppress a
     // duplicate when its question is present; retain the canonical model history.
-    Map<String,JSONObject> textAnswers=new HashMap<>();Set<String> duplicates=new HashSet<>(),precedingTurns=new HashSet<>();
+    Map<String,JSONObject> textAnswers=new HashMap<>();Set<ChatItem> duplicates=new HashSet<>();Set<String> precedingTurns=new HashSet<>();
     for(ChatItem m:messages) {
       if(m.user()) {
         JSONObject answer=matchTextAnswer(m.text,precedingTurns);
         if(answer!=null) {
           String identity=identities.get(answer.optString("id"));JSONObject entry=unique.get(identity);
-          if(entry!=null && ends.containsKey(entry.optString("turnId"))) {textAnswers.put(identity,answer);duplicates.add(m.id);}
+          if(entry!=null && ends.containsKey(entry.optString("turnId"))) {textAnswers.put(identity,answer);duplicates.add(m);}
         }
       }
       if(!m.turnId.isEmpty())precedingTurns.add(m.turnId);
@@ -134,6 +134,12 @@ final class InteractionHistory {
       if(at==null)continue; // Never attach a different thread's record to the current history.
       JSONObject answer=textAnswers.get(displayed.getKey());
       if(answer!=null)try {entry=new JSONObject(entry.toString());entry.put("status","answered");entry.put("answers",Json.object(answer,"answers"));}catch(JSONException ignored){}
+      // Async delivery also emits an AgentMessage with the tool's call ID and
+      // question text. It is the question itself, not an additional reply.
+      // Require both identity and the full text, so genuine replies stay visible.
+      Set<String> sourceIds=new HashSet<>();
+      for(Map.Entry<String,String> identity:identities.entrySet())if(identity.getValue().equals(displayed.getKey()))sourceIds.add(identity.getKey());
+      for(ChatItem m:messages)if(questionEcho(m,entry,sourceIds))duplicates.add(m);
       ChatItem q=new ChatItem("interaction-"+displayed.getKey(),"question","");q.interaction=entry;q.turnId=turn;q.status=entry.optString("status");
       insertions.computeIfAbsent(at,k->new ArrayList<>()).add(q);
     }
@@ -141,9 +147,21 @@ final class InteractionHistory {
     for(int i=0;i<=messages.size();i++) {
       result.addAll(insertions.getOrDefault(i,Collections.emptyList()));if(i==messages.size())break;
       ChatItem m=messages.get(i);
-      if(!duplicates.contains(m.id))result.add(m);
+      if(!duplicates.contains(m))result.add(m);
     }
     return result;
+  }
+  private static boolean questionEcho(ChatItem m,JSONObject entry,Set<String> sourceIds) {
+    if(!m.type.equals("agentMessage") || !m.turnId.equals(entry.optString("turnId")) || !m.images.isEmpty())return false;
+    if(!sourceIds.contains("call:"+m.id) && !sourceIds.contains("native:"+m.turnId+":"+m.id))return false;
+    JSONArray qs=entry.optJSONArray("questions");if(qs==null || qs.length()==0)return false;
+    List<String> titles=new ArrayList<>();
+    for(int i=0;i<qs.length();i++) {
+      JSONObject q=qs.optJSONObject(i);if(q==null || q.optString("question").trim().isEmpty())return false;
+      titles.add(q.optString("question").trim().replace("\r\n","\n"));
+    }
+    String text=m.text.trim().replace("\r\n","\n");
+    return text.equals(String.join("\n\n",titles)) || text.equals(String.join("\n",titles));
   }
   private static int rank(String status){return status.equals("answered")?5:status.equals("pending")?4:status.equals("skipped")?3:2;}
   String serialize() {return new JSONArray(entries.values()).toString();}

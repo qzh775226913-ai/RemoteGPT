@@ -954,10 +954,13 @@ public final class MainActivity extends Activity {
       preview.setImageBitmap(bitmap);
       preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
       preview.setContentDescription("待发送图片 " + index);
+      if(path!=null){preview.setOnClickListener(v->openImage(path));PressFeedback.apply(preview,isDark());}
       tile.addView(preview, new FrameLayout.LayoutParams(-1, -1));
     } else {
       TextView label = text("图片 " + index, 12, muted);
       label.setGravity(Gravity.CENTER);
+      label.setContentDescription("待发送图片 " + index);
+      if(path!=null){label.setOnClickListener(v->openImage(path));PressFeedback.apply(label,isDark());}
       tile.addView(label, new FrameLayout.LayoutParams(-1, -1));
     }
     if (path != null) {
@@ -1029,6 +1032,7 @@ public final class MainActivity extends Activity {
 
   private void openImage(String source) {
     LinearLayout view=column();ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+    image.setContentDescription("原图预览");
     view.addView(image,new LinearLayout.LayoutParams(-1,dp(420)));TextView loading=text("正在加载大图…",13,muted);view.addView(loading);
     Dialog dialog=new AlertDialog.Builder(this).setView(view).setPositiveButton("保存图片",(d,w)->saveMedia(source)).setNegativeButton("关闭",null).show();
     int generation=app.connectionGeneration();

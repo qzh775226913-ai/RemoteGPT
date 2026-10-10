@@ -1005,6 +1005,44 @@ public class MainActivityTest {
     assertEquals(44, request.requestCode);
   }
 
+  @Test public void answeredAsyncDeliveryShowsOnlyQuestionCardAfterRecreation() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="chat";
+    org.json.JSONObject req=InteractionHistoryTest.question("echo","t1");app.interactions.question(req);
+    ChatItem echo=InteractionHistoryTest.message("echo","agentMessage","t1","选择方案");echo.phase="final_answer";
+    app.items.add(echo);app.items.add(InteractionHistoryTest.message("answer","userMessage","t2","回答上一轮的问题：\n选择方案\nB\n\n"));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertNotNull(find(content(),"交互提问 · 已回答"));assertNull(find(content(),"回复"));assertNotNull(find(content(),"✓  B"));
+    find(content(),"复制交互问答").performClick();
+    android.content.ClipboardManager clipboard=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+    assertEquals("选择方案\n○ A — 优先兼容\n✓ B\n回答：B",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+    capture("async-question-without-echo");
+    controller.recreate();activity=controller.get();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertNotNull(find(content(),"交互提问 · 已回答"));assertNull(find(content(),"回复"));assertEquals(2,app.items.size());
+  }
+
+  @Test public void draftThumbnailOpensOriginalDuringRunWithoutRemovingOrSending() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="chat";app.turnId="running";app.busy=true;
+    Bitmap original=Bitmap.createBitmap(900,450,Bitmap.Config.ARGB_8888);new Canvas(original).drawColor(Color.rgb(44,100,165));
+    ByteArrayOutputStream bytes=new ByteArrayOutputStream();original.compress(Bitmap.CompressFormat.PNG,100,bytes);original.recycle();
+    String source="data:image/png;base64,"+android.util.Base64.encodeToString(bytes.toByteArray(),android.util.Base64.NO_WRAP);
+    Bitmap thumbnail=Bitmap.createBitmap(32,16,Bitmap.Config.ARGB_8888);app.draftImages.add(source);app.draftImagePreviews.put(source,thumbnail);
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertTrue(find(content(),"待发送图片 1").performClick());
+    android.app.Dialog dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();assertTrue(dialog.isShowing());
+    ImageView image=(ImageView)find(dialog.getWindow().getDecorView(),"原图预览");
+    for(int i=0;i<150 && image.getDrawable()==null;i++){Thread.sleep(10);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));}
+    assertNotNull(image.getDrawable());Bitmap displayed=((android.graphics.drawable.BitmapDrawable)image.getDrawable()).getBitmap();
+    assertEquals(900,displayed.getWidth());assertEquals(450,displayed.getHeight());assertFalse(thumbnail.isRecycled());
+    assertEquals(1,app.draftImages.size());assertTrue(app.busy);captureView(dialog.getWindow().getDecorView(),"draft-original-preview");
+    dialog.dismiss();shadowOf(android.os.Looper.getMainLooper()).idle();assertTrue(displayed.isRecycled());assertFalse(thumbnail.isRecycled());
+    app.draftImagePreviews.clear();app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertTrue("Restored drafts with no cached thumbnail also open the original",find(content(),"待发送图片 1").performClick());
+    dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();assertTrue(dialog.isShowing());dialog.dismiss();
+    find(content(),"移除图片 1").performClick();assertTrue(app.draftImages.isEmpty());
+    assertFalse(org.robolectric.shadows.ShadowDialog.getLatestDialog().isShowing());assertTrue(app.busy);
+    thumbnail.recycle();
+  }
+
   @Test public void conversationShowsTypedQuestionHistoryAndCopyActions() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="chat";
     org.json.JSONObject req=InteractionHistoryTest.question("fixture","t1");app.interactions.question(req);

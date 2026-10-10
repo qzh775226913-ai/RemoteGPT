@@ -70,4 +70,49 @@ public class InteractionHistoryTest {
     List<ChatItem> items=h.present(Arrays.asList(message("q","agentMessage","t1","问题"),message("a","userMessage","t2","回答上一轮的问题：\n选择方案\nB\n\n")));
     assertEquals(2,items.size());ChatItem card=items.get(1);assertEquals("question",card.type);assertEquals("answered",card.status);assertEquals("B",Json.object(card.interaction,"answers").optString("q0"));
   }
+
+  @Test public void asyncDeliveryEchoFoldsBeforeAndAfterAnswerAndRestore() {
+    InteractionHistory h=new InteractionHistory();JSONObject req=question("call","t1");h.question(req);
+    ChatItem echo=message("call","agentMessage","t1","选择方案");echo.phase="final_answer";
+    List<ChatItem> canonical=new ArrayList<>();canonical.add(echo);
+    assertEquals(1,h.present(canonical).size());assertEquals("pending",h.present(canonical).get(0).status);
+    canonical.add(message("answer","userMessage","t2","回答上一轮的问题：\n选择方案\nB\n\n"));
+    List<ChatItem> shown=h.present(canonical);assertEquals(1,shown.size());assertEquals("answered",shown.get(0).status);
+    assertEquals("B",Json.object(shown.get(0).interaction,"answers").optString("q0"));
+    InteractionHistory restored=new InteractionHistory();restored.restore(h.serialize());
+    assertEquals(1,restored.present(canonical).size());assertEquals("answered",restored.present(canonical).get(0).status);
+    assertEquals(2,canonical.size());assertEquals("选择方案",echo.text);
+  }
+
+  @Test public void echoMatchingRequiresCallTurnFullTextAndNoImages() {
+    InteractionHistory h=new InteractionHistory();h.question(question("call","t1"));
+    ChatItem genuine=message("call","agentMessage","t1","选择方案\n我建议选择 B，因为兼容性更好。");
+    ChatItem otherCall=message("different","agentMessage","t1","选择方案");
+    ChatItem otherTurn=message("call","agentMessage","t2","选择方案");
+    ChatItem picture=message("call","agentMessage","t1","选择方案");picture.images.add("/result.png");
+    for(ChatItem m:Arrays.asList(genuine,otherCall,otherTurn,picture))assertTrue(h.present(Arrays.asList(m)).contains(m));
+    assertTrue(h.present(Arrays.asList(message("call","agentMessage","t1","选择方案"),otherTurn)).contains(otherTurn));
+    ChatItem user=message("call","userMessage","t1","选择方案");assertTrue(h.present(Arrays.asList(user)).contains(user));
+    h.status(question("call","t1"),"unavailable");
+    ChatItem echo=message("call","agentMessage","t1","选择方案");assertSame(echo,h.present(Arrays.asList(echo)).get(0));
+  }
+
+  @Test public void nativeArchiveAliasesFoldAsyncEchoAndKeepActualReply() {
+    InteractionHistory h=new InteractionHistory();JSONObject req=question("call","t1");
+    JSONObject nativeQ=Json.obj("id",8,"method","item/tool/requestUserInput","params",Json.object(req,"params"));
+    Json.object(nativeQ,"params").remove("callId");h.question(nativeQ);h.question(question("call","t1"));
+    ChatItem echo=message("call","agentMessage","t1","选择方案");echo.phase="final_answer";
+    ChatItem reply=message("result","agentMessage","t2","已收到选择，开始执行。");reply.phase="final_answer";
+    List<ChatItem> shown=h.present(Arrays.asList(echo,message("a","userMessage","t2","回答上一轮的问题：\n选择方案\nA\n\n"),reply));
+    assertEquals(2,shown.size());assertEquals("question",shown.get(0).type);assertSame(reply,shown.get(1));
+    assertEquals("A",Json.object(shown.get(0).interaction,"answers").optString("q0"));
+  }
+
+  @Test public void multiQuestionEchoMustContainEveryQuestion() {
+    InteractionHistory h=new InteractionHistory();JSONObject req=question("call","t1");
+    Json.object(req,"params").optJSONArray("questions").put(Json.obj("id","q1","question","补充城市"));h.question(req);
+    ChatItem echo=message("call","agentMessage","t1","选择方案\r\n\r\n补充城市\n");
+    assertEquals("question",h.present(Arrays.asList(echo)).get(0).type);assertEquals(1,h.present(Arrays.asList(echo)).size());
+    ChatItem partial=message("call","agentMessage","t1","选择方案");assertTrue(h.present(Arrays.asList(partial)).contains(partial));
+  }
 }
