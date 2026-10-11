@@ -1,0 +1,87 @@
+{
+  "default_java_line_budget": 450,
+  "line_budgets": {
+    "MainActivity": 1725,
+    "RemoteApp": 1780
+  },
+  "python_asset_line_budgets": {
+    "remote_session.py": 450,
+    "remote_maintenance.py": 330,
+    "conversation_state.py": 110
+  },
+  "modules": {
+    "application": [
+      "RemoteApp",
+      "ConversationStore",
+      "ConversationState",
+      "ConversationPreferences",
+      "TurnController",
+      "AttachmentController",
+      "DirectoryController"
+    ],
+    "protocol_transport": [
+      "SshTransport",
+      "RpcClient",
+      "RpcException",
+      "ConnectionFailure",
+      "HostPins",
+      "ThreadSnapshot"
+    ],
+    "data_configuration": [
+      "Profile",
+      "Vault",
+      "RemoteDirectory",
+      "RemoteVersion",
+      "ModelCatalog",
+      "ModelOptions",
+      "ModelSettings",
+      "ServiceTierOptions",
+      "PermissionMode",
+      "UsageLimits",
+      "ConversationJournal",
+      "InteractionHistory",
+      "ChatItem",
+      "Json"
+    ],
+    "ui": [
+      "MainActivity",
+      "ProfileEditor",
+      "ModelPicker",
+      "DialogUi",
+      "RemoteBrowser",
+      "DirectoryPicker",
+      "RemoteScreens",
+      "QuestionForm",
+      "QuestionHistoryView",
+      "MessageBodyView",
+      "ConversationScrollView",
+      "ModelListScrollView",
+      "ImageDialog",
+      "ZoomImageView",
+      "LoadingSpinner",
+      "LiveProgressTextView",
+      "FilePicker",
+      "ImagePicker",
+      "Markdown"
+    ],
+    "media": [
+      "FileAttachment",
+      "ImageDocument",
+      "MediaFiles",
+      "ThumbnailCache",
+      "ThumbnailLoader"
+    ],
+    "background_notifications": [
+      "BubbleActivity",
+      "ConnectionService",
+      "LiveStatusNotifications",
+      "LiveActionReceiver"
+    ],
+    "icons": [
+      "AppIconCatalog",
+      "AppIcons",
+      "IconView",
+      "PressFeedback"
+    ]
+  }
+}

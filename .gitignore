@@ -5,6 +5,7 @@ local.properties
 *.keystore
 .idea/
 .kotlin/
+.venv/
 **/__pycache__/
 *.py[cod]
 

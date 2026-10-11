@@ -76,7 +76,8 @@ class Client:
         def read():
             for line in self.proc.stdout:
                 self.events.put(json.loads(line))
-        threading.Thread(target=read, daemon=True).start()
+        self.reader = threading.Thread(target=read, daemon=True)
+        self.reader.start()
 
     def send(self, value):
         self.proc.stdin.write((json.dumps(value)+'\n').encode())
@@ -95,8 +96,10 @@ class Client:
                 return value
 
     def kill(self):
-        self.proc.kill()
+        if self.proc.poll() is None:
+            self.proc.kill()
         self.proc.wait(timeout=5)
+        self.reader.join(timeout=5)
         for stream in (self.proc.stdin, self.proc.stdout, self.proc.stderr):
             stream.close()
 
@@ -120,8 +123,7 @@ class PersistentSessionTest(unittest.TestCase):
 
     def tearDown(self):
         for c in self.clients:
-            if c.proc.poll() is None:
-                c.kill()
+            c.kill()
         for path in self.home.glob('.remote-gpt/*/*.pid'):
             try:
                 os.killpg(int(path.read_text()), signal.SIGKILL)

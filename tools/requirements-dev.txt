@@ -1,0 +1,2 @@
+# Used only by the loopback SSH fixture, never by the Android application.
+paramiko==5.0.0
