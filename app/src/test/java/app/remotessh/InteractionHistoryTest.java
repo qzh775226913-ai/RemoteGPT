@@ -115,4 +115,31 @@ public class InteractionHistoryTest {
     assertEquals("question",h.present(Arrays.asList(echo)).get(0).type);assertEquals(1,h.present(Arrays.asList(echo)).size());
     ChatItem partial=message("call","agentMessage","t1","选择方案");assertTrue(h.present(Arrays.asList(partial)).contains(partial));
   }
+
+  @Test public void questionEchoWithOptionBulletsFoldsAfterAnswerAndArchiveRestore() {
+    InteractionHistory h=new InteractionHistory();JSONObject req=question("call","t1");
+    Json.object(req,"params").optJSONArray("questions").put(Json.obj("id","q1","question","补充设备型号"));h.question(req);
+    h.answered(req,Json.obj("answers",Json.obj("q0",Json.obj("answers",new JSONArray().put("B")),"q1",Json.obj("answers",new JSONArray().put("稍后补充")))));
+    ChatItem echo=message("call","agentMessage","t1","选择方案\n\n- A\n- B\n\n补充设备型号");echo.phase="final_answer";
+    for(InteractionHistory history:Arrays.asList(h,restored(h))) {
+      List<ChatItem> shown=history.present(Arrays.asList(echo));
+      assertEquals(1,shown.size());assertEquals("question",shown.get(0).type);assertEquals("answered",shown.get(0).status);
+      assertEquals("B",Json.object(shown.get(0).interaction,"answers").optString("q0"));
+    }
+    assertEquals("agentMessage",echo.type);assertTrue(echo.text.contains("- A"));
+  }
+
+  @Test public void optionEchoRequiresAllOptionsAndRetainsActualRepliesAndOtherIdentities() {
+    InteractionHistory h=new InteractionHistory();h.question(question("call","t1"));
+    for(String text:Arrays.asList("选择方案\n- A", "选择方案\n- A\n- B\n我建议选择 B。", "选择方案\n- B\n- A", "选择方案\n- A\n- C")) {
+      ChatItem actual=message("call","agentMessage","t1",text);assertTrue(h.present(Arrays.asList(actual)).contains(actual));
+    }
+    ChatItem other=message("other","agentMessage","t1","选择方案\n- A\n- B");assertTrue(h.present(Arrays.asList(other)).contains(other));
+    ChatItem numbered=message("call","agentMessage","t1","**选择方案**\r\n1. A\r\n2. B");
+    assertEquals(1,h.present(Arrays.asList(numbered)).size());assertEquals("question",h.present(Arrays.asList(numbered)).get(0).type);
+  }
+
+  private static InteractionHistory restored(InteractionHistory source) {
+    InteractionHistory history=new InteractionHistory();history.restore(source.serialize());return history;
+  }
 }

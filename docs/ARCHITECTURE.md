@@ -13,6 +13,7 @@
 | 会话容器 | `ConversationStore` 是会话缓存和临时背景分发的唯一所有者；`ConversationState` 保存每条会话的消息、草稿、权限／速度和运行状态 |
 | 轮次／队列 | `TurnController` 管理创建／发送／引导轮次、一条待发消息及其附件、可自动发送标记；请求仍走统一回调路由 |
 | 附件 | `AttachmentController` 管理批量上传、媒体读取、连接变化取消和主线程结果提交；`MediaFiles`／`FileAttachment` 定义格式、路径与限额 |
+| 消息图片 | `MessageImageTile` 拥有可见缩略图、读取任务与有界重试；同服务器／会话的连接 generation 变化时释放旧任务并重新绑定，主线程核对作用域后才显示结果。消息区暂停更新仍刷新图片连接状态；`ThumbnailLoader`／`ThumbnailCache` 分别提供任务调度和共享有界缓存 |
 | 目录／会话偏好 | `DirectoryController` 管理目录操作的 worker 和迟到结果；`ConversationPreferences` 管理稳定存储键及权限／速度／问答历史快照 |
 | 传输／协议 | `SshTransport` 管理 SSH、SFTP 和辅助通道；`RpcClient` 管理 JSON-RPC framing、请求匹配和事件分发，不操作 Android View |
 | 配置／数据 | `Vault`／`Profile` 保存连接；模型、额度、权限、版本、线程快照与问答日志由对应类解析 |

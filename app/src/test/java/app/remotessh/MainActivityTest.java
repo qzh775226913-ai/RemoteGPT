@@ -1185,6 +1185,24 @@ public class MainActivityTest {
   @Test @Config(qualifiers="w411dp-h891dp-night-xhdpi")
   public void typedQuestionHistoryAlsoRendersInDarkTheme() throws Exception {conversationShowsTypedQuestionHistoryAndCopyActions();}
 
+  @Test public void unchangedImageLoadsAgainAfterConnectionGenerationChanges() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="photos";
+    Bitmap sample=Bitmap.createBitmap(30,30,Bitmap.Config.ARGB_8888);ByteArrayOutputStream bytes=new ByteArrayOutputStream();sample.compress(Bitmap.CompressFormat.PNG,100,bytes);sample.recycle();
+    ChatItem message=new ChatItem("photo","agentMessage","");message.images.add("data:image/png;base64,"+android.util.Base64.encodeToString(bytes.toByteArray(),android.util.Base64.NO_WRAP));app.items.add(message);app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));capture("image-before-reconnect");
+    ImageView preview=(ImageView)find(content(),"消息图片，点击查看大图");
+    for(int i=0;i<150 && preview.getDrawable()==null;i++){Thread.sleep(10);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));}
+    assertNotNull(preview.getDrawable());
+    ConversationScrollView scroll=(ConversationScrollView)find(content(),"对话消息");scroll.read();
+    org.robolectric.util.ReflectionHelpers.setField(app,"generation",app.connectionGeneration()+1);app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    java.util.List<?> tiles=org.robolectric.util.ReflectionHelpers.getField(activity,"mediaTiles");
+    assertTrue("Reconnect must refresh the viewport without a scroll",org.robolectric.util.ReflectionHelpers.<Boolean>callInstanceMethod(tiles.get(0),"valid"));
+    for(int i=0;i<150 && preview.getDrawable()==null;i++){Thread.sleep(10);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));}
+    assertNotNull("Same-source image must recover even while reading old messages",preview.getDrawable());
+    assertFalse("Reconnect must preserve reading position",scroll.isFollowing());
+  }
+
   @Test public void longImageHistoryRendersInPagesAndLoadsOnlyVisibleThumbnails() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="photos";
     Bitmap sample=Bitmap.createBitmap(30,30,Bitmap.Config.ARGB_8888);ByteArrayOutputStream bytes=new ByteArrayOutputStream();sample.compress(Bitmap.CompressFormat.PNG,100,bytes);sample.recycle();

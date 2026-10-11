@@ -49,7 +49,7 @@ public final class MainActivity extends Activity {
   private int historyLimit=60;
   private boolean historyRender;
   private boolean mediaScheduled;
-  private final List<MediaTile> mediaTiles=new ArrayList<>();
+  private final List<MessageImageTile> mediaTiles=new ArrayList<>();
   private final Runnable refreshMedia=()->{mediaScheduled=false;updateMediaViewport();};
   private final Map<String, ChatItem> currentItems = new HashMap<>();
   private final List<String> order = new ArrayList<>();
@@ -211,7 +211,7 @@ public final class MainActivity extends Activity {
   protected void onDestroy() {
     if(resumeSpinner!=null)resumeSpinner.stop();if(reconnectSpinner!=null)reconnectSpinner.stop();
     app.main.removeCallbacks(refreshMedia);
-    for(MediaTile tile:mediaTiles)tile.release();
+    for(MessageImageTile tile:mediaTiles)tile.release();
     if (scroll != null) scroll.removeCallbacks(pinLatest);
     if (trustDialog != null) trustDialog.dismiss();
     if (approvalDialog != null) approvalDialog.dismiss();
@@ -567,7 +567,7 @@ public final class MainActivity extends Activity {
           messageBodies.clear();
           mediaRows.clear();
           mediaSources.clear();
-          for(MediaTile tile:mediaTiles)tile.release();
+          for(MessageImageTile tile:mediaTiles)tile.release();
           mediaTiles.clear();questionCards.clear();
           rendered.clear();
           currentItems.clear();
@@ -599,13 +599,13 @@ public final class MainActivity extends Activity {
       }
       updateMessageSpacing();
       if (!visibleItems.isEmpty() && !historyRender) followLatest();
-      scheduleMedia();
       firstRender = false;
     } else {
       messageUpdatesPaused = true;
       jump.setVisibility(View.VISIBLE);
       jump.setTooltipText("消息区已暂停刷新，回到底部查看最新内容");
     }
+    scheduleMedia();
     if (wide) fillNavigation(sidebar, false);
     if (browser != null && browser.isShowing()) browser.refresh();
     if (drawer != null && drawer.isShowing())
@@ -952,58 +952,14 @@ public final class MainActivity extends Activity {
     }
   }
 
-  private final class MediaTile {
-    final String itemId,source,host,cacheHost;
-    final int generation;
-    final LinearLayout row,tile;
-    final ImageView preview;
-    final TextView label;
-    volatile boolean visible;
-    boolean loading,loaded;
-    volatile long loadVersion;
-    ThumbnailLoader.Job job;
-    MediaTile(String itemId,String source,LinearLayout row,boolean multiple) {
-      this.itemId=itemId;this.source=source;this.row=row;
-      host=app.profile==null?"":app.profile.id;generation=app.connectionGeneration();
-      cacheHost=app.profile==null?"":host+":"+app.profile.host+":"+app.profile.port+":"+app.profile.user+":"+app.threadId+":"+itemId;
-      tile=column();
-      LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(multiple?0:-1,-2,multiple?1:0);tp.setMargins(0,dp(6),dp(multiple?6:0),dp(6));
-      preview=new ImageView(MainActivity.this);preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
-      FrameLayout imageArea=new FrameLayout(MainActivity.this);
-      tile.addView(imageArea,new LinearLayout.LayoutParams(-1,dp(multiple?160:240)));
-      preview.setContentDescription("消息图片，点击查看大图");imageArea.addView(preview,new FrameLayout.LayoutParams(-1,-1));
-      label=text("图片 · 滚动到此处加载",12,muted);label.setMinHeight(dp(48));label.setSingleLine(true);label.setEllipsize(TextUtils.TruncateAt.END);label.setGravity(Gravity.CENTER);
-      imageArea.addView(label,new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER));
-      tile.setLayoutParams(tp);preview.setOnClickListener(v->openImage(source));
-      label.setOnClickListener(v->load());PressFeedback.apply(preview,isDark());PressFeedback.apply(label,isDark());
-    }
-    boolean valid() {return !isDestroyed() && generation==app.connectionGeneration() && app.profile!=null && host.equals(app.profile.id) && mediaRows.get(itemId)==row && tile.getParent()!=null;}
-    void load() {
-      if(loading || loaded || !valid())return;loading=true;label.setText("正在加载图片…");
-      long version=++loadVersion;
-      job=thumbnailWorker.submit(running->{
-        android.graphics.Bitmap bitmap=null;
-        java.util.function.BooleanSupplier active=()->running.getAsBoolean() && visible && version==loadVersion && generation==app.connectionGeneration();
-        try {
-          MediaFiles.check(active);
-          String key=ThumbnailCache.key(cacheHost,source);bitmap=app.thumbnails.images.get(key);
-          if(bitmap==null){ByteArrayOutputStream bytes=new ByteArrayOutputStream();app.readMedia(source,bytes,MediaFiles.IMAGE_LIMIT,active);MediaFiles.check(active);bitmap=MediaFiles.decode(bytes.toByteArray(),640);if(!active.getAsBoolean()){bitmap.recycle();return;}app.thumbnails.images.put(key,bitmap);}
-          android.graphics.Bitmap image=bitmap;
-          app.main.post(()->{if(version!=loadVersion)return;loading=false;job=null;if(!valid() || !visible)return;loaded=true;preview.setImageBitmap(image);label.setVisibility(View.GONE);});
-        }catch(Exception e){app.main.post(()->{if(version!=loadVersion)return;loading=false;job=null;if(valid() && visible)label.setText("图片加载失败 · 点按重试");});}
-      });
-    }
-    void release(){visible=false;loadVersion++;if(job!=null){job.discard();job=null;}loading=false;if(loaded){preview.setImageDrawable(null);loaded=false;}label.setText("图片 · 滚动到此处加载");label.setVisibility(View.VISIBLE);}
-  }
-
   private void scheduleMedia() {
     if(mediaScheduled)return;mediaScheduled=true;app.main.postDelayed(refreshMedia,16);
   }
   private void updateMediaViewport() {
     if(isDestroyed() || scroll==null)return;
     android.graphics.Rect rect=new android.graphics.Rect();
-    for(MediaTile tile:mediaTiles){tile.visible=tile.valid() && tile.tile.isShown() && tile.tile.getGlobalVisibleRect(rect) && rect.height()>0;if(!tile.visible)tile.release();}
-    for(MediaTile tile:mediaTiles)if(tile.visible)tile.load();
+    for(MessageImageTile tile:mediaTiles){tile.refreshConnection();tile.visible=tile.valid() && tile.tile.isShown() && tile.tile.getGlobalVisibleRect(rect) && rect.height()>0;if(!tile.visible)tile.release();}
+    for(MessageImageTile tile:mediaTiles)if(tile.visible)tile.load();
   }
 
   private void openImagePreview(android.graphics.Bitmap preview) {
@@ -1012,7 +968,7 @@ public final class MainActivity extends Activity {
 
   private void openImage(String source) {
     android.graphics.Bitmap preview=app.draftImagePreviews.get(source);
-    if(preview==null)for(MediaTile tile:mediaTiles)if(tile.source.equals(source) && tile.loaded && tile.preview.getDrawable() instanceof BitmapDrawable){preview=((BitmapDrawable)tile.preview.getDrawable()).getBitmap();break;}
+    if(preview==null)for(MessageImageTile tile:mediaTiles)if(tile.source.equals(source) && tile.loaded && tile.preview.getDrawable() instanceof BitmapDrawable){preview=((BitmapDrawable)tile.preview.getDrawable()).getBitmap();break;}
     showImage(source,preview);
   }
 
@@ -1028,7 +984,8 @@ public final class MainActivity extends Activity {
   private void renderMedia(ChatItem item) {
     LinearLayout row = mediaRows.get(item.id);
     List<String> sources = MediaFiles.images(item);
-    if (row == null || sources.equals(mediaSources.get(item.id))) return;
+    if (row == null) return;
+    if (sources.equals(mediaSources.get(item.id)) && mediaTiles.stream().noneMatch(tile->tile.itemId.equals(item.id) && !tile.sameContext())) return;
     mediaSources.put(item.id, sources);
     mediaTiles.removeIf(tile->{if(!tile.itemId.equals(item.id))return false;tile.release();return true;});
     row.removeAllViews();
@@ -1037,7 +994,7 @@ public final class MainActivity extends Activity {
       String source=original;
       try{if(!source.startsWith("data:") && !source.startsWith("https://"))source=MediaFiles.remotePath(source,app.currentProject());}catch(Exception ignored){}
       if(index%2==0 || sources.size()==1){grid=row();row.addView(grid,new LinearLayout.LayoutParams(-1,-2));}
-      MediaTile tile=new MediaTile(item.id,source,row,sources.size()>1);mediaTiles.add(tile);grid.addView(tile.tile);index++;
+      MessageImageTile tile=new MessageImageTile(this,app,ui,thumbnailWorker,item.id,source,row,sources.size()>1,()->mediaRows.get(item.id)==row,this::openImage);mediaTiles.add(tile);grid.addView(tile.tile);index++;
     }
     scheduleMedia();
   }

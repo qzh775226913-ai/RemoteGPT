@@ -69,7 +69,8 @@
       "ImageDocument",
       "MediaFiles",
       "ThumbnailCache",
-      "ThumbnailLoader"
+      "ThumbnailLoader",
+      "MessageImageTile"
     ],
     "background_notifications": [
       "BubbleActivity",

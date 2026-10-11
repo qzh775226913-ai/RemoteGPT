@@ -155,13 +155,28 @@ final class InteractionHistory {
     if(!m.type.equals("agentMessage") || !m.turnId.equals(entry.optString("turnId")) || !m.images.isEmpty())return false;
     if(!sourceIds.contains("call:"+m.id) && !sourceIds.contains("native:"+m.turnId+":"+m.id))return false;
     JSONArray qs=entry.optJSONArray("questions");if(qs==null || qs.length()==0)return false;
-    List<String> titles=new ArrayList<>();
+    List<String> titles=new ArrayList<>(),withOptions=new ArrayList<>();
     for(int i=0;i<qs.length();i++) {
       JSONObject q=qs.optJSONObject(i);if(q==null || q.optString("question").trim().isEmpty())return false;
-      titles.add(q.optString("question").trim().replace("\r\n","\n"));
+      String title=q.optString("question");titles.add(title);withOptions.add(title);
+      JSONArray options=q.optJSONArray("options");
+      if(options!=null)for(int n=0;n<options.length();n++) {
+        Object option=options.opt(n);String label=option instanceof JSONObject ? ((JSONObject)option).optString("label") : option instanceof String ? (String)option : "";
+        if(label.trim().isEmpty())return false;
+        withOptions.add(label);
+      }
     }
-    String text=m.text.trim().replace("\r\n","\n");
-    return text.equals(String.join("\n\n",titles)) || text.equals(String.join("\n",titles));
+    String text=echoText(m.text);
+    return text.equals(echoText(String.join("\n",titles))) || text.equals(echoText(String.join("\n",withOptions)));
+  }
+  private static String echoText(String value) {
+    List<String> lines=new ArrayList<>();
+    for(String line:value.replace("\r\n","\n").split("\n")) {
+      line=line.trim().replaceFirst("^(?:[-*+•]|[0-9]+[.)])\\s+","");
+      if(line.startsWith("**") && line.endsWith("**") && line.length()>4)line=line.substring(2,line.length()-2).trim();
+      if(!line.isEmpty())lines.add(line);
+    }
+    return String.join("\n",lines);
   }
   private static int rank(String status){return status.equals("answered")?5:status.equals("pending")?4:status.equals("skipped")?3:2;}
   String serialize() {return new JSONArray(entries.values()).toString();}
