@@ -92,4 +92,17 @@ public class ReasoningStateTest {
     emit("turn/completed", Json.obj("threadId", "active", "turn", Json.obj("id", "old", "status", "completed")));
     assertEquals("inProgress", app.items.get(0).status);
   }
+
+  @Test public void completedTurnSnapshotPreservesReasoningTurnIdentity() throws Exception {
+    emit("item/started",Json.obj("threadId","active","turnId","old","item",reasoning("已有摘要")));
+    emit("turn/completed",Json.obj("threadId","active","turn",Json.obj("id","old","status","completed","items",new JSONArray().put(reasoning("")))));
+    assertEquals("old",app.items.get(0).turnId);
+  }
+
+  @Test public void lateItemCompletionWithoutTurnIdCannotBorrowTheNewActiveTurn() throws Exception {
+    emit("item/started",Json.obj("threadId","active","turnId","old","item",Json.obj("id","call","type","agentMessage","text","选择方案")));
+    emit("turn/started",Json.obj("threadId","active","turn",Json.obj("id","new")));
+    emit("item/completed",Json.obj("threadId","active","item",Json.obj("id","call","type","agentMessage","text","选择方案")));
+    assertEquals("old",app.items.get(0).turnId);assertEquals("new",app.turnId);
+  }
 }

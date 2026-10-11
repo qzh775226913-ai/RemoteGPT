@@ -1203,6 +1203,21 @@ public class MainActivityTest {
     assertFalse("Reconnect must preserve reading position",scroll.isFollowing());
   }
 
+  @Test public void answeredQuestionCardKeepsItsPlaceBeforeLaterWorkInTheSameTurn() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="questions";
+    org.json.JSONObject req=InteractionHistoryTest.question("call","turn");app.interactions.question(req);
+    app.items.add(InteractionHistoryTest.message("call","agentMessage","turn","选择方案\n- A\n- B"));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    capture("question-position-pending");
+    app.interactions.answered(req,Json.obj("answers",Json.obj("q0",Json.obj("answers",new org.json.JSONArray().put("B")))));
+    app.items.add(InteractionHistoryTest.message("after","commandExecution","turn","根据回答继续执行"));
+    ChatItem reply=InteractionHistoryTest.message("final","agentMessage","turn","已完成后续任务");reply.phase="final_answer";app.items.add(reply);
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));capture("question-position-answered");
+    java.util.List<String> order=org.robolectric.util.ReflectionHelpers.getField(activity,"order");
+    assertEquals(java.util.Arrays.asList("interaction-call:call","after","final"),order);
+    assertNotNull(find(content(),"交互提问 · 已回答"));
+  }
+
   @Test public void longImageHistoryRendersInPagesAndLoadsOnlyVisibleThumbnails() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="photos";
     Bitmap sample=Bitmap.createBitmap(30,30,Bitmap.Config.ARGB_8888);ByteArrayOutputStream bytes=new ByteArrayOutputStream();sample.compress(Bitmap.CompressFormat.PNG,100,bytes);sample.recycle();

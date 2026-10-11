@@ -1667,6 +1667,8 @@ public final class RemoteApp extends Application {
         JSONObject item = completedItems.optJSONObject(i);
         if (item == null || !item.optString("type").equals("reasoning")) continue;
         ChatItem incoming = ChatItem.from(item), previous = find(incoming.id);
+        incoming.turnId=turn.optString("id",p.optString("turnId"));
+        if(incoming.turnId.isEmpty() && previous!=null)incoming.turnId=previous.turnId;
         preserveReasoning(incoming, previous);
         incoming.status = "completed";
         if (previous == null) items.add(incoming);
@@ -1699,10 +1701,11 @@ public final class RemoteApp extends Application {
       else error = message;
     } else if (method.equals("item/started") || method.equals("item/completed")) {
       ChatItem incoming = ChatItem.from(Json.object(p, "item"));
-      incoming.turnId=p.optString("turnId",turnId);
+      incoming.turnId=p.optString("turnId",incoming.turnId.isEmpty()?turnId:incoming.turnId);
       if (incoming.type.equals("reasoning")) incoming.status = method.equals("item/completed") ? "completed" : "inProgress";
       if (incoming.user()) unsentText = "";
       ChatItem old = find(incoming.id);
+      if(old!=null && p.optString("turnId").isEmpty() && Json.object(p,"item").optString("turnId").isEmpty())incoming.turnId=old.turnId;
       if (old == null && incoming.user())
         for (ChatItem m : items)
           if (m.id.startsWith("local-") && m.text.equals(incoming.text) && m.images.equals(incoming.images)) {

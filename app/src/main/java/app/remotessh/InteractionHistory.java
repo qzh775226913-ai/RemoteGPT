@@ -9,6 +9,12 @@ final class InteractionHistory {
   String archiveTurn = "";
   final Set<String> archivePastTurns=new HashSet<>();
   long revision;
+  // Presentation-only fallback anchors; persisted question/answer format stays unchanged.
+  private final Map<String,Position> positions=new HashMap<>();
+  private static final class Position {
+    final String item;final boolean before;
+    Position(String item,boolean before){this.item=item;this.before=before;}
+  }
 
   static String key(JSONObject request) {
     JSONObject p=Json.object(request,"params");
@@ -78,9 +84,13 @@ final class InteractionHistory {
   }
   JSONObject matchTextAnswer(String text) {return matchTextAnswer(text,null);}
   private JSONObject matchTextAnswer(String text,Set<String> precedingTurns) {
+    return matchTextAnswer(text,precedingTurns,entry->true);
+  }
+  private JSONObject matchTextAnswer(String text,Set<String> precedingTurns,java.util.function.Predicate<JSONObject> eligible) {
     if(!text.startsWith("回答上一轮的问题：\n"))return null;
     List<JSONObject> list=new ArrayList<>(entries.values());Collections.reverse(list);
     for(JSONObject entry:list) {
+      if(!eligible.test(entry))continue;
       if(precedingTurns!=null && !precedingTurns.contains(entry.optString("turnId")))continue;
       JSONArray qs=entry.optJSONArray("questions");if(qs==null||qs.length()==0)continue;
       int position="回答上一轮的问题：\n".length();JSONObject answers=new JSONObject();boolean matches=true;
@@ -101,7 +111,7 @@ final class InteractionHistory {
   List<ChatItem> present(List<ChatItem> messages) {
     Map<Integer,List<ChatItem>> insertions=new HashMap<>();
     Map<String,Integer> ends=new HashMap<>(),finals=new HashMap<>();
-    for(int i=0;i<messages.size();i++){ChatItem m=messages.get(i);if(!m.turnId.isEmpty()){ends.put(m.turnId,i+1);if(m.phase.equals("final_answer"))finals.put(m.turnId,i);}}
+    for(int i=0;i<messages.size();i++){ChatItem m=messages.get(i);if(!m.turnId.isEmpty()){ends.put(m.turnId,i+1);if(m.phase.equals("final_answer"))finals.putIfAbsent(m.turnId,i);}}
     Map<String,String> nativeCopies=new HashMap<>();
     for(JSONObject entry:entries.values())if(entry.optString("id").startsWith("native:"))nativeCopies.put(entry.optString("turnId")+":"+String.valueOf(entry.optJSONArray("questions")),entry.optString("id"));
     Map<String,JSONObject> unique=new LinkedHashMap<>();
@@ -114,12 +124,22 @@ final class InteractionHistory {
       JSONObject previous=unique.get(identity);
       if(previous==null || rank(entry.optString("status"))>rank(previous.optString("status")))unique.put(identity,entry);
     }
+    Map<String,Set<String>> sources=new HashMap<>();
+    for(Map.Entry<String,String> identity:identities.entrySet())sources.computeIfAbsent(identity.getValue(),k->new HashSet<>()).add(identity.getKey());
+    Map<String,Integer> placements=new HashMap<>();
+    for(Map.Entry<String,JSONObject> displayed:unique.entrySet()) {
+      Integer at=position(displayed.getKey(),displayed.getValue(),sources.get(displayed.getKey()),messages,finals,ends);
+      if(at!=null)placements.put(displayed.getKey(),at);
+    }
     // Fold App-formatted answer messages into their question card. Only suppress a
     // duplicate when its question is present; retain the canonical model history.
     Map<String,JSONObject> textAnswers=new HashMap<>();Set<ChatItem> duplicates=new HashSet<>();Set<String> precedingTurns=new HashSet<>();
-    for(ChatItem m:messages) {
+    for(int i=0;i<messages.size();i++) {
+      ChatItem m=messages.get(i);final int index=i;
       if(m.user()) {
-        JSONObject answer=matchTextAnswer(m.text,precedingTurns);
+        JSONObject answer=matchTextAnswer(m.text,precedingTurns,entry->{
+          Integer at=placements.get(identities.get(entry.optString("id")));return at!=null && at<=index;
+        });
         if(answer!=null) {
           String identity=identities.get(answer.optString("id"));JSONObject entry=unique.get(identity);
           if(entry!=null && ends.containsKey(entry.optString("turnId"))) {textAnswers.put(identity,answer);duplicates.add(m);}
@@ -130,15 +150,14 @@ final class InteractionHistory {
     for(Map.Entry<String,JSONObject> displayed:unique.entrySet()) {
       JSONObject entry=displayed.getValue();
       if(entry.optString("status").equals("unavailable"))continue;
-      String turn=entry.optString("turnId");Integer at=finals.getOrDefault(turn,ends.get(turn));
+      String turn=entry.optString("turnId");Integer at=placements.get(displayed.getKey());
       if(at==null)continue; // Never attach a different thread's record to the current history.
       JSONObject answer=textAnswers.get(displayed.getKey());
       if(answer!=null)try {entry=new JSONObject(entry.toString());entry.put("status","answered");entry.put("answers",Json.object(answer,"answers"));}catch(JSONException ignored){}
       // Async delivery also emits an AgentMessage with the tool's call ID and
       // question text. It is the question itself, not an additional reply.
       // Require both identity and the full text, so genuine replies stay visible.
-      Set<String> sourceIds=new HashSet<>();
-      for(Map.Entry<String,String> identity:identities.entrySet())if(identity.getValue().equals(displayed.getKey()))sourceIds.add(identity.getKey());
+      Set<String> sourceIds=sources.get(displayed.getKey());
       for(ChatItem m:messages)if(questionEcho(m,entry,sourceIds))duplicates.add(m);
       ChatItem q=new ChatItem("interaction-"+displayed.getKey(),"question","");q.interaction=entry;q.turnId=turn;q.status=entry.optString("status");
       insertions.computeIfAbsent(at,k->new ArrayList<>()).add(q);
@@ -150,6 +169,29 @@ final class InteractionHistory {
       if(!duplicates.contains(m))result.add(m);
     }
     return result;
+  }
+  private Integer position(String identity,JSONObject entry,Set<String> sourceIds,List<ChatItem> messages,
+      Map<String,Integer> finals,Map<String,Integer> ends) {
+    String turn=entry.optString("turnId");
+    // A tool/call identity locates the original question even after later replies,
+    // answers, more questions in the same turn, or an archive restore.
+    for(int i=0;i<messages.size();i++) {
+      ChatItem m=messages.get(i);if(!m.turnId.equals(turn))continue;
+      if(sourceIds.contains("call:"+m.id) || sourceIds.contains("native:"+turn+":"+m.id)) {
+        boolean before=questionEcho(m,entry,sourceIds);
+        positions.put(identity,new Position(m.id,before));return i+(before?0:1);
+      }
+    }
+    Position saved=positions.get(identity);
+    if(saved!=null)for(int i=0;i<messages.size();i++) {
+      ChatItem m=messages.get(i);
+      if(m.id.equals(saved.item) && m.turnId.equals(turn))return i+(saved.before?0:1);
+    }
+    Integer at=finals.getOrDefault(turn,ends.get(turn));
+    if(at==null)return null;
+    boolean before=finals.containsKey(turn);int index=before?at:at-1;
+    if(index>=0 && index<messages.size())positions.put(identity,new Position(messages.get(index).id,before));
+    return at;
   }
   private static boolean questionEcho(ChatItem m,JSONObject entry,Set<String> sourceIds) {
     if(!m.type.equals("agentMessage") || !m.turnId.equals(entry.optString("turnId")) || !m.images.isEmpty())return false;

@@ -142,4 +142,61 @@ public class InteractionHistoryTest {
   private static InteractionHistory restored(InteractionHistory source) {
     InteractionHistory history=new InteractionHistory();history.restore(source.serialize());return history;
   }
+
+  private static List<String> ids(List<ChatItem> messages) {
+    List<String> result=new ArrayList<>();for(ChatItem item:messages)result.add(item.id);return result;
+  }
+
+  @Test public void answeringAndContinuingTheSameTurnDoesNotMoveItsEarlierQuestion() {
+    InteractionHistory h=new InteractionHistory();JSONObject req=question("call","t1");h.question(req);
+    List<ChatItem> messages=new ArrayList<>();messages.add(message("call","agentMessage","t1","选择方案"));
+    assertEquals(Arrays.asList("interaction-call:call"),ids(h.present(messages)));
+    h.answered(req,Json.obj("answers",Json.obj("q0",Json.obj("answers",new JSONArray().put("B")))));
+    messages.add(message("work","commandExecution","t1","继续执行"));
+    ChatItem finalReply=message("final","agentMessage","t1","执行完毕");finalReply.phase="final_answer";messages.add(finalReply);
+    messages.add(message("next","userMessage","t2","继续下一个任务"));
+    for(InteractionHistory history:Arrays.asList(h,restored(h))) {
+      assertEquals(Arrays.asList("interaction-call:call","work","final","next"),ids(history.present(messages)));
+      assertEquals("answered",history.present(messages).get(0).status);
+    }
+  }
+
+  @Test public void repeatedQuestionInSameTurnCannotStealAnAnswerBeforeItsOwnCall() {
+    InteractionHistory h=new InteractionHistory();h.question(question("first","t1"));h.question(question("second","t1"));
+    ChatItem finalReply=message("final","agentMessage","t1","执行结束");finalReply.phase="final_answer";
+    List<ChatItem> canonical=Arrays.asList(message("first","agentMessage","t1","选择方案"),
+        message("answer","userMessage","t1","回答上一轮的问题：\n选择方案\nB\n\n"),
+        message("work","commandExecution","t1","继续执行"),message("second","agentMessage","t1","选择方案"),finalReply);
+    List<ChatItem> shown=h.present(canonical);
+    assertEquals(Arrays.asList("interaction-call:first","work","interaction-call:second","final"),ids(shown));
+    assertEquals("answered",shown.get(0).status);assertEquals("B",Json.object(shown.get(0).interaction,"answers").optString("q0"));
+    assertEquals("pending",shown.get(2).status);
+    assertEquals("pending",h.entries.get("call:first").optString("status"));
+  }
+
+  @Test public void missingSourceKeepsItsFirstObservedPositionDuringLaterUpdates() {
+    InteractionHistory h=new InteractionHistory();JSONObject req=question("missing","t1");h.question(req);
+    List<ChatItem> canonical=new ArrayList<>();canonical.add(message("before","commandExecution","t1","检查配置"));
+    assertEquals(Arrays.asList("before","interaction-call:missing"),ids(h.present(canonical)));
+    h.answered(req,Json.obj("answers",Json.obj("q0",Json.obj("answers",new JSONArray().put("A")))));
+    canonical.add(message("after","commandExecution","t1","执行后续步骤"));
+    ChatItem finalReply=message("final","agentMessage","t1","完成");finalReply.phase="final_answer";canonical.add(finalReply);
+    assertEquals(Arrays.asList("before","interaction-call:missing","after","final"),ids(h.present(canonical)));
+  }
+
+  @Test public void nativeQuestionStaysBesideItsSourceToolInsteadOfFinalReply() {
+    InteractionHistory h=new InteractionHistory();
+    JSONObject request=Json.obj("id",8,"method","item/tool/requestUserInput","params",Json.obj("turnId","t1","itemId","tool","questions",Json.object(question("unused","t1"),"params").optJSONArray("questions")));
+    h.question(request);
+    ChatItem finalReply=message("final","agentMessage","t1","完成");finalReply.phase="final_answer";
+    List<ChatItem> canonical=Arrays.asList(message("tool","mcpToolCall","t1","交互工具"),message("after","commandExecution","t1","继续执行"),finalReply);
+    assertEquals(Arrays.asList("tool","interaction-native:t1:tool","after","final"),ids(h.present(canonical)));
+  }
+
+  @Test public void sourceOrderWinsOverArchiveArrivalOrderAndSurvivesRestore() {
+    InteractionHistory h=new InteractionHistory();h.question(question("second","t1"));h.question(question("first","t1"));
+    List<ChatItem> canonical=Arrays.asList(message("first","agentMessage","t1","选择方案"),message("work","commandExecution","t1","执行"),message("second","agentMessage","t1","选择方案"));
+    for(InteractionHistory history:Arrays.asList(h,restored(h)))
+      assertEquals(Arrays.asList("interaction-call:first","work","interaction-call:second"),ids(history.present(canonical)));
+  }
 }
