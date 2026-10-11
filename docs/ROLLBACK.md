@@ -56,7 +56,9 @@ git clone /home/qzh-n100/AI-Workspace/remotesshapp-before-maintenance-20261011.b
 git -C /path/to/recovered-project switch backup/before-maintenance-20261011
 ```
 
-该 bundle 是**整理前**快照，不包含后续维护提交；整理完成后的历史可从当前维护分支备份。
+该 bundle 是**整理前**快照，不包含后续维护提交。整理完成后的完整历史另存为 `/home/qzh-n100/AI-Workspace/remotesshapp-after-maintenance-20261011.bundle`，恢复维护成果时使用它并切换维护分支。前后备份各自保留，不覆盖基线。
+
+已在独立临时目录实际执行整理前 bundle 的克隆和切换，核对原始提交与干净工作区，并通过 `git fsck --full`；证据见本轮验证记录。
 
 ## 手机与远端边界
 
