@@ -2,7 +2,9 @@
 
 原生 Android SSH 客户端，通过远端 `codex app-server` 管理项目、对话、审批和附件。手机没有内置模型服务，也没有调用 ChatGPT 私有接口。
 
-当前安装版本为 **1.0.47 / versionCode 48**，包名 `app.remotessh`。2026-10-11 的维护整理保留版本号、协议和现有界面行为；整理后的构建不作为新版本发布。最低 Android 8（API 26），compileSdk 36，targetSdk 35。
+当前安装版本为 **1.0.48 / versionCode 49**，包名 `app.remotessh`。本版修复附选项列表的交互问答重复回复，以及重连后同源缩略图无法重新加载；短暂图片读取失败提供有界重试。保留原签名和存储格式，可覆盖安装。最低 Android 8（API 26），compileSdk 36，targetSdk 35。
+
+本次局域网下载：[RemoteGPT-1.0.48-Android-universal-debug.apk](http://192.168.1.74:8000/RemoteGPT-1.0.48-Android-universal-debug.apk)。完整验证、校验和及访问范围见 [交付记录](docs/verification/2026-10-11-1.0.48.md)。
 
 ## 使用
 
@@ -50,7 +52,8 @@ export ANDROID_HOME="/path/to/android-sdk"
 | [验收边界](docs/ACCEPTANCE.md) | 自动化能证明什么、哪些仍需真机或真实服务 |
 | [维护规则与技术债](docs/MAINTENANCE.md) | 变更流程、风险、后续整理顺序 |
 | [回退说明](docs/ROLLBACK.md) | 原始提交、备份、分阶段撤回、手机安装限制 |
-| [本轮验证](docs/verification/2026-10-11.md) | 基线与整理后的实际验证证据 |
+| [1.0.48 验证与下载](docs/verification/2026-10-11-1.0.48.md) | 问答／图片修复回归、安装包和局域网下载 |
+| [项目整理验证](docs/verification/2026-10-11.md) | 整理基线、模块拆分与恢复证据 |
 | [图标系统](docs/icon-system.md) | 图标来源和生成方式 |
 | [历史版本记录](docs/history/CHANGELOG-through-1.0.47.md) | 原始发布历史，仅作追溯 |
 
