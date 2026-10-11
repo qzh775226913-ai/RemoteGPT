@@ -92,7 +92,7 @@ public class QuestionRecoveryTest {
     apply.invoke(app,snapshot(),"thread",false);assertEquals(PermissionMode.INHERIT,app.permissionMode);assertEquals(PermissionMode.FULL,app.displayedPermission());
     JSONObject params=new JSONObject();app.permissionMode.applyTurn(params);assertEquals(0,params.length());
     app.choosePermission(PermissionMode.READ_ONLY);
-    Field cache=RemoteApp.class.getDeclaredField("conversations");cache.setAccessible(true);((Map<?,?>)cache.get(app)).clear();app.threadId="";app.permissionMode=PermissionMode.INHERIT;
+    app.conversationStore.clear();app.threadId="";app.permissionMode=PermissionMode.INHERIT;
     apply.invoke(app,snapshot(),"thread",false);assertEquals(PermissionMode.READ_ONLY,app.permissionMode);
     app.inConversation("other",()->assertEquals(PermissionMode.INHERIT,app.permissionMode));assertEquals(PermissionMode.READ_ONLY,app.permissionMode);
   }
@@ -102,7 +102,7 @@ public class QuestionRecoveryTest {
     event.invoke(app,req);app.answer(req,answer());await(()->app.approvals.isEmpty());
     await(()->!app.getSharedPreferences("interaction-history",0).getAll().isEmpty());
     assertEquals("answered",app.interactions.entries.get(InteractionHistory.key(req)).optString("status"));
-    Field cache=RemoteApp.class.getDeclaredField("conversations");cache.setAccessible(true);((Map<?,?>)cache.get(app)).clear();app.threadId="";app.interactions=new InteractionHistory();
+    app.conversationStore.clear();app.threadId="";app.interactions=new InteractionHistory();
     JSONObject restored=snapshot();Json.object(restored,"thread").put("turns",new JSONArray().put(Json.obj("id","test","items",new JSONArray().put(Json.obj("id","m","type","agentMessage","phase","final_answer","text","结果")))));
     apply.invoke(app,restored,"thread",true);
     assertEquals(2,app.displayItems().size());assertEquals("question",app.displayItems().get(0).type);assertEquals("answered",app.displayItems().get(0).status);

@@ -30,7 +30,6 @@ public final class RemoteApp extends Application {
   private String journalScript;
   InteractionHistory interactions = new InteractionHistory();
   final ThumbnailCache thumbnails = new ThumbnailCache();
-  private final java.util.concurrent.ExecutorService interactionWriter = java.util.concurrent.Executors.newSingleThreadExecutor();
   private final Set<String> journalPolling = new HashSet<>();
   public boolean readOnly, remoteRunning;
   public final UsageLimits usage = new UsageLimits();
@@ -87,44 +86,22 @@ public final class RemoteApp extends Application {
     retryAttempts = attempt;
   };
 
-  private final Map<String, ConversationState> conversations = new LinkedHashMap<>();
-  private int scopeDepth;
-  private boolean scopeChanged;
+  private final ConversationPreferences preferences = new ConversationPreferences(this);
+  final ConversationStore conversationStore = new ConversationStore(this);
+  private final TurnController turns = new TurnController(this);
+  private final AttachmentController attachments = new AttachmentController(this);
+  private final DirectoryController directories = new DirectoryController(this);
   private final ArrayDeque<String> restoreQueue = new ArrayDeque<>();
   private String restoringThread = "", pendingNavigation = "", loadingThread = "", replayThread = "";
   private String loadingStage="";
   private ThreadSnapshot preparedThread;
   private boolean multiSessionHost = true;
 
-  void checkpoint() {
-    conversations.computeIfAbsent(threadId, key -> new ConversationState()).capture(this);
-  }
+  void checkpoint() { conversationStore.checkpoint(); }
 
-  List<String> conversationIds() {
-    checkpoint();
-    List<String> ids = new ArrayList<>(conversations.keySet()); ids.remove(""); return ids;
-  }
+  List<String> conversationIds() { return conversationStore.ids(); }
 
-  // All state and event dispatch run on the main looper. Never expose a temporary
-  // background context to UI listeners; publish once the selected context is restored.
-  void inConversation(String id, Runnable action) {
-    if (id.equals(threadId)) { action.run(); return; }
-    checkpoint();
-    ConversationState selected = conversations.get(threadId);
-    ConversationState target = conversations.computeIfAbsent(id, key -> {
-      ConversationState c = new ConversationState(); c.threadId=key; restoreServiceTier(c, key); restorePermission(c,key); restoreInteractions(c,key); return c;
-    });
-    String selectedProject = profile == null ? "" : profile.cwd;
-    String selectedLast = profile == null ? "" : profile.lastThread;
-    scopeDepth++;
-    target.apply(this);
-    try { action.run(); }
-    finally {
-      checkpoint(); selected.apply(this); scopeDepth--;
-      if (profile != null) { profile.cwd=selectedProject; profile.lastThread=selectedLast; }
-      if (scopeDepth == 0 && scopeChanged) { scopeChanged=false; changed(); }
-    }
-  }
+  void inConversation(String id, Runnable action) { conversationStore.dispatch(id, action); }
 
   boolean canSwitchConversation() {
     return connected && !restartingRemote && !attaching && !(busy && threadId.isEmpty()) && restoringThread.isEmpty() && loadingThread.isEmpty() && restoreQueue.isEmpty();
@@ -143,22 +120,11 @@ public final class RemoteApp extends Application {
 
   private void select(String id) {
     if (!id.equals(threadId)) leaveIdleConversation();
-    checkpoint();
-    ConversationState target = conversations.computeIfAbsent(id, key -> {
-      ConversationState c = new ConversationState(); c.threadId=key; c.model=model; c.effort=reasoningEffort; c.permission=permissionMode;
-      restoreServiceTier(c, key);
-      if(!key.isEmpty()){restorePermission(c,key);restoreInteractions(c,key);}
-      return c;
-    });
-    target.apply(this);
+    conversationStore.select(id);
     if (profile != null) { profile.lastThread=id; save(); }
   }
 
-  List<JSONObject> allApprovals() {
-    checkpoint(); List<JSONObject> result = new ArrayList<>();
-    for (ConversationState c : conversations.values()) result.addAll(c.approvals);
-    return result;
-  }
+  List<JSONObject> allApprovals() { return conversationStore.approvals(); }
 
   android.content.Intent conversationIntent(Class<?> activity, String id) {
     return new android.content.Intent(this, activity).setAction(android.content.Intent.ACTION_VIEW)
@@ -250,7 +216,7 @@ public final class RemoteApp extends Application {
     if (!connected || !replayThread.isEmpty()) return false;
     String id = thread.optString("id");
     if (id.equals(threadId)) return currentThreadRunning();
-    ConversationState cached = conversations.get(id);
+    ConversationState cached = conversationStore.get(id);
     if (cached != null) return !cached.replaying && (cached.remoteRunning
         || (cached.busy && !cached.turnId.isEmpty()) || !cached.approvals.isEmpty());
     return Json.object(thread, "status").optString("type").equals("active");
@@ -278,7 +244,7 @@ public final class RemoteApp extends Application {
     if (!replayThread.isEmpty()) return null;
     if (!replaying && !approvals.isEmpty()) return approvals.get(0);
     checkpoint();
-    for (ConversationState c : conversations.values())
+    for (ConversationState c : conversationStore.values())
       if (!c.replaying && !c.approvals.isEmpty()) return c.approvals.get(0);
     return null;
   }
@@ -290,7 +256,7 @@ public final class RemoteApp extends Application {
     final int g = generation;
     final long revision = statusRevision;
     for (String id : conversationIds()) {
-      ConversationState c = conversations.get(id);
+      ConversationState c = conversationStore.get(id);
       if (loadedThreads.contains(id) || !c.remoteRunning || !statusPolling.add(id)) continue;
       worker.execute(() -> client.request("thread/read", Json.obj("threadId", id, "includeTurns", false))
           .whenComplete((r, e) -> main.post(() -> {
@@ -392,17 +358,9 @@ public final class RemoteApp extends Application {
   private void clearServerRequests() { approvals.removeIf(req->{if(ConversationJournal.savedQuestion(req))return false;interactions.status(req,"expired");return true;});saveInteractions(); }
 
   List<ChatItem> displayItems() {return interactions.present(items);}
-  private void restoreInteractions(ConversationState c,String id) {
-    c.interactions.restore(getSharedPreferences("interaction-history",MODE_PRIVATE).getString(tierPreferenceKey(id),"[]"));
-    c.savedInteractionRevision=c.interactions.revision;
-  }
   long savedInteractionRevision;
-  private void saveInteractions() {
-    if(profile==null || threadId.isEmpty() || savedInteractionRevision==interactions.revision)return;
-    savedInteractionRevision=interactions.revision;
-    String key=tierPreferenceKey(threadId),value=interactions.serialize();
-    interactionWriter.execute(()->getSharedPreferences("interaction-history",MODE_PRIVATE).edit().putString(key,value).apply());
-  }
+  void restoreInteractions(ConversationState state, String id) { preferences.restoreInteractions(state, id); }
+  private void saveInteractions() { preferences.saveInteractions(); }
 
   void cancelQuestion(JSONObject req) {
     String target=Json.object(req,"params").optString("threadId",threadId);
@@ -421,14 +379,9 @@ public final class RemoteApp extends Application {
     getSharedPreferences("question-answers",MODE_PRIVATE).edit().putStringSet(tierPreferenceKey(threadId),ids).apply();
   }
 
-  private void restorePermission(ConversationState c,String id) {
-    String value=getSharedPreferences("permission-choices",MODE_PRIVATE).getString(tierPreferenceKey(id),PermissionMode.INHERIT.name());
-    try{c.permission=PermissionMode.valueOf(value);}catch(IllegalArgumentException ignored){c.permission=PermissionMode.INHERIT;}
-  }
-  void choosePermission(PermissionMode mode) {permissionMode=mode;savePermission();changed();}
-  private void savePermission() {
-    if(profile!=null)getSharedPreferences("permission-choices",MODE_PRIVATE).edit().putString(tierPreferenceKey(threadId),permissionMode.name()).apply();
-  }
+  void restorePermission(ConversationState state, String id) { preferences.restorePermission(state, id); }
+  void choosePermission(PermissionMode mode) { permissionMode = mode; savePermission(); changed(); }
+  void savePermission() { preferences.savePermission(); }
   PermissionMode displayedPermission() {return permissionMode==PermissionMode.INHERIT ? effectivePermissionMode:permissionMode;}
 
 
@@ -457,7 +410,7 @@ public final class RemoteApp extends Application {
   }
 
   public void changed() {
-    if (scopeDepth > 0) { scopeChanged=true; return; }
+    if (conversationStore.deferChanges()) return;
     checkpoint();
     if (profile != null && connected) {
       Set<String> remembered = new HashSet<>(recoveringThreads);
@@ -532,7 +485,7 @@ public final class RemoteApp extends Application {
     String previousProfileId = profile == null ? "" : profile.id;
     boolean sameHost = profile != null && profile.id.equals(p.id);
     disconnect();
-    conversations.clear();
+    conversationStore.clear();
     if (!sameHost) permissionMode = PermissionMode.INHERIT;
     profile = p;
     journalPath="";journal=new ConversationJournal();effectivePermissionMode=PermissionMode.INHERIT;interactions=new InteractionHistory();savedInteractionRevision=0;
@@ -777,7 +730,7 @@ public final class RemoteApp extends Application {
   boolean remoteHasWork() {
     if (busy || attaching || replaying || !restoringThread.isEmpty() || !loadingThread.isEmpty()
         || !restoreQueue.isEmpty() || !approvals.isEmpty()) return true;
-    for (ConversationState state : conversations.values())
+    for (ConversationState state : conversationStore.values())
       if (state.busy || state.remoteRunning || !state.approvals.isEmpty()) return true;
     for (int i = 0; i < threads.length(); i++) {
       JSONObject thread = threads.optJSONObject(i);
@@ -902,36 +855,9 @@ public final class RemoteApp extends Application {
     });
   }
 
-  private String tierPreferenceKey(String id) {
-    if (profile == null) return "unconnected:" + id;
-    String pin = vault == null ? null : vault.getPin(profile.host + ":" + profile.port);
-    String identity = pin == null ? profile.id : pin + "\0" + profile.user + "\0" + profile.command;
-    try {
-      // Custom launch commands may contain private values; do not copy them into preference keys.
-      byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
-          .digest(identity.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-      return Base64.getUrlEncoder().withoutPadding().encodeToString(digest) + ":" + id;
-    } catch (java.security.NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); }
-  }
-
-  private void saveServiceTier() {
-    if (profile == null) return;
-    android.content.SharedPreferences.Editor edit = getSharedPreferences("service-tiers", MODE_PRIVATE).edit();
-    String key = tierPreferenceKey(threadId);
-    edit.putString(key + ":choice", serviceTier);
-    edit.putBoolean(key + ":applied", tierOverrideApplied);
-    if (inheritedTierKnown) edit.putString(key + ":base", inheritedServiceTier);
-    edit.apply();
-  }
-
-  private void restoreServiceTier(ConversationState c, String id) {
-    android.content.SharedPreferences prefs = getSharedPreferences("service-tiers", MODE_PRIVATE);
-    String prefix = tierPreferenceKey(id);
-    c.serviceTier = prefs.getString(prefix + ":choice", "");
-    c.inheritedTierKnown = prefs.contains(prefix + ":base");
-    c.inheritedServiceTier = prefs.getString(prefix + ":base", "");
-    c.tierOverrideApplied = prefs.getBoolean(prefix + ":applied", false);
-  }
+  private String tierPreferenceKey(String id) { return preferences.key(id); }
+  void saveServiceTier() { preferences.saveServiceTier(); }
+  void restoreServiceTier(ConversationState state, String id) { preferences.restoreServiceTier(state, id); }
 
   JSONObject selectedModel(String selection) {
     String id = selection;
@@ -974,7 +900,7 @@ public final class RemoteApp extends Application {
     return serviceTier.isEmpty() && tier.equals(ServiceTierOptions.STANDARD) ? "" : ServiceTierOptions.label(tier, selected);
   }
 
-  private boolean validateServiceTier() {
+  boolean validateServiceTier() {
     if (serviceTier.isEmpty()) return true;
     if (serviceTier.equals(ServiceTierOptions.STANDARD) && supportsServiceTier()) return true;
     JSONObject selected = selectedModel(model);
@@ -985,13 +911,13 @@ public final class RemoteApp extends Application {
     return true;
   }
 
-  private String requestedServiceTier() {
+  String requestedServiceTier() {
     if (serviceTier.isEmpty()) return defaultServiceTier(selectedModel(model));
     if (serviceTier.equals(ServiceTierOptions.STANDARD)) return serviceTier;
     return ServiceTierOptions.supportedId(selectedModel(model), serviceTier);
   }
 
-  private boolean shouldSendServiceTier() {
+  boolean shouldSendServiceTier() {
     if (!supportsServiceTier()) return false;
     if (!serviceTier.isEmpty() || tierOverrideApplied) return true;
     JSONObject selected = selectedModel(model);
@@ -1038,10 +964,10 @@ public final class RemoteApp extends Application {
     retryAttempts = 0;
     readPolling = false;
     replaying = false;
-    readyMessages.clear();
+    turns.clearReady();
     restoreQueue.clear(); restoringThread=""; pendingNavigation=""; loadingThread=""; replayThread="";
     loadingStage="";preparedThread=null;
-    conversations.clear();
+    conversationStore.clear();
     remoteRunning = false;
     reconnectThread = "";
     resumeDraftThread = "";
@@ -1090,12 +1016,12 @@ public final class RemoteApp extends Application {
     return ConnectionFailure.reason(e);
   }
 
-  private void request(
+  void request(
       String method, JSONObject params, java.util.function.Consumer<JSONObject> success) {
     request(method,params,success,null);
   }
 
-  private void request(String method,JSONObject params,java.util.function.Consumer<JSONObject> success,java.util.function.Consumer<Throwable> failure) {
+  void request(String method,JSONObject params,java.util.function.Consumer<JSONObject> success,java.util.function.Consumer<Throwable> failure) {
     RpcClient c = rpc;
     if (c == null) {
       if(failure!=null)failure.accept(new java.io.IOException("SSH 未连接"));
@@ -1277,7 +1203,7 @@ public final class RemoteApp extends Application {
   public void resume(String id) {
     if (!canSwitchConversation() || id.isEmpty()) return;
     checkpoint();
-    boolean cached = conversations.containsKey(id) && loadedThreads.contains(id);
+    boolean cached = conversationStore.contains(id) && loadedThreads.contains(id);
     select(id);
     if (cached) { changed(); return; }
     error=""; busy=true; loadingThread=id; loadingStage="正在接续对话…";changed();
@@ -1432,7 +1358,7 @@ public final class RemoteApp extends Application {
       profile.cwd = cwd;
       profile.projects.add(cwd);
     }
-    if (scopeDepth == 0) { profile.lastThread = threadId; save(); }
+    if (!conversationStore.isScoped()) { profile.lastThread = threadId; save(); }
     if (r.optBoolean("remoteReplay")) {
       // Acknowledge only after the baseline has been applied on the UI thread.
       // This prevents a very fast RPC response from racing event delivery.
@@ -1452,416 +1378,41 @@ public final class RemoteApp extends Application {
     changed();
   }
 
-  public void send(String text) {
-    sendPayload(text,new ArrayList<>(draftImages),new ArrayList<>(draftFiles));
-  }
+  SshTransport currentTransport() { return transport; }
+  void executeBackground(Runnable action) { worker.execute(action); }
+  boolean isRestartingRemote() { return restartingRemote; }
+  void rememberLoadedThread() { loadedThreads.add(threadId); }
+  void noteServiceTierProtocol() { serviceTierProtocol = true; }
 
-  private void sendPayload(String text,List<String> attachments,List<FileAttachment> files) {
-    if (restartingRemote || recoveryInProgress() || replaying || !connected || busy || readOnly || attaching || (text.trim().isEmpty() && attachments.isEmpty() && files.isEmpty())) return;
-    if (!validateServiceTier()) return;
-    busy = true;
-    stopping = false;
-    unsentText = text;
-    error = "";
-    state = "正在思考…";
-    changed();
-    if (threadId.isEmpty()) {
-      JSONObject p = permissionMode.startParams();
-      if(modelSettings.cwd.equals(currentProject())) modelSettings.applyQuestionSupport(p);
-      // ThreadStartParams uses kebab-case configuration values; turn overrides use tagged
-      // camel-case objects.
-      try {
-        if (!profile.cwd.isEmpty()) p.put("cwd", profile.cwd);
-        if (!model.isEmpty()) p.put("model", model);
-        if (shouldSendServiceTier()) {
-          if (modelSettings.configKnown && !inheritedTierKnown) {
-            inheritedServiceTier = defaultServiceTier(selectedModel(model)); inheritedTierKnown = true;
-          }
-          p.put("serviceTier", requestedServiceTier());
-        }
-      } catch (JSONException ignored) {
-      }
-      request(
-          "thread/start",
-          p,
-          r -> {
-            threadId = Json.object(r, "thread").optString("id");
-            if (threadId.isEmpty()) {
-              busy = false;
-              error = "远端没有返回会话 ID";
-              changed();
-              return;
-            }
-            threadCwd = Json.object(r, "thread").optString("cwd", r.optString("cwd", profile.cwd));
-            journalPath=Json.object(r,"thread").optString("path");journal=new ConversationJournal();savePermission();
-            PermissionMode remotePermission=PermissionMode.fromRemote(r.opt("approvalPolicy"),r.optJSONObject("sandbox"));
-            if(remotePermission!=null)effectivePermissionMode=remotePermission;
-            effectiveModel = r.optString("model", model);
-            if (r.has("serviceTier")) {
-              serviceTierProtocol = true;
-              effectiveServiceTier = r.isNull("serviceTier") ? ServiceTierOptions.STANDARD : r.optString("serviceTier");
-              if (!inheritedTierKnown && serviceTier.isEmpty()) { inheritedServiceTier = effectiveServiceTier; inheritedTierKnown = true; }
-            }
-            if (p.has("serviceTier")) tierOverrideApplied = !serviceTier.isEmpty();
-            saveServiceTier();
-            profile.lastThread = threadId;
-            loadedThreads.add(threadId);
-            threadTitle = text;
-            save();
-            startTurn(FileAttachment.message(text,files), attachments,()->draftFiles.removeAll(files),null);
-          });
-    } else startTurn(FileAttachment.message(text,files), attachments,()->draftFiles.removeAll(files),null);
-  }
+  public void send(String text) { turns.send(text); }
+  public String queuedMessage() { return turns.queuedMessage(); }
+  public boolean queueMessage(String text) { return turns.queueMessage(text, false); }
+  public boolean queueMessage(String text, boolean includeAttachments) { return turns.queueMessage(text, includeAttachments); }
+  public void cancelQueuedMessage() { turns.cancelQueuedMessage(); }
+  public void sendQueuedMessage() { turns.sendQueuedMessage(); }
+  int remainingImages() { return turns.remainingImages(); }
+  int remainingFiles() { return turns.remainingFiles(); }
+  public boolean canSteer() { return turns.canSteer(); }
+  public boolean steer(String text) { return turns.steer(text); }
+  void drainQueuedMessage() { turns.drain(); }
 
-  private static final class PendingMessage {
-    final String text;
-    final List<String> images;
-    final List<FileAttachment> files;
-    final Map<String,android.graphics.Bitmap> previews;
-    PendingMessage(String text,List<String> images,List<FileAttachment> files,Map<String,android.graphics.Bitmap> previews) {
-      this.text=text;this.images=images;this.files=files;this.previews=previews;
-    }
-    String preview(){return text.isEmpty()?"附件 · "+images.size()+" 张图片、"+files.size()+" 个文件":text;}
-  }
-  private final Map<String, PendingMessage> pendingMessages = new HashMap<>();
-  private final Set<String> readyMessages = new HashSet<>();
-
-  private String queueKey() { return (profile == null ? "" : profile.id) + ":" + threadId; }
-  public String queuedMessage() {
-    PendingMessage message=pendingMessages.get(queueKey());return message==null?"":message.preview();
-  }
-  public boolean queueMessage(String text) {return queueMessage(text,false);}
-  public boolean queueMessage(String text,boolean includeAttachments) {
-    List<String> images=includeAttachments?new ArrayList<>(draftImages):new ArrayList<>();
-    List<FileAttachment> files=includeAttachments?new ArrayList<>(draftFiles):new ArrayList<>();
-    if (!canSteer() || (text.trim().isEmpty() && images.isEmpty() && files.isEmpty()) || !queuedMessage().isEmpty()) return false;
-    Map<String,android.graphics.Bitmap> previews=new HashMap<>();
-    for(String path:images)if(draftImagePreviews.containsKey(path))previews.put(path,draftImagePreviews.get(path));
-    pendingMessages.put(queueKey(),new PendingMessage(text,images,files,previews));
-    draftImages.removeAll(images);draftFiles.removeAll(files);for(String path:images)draftImagePreviews.remove(path);
-    readyMessages.remove(queueKey());
-    changed();return true;
-  }
-  private void restoreQueuedAttachments(PendingMessage message) {
-    if(message==null)return;
-    for(String path:message.images)if(!draftImages.contains(path))draftImages.add(path);
-    for(FileAttachment file:message.files)if(!draftFiles.contains(file))draftFiles.add(file);
-    draftImagePreviews.putAll(message.previews);
-  }
-  public void cancelQueuedMessage() {
-    restoreQueuedAttachments(pendingMessages.remove(queueKey()));readyMessages.remove(queueKey());changed();
-  }
-  public void sendQueuedMessage() {
-    if (!connected || busy || readOnly || attaching || steering || restartingRemote || recoveryInProgress() || threadId.isEmpty() || !validateServiceTier()) return;
-    PendingMessage message=pendingMessages.remove(queueKey());readyMessages.remove(queueKey());
-    if(message!=null) {
-      restoreQueuedAttachments(message);
-      sendPayload(message.text,message.images,message.files);
-    }
-  }
-  int remainingImages() {
-    PendingMessage message=pendingMessages.get(queueKey());
-    return Math.max(0,MediaFiles.MAX_ATTACHMENTS-draftImages.size()-(message==null?0:message.images.size()));
-  }
-  int remainingFiles() {
-    PendingMessage message=pendingMessages.get(queueKey());
-    return Math.max(0,FileAttachment.MAX_FILES-draftFiles.size()-(message==null?0:message.files.size()));
-  }
-  private void drainQueuedMessage() {
-    if (readyMessages.contains(queueKey())) sendQueuedMessage();
-  }
-
-  public boolean canSteer() {
-    return !replaying && !recoveryInProgress() && !attaching && connected && busy && !readOnly && !steering && !stopping && !turnId.isEmpty();
-  }
-
-  public boolean steer(String text) {
-    if (!canSteer() || (text.trim().isEmpty() && draftImages.isEmpty() && draftFiles.isEmpty())) return false;
-    List<String> attachments=new ArrayList<>(draftImages);
-    List<FileAttachment> files=new ArrayList<>(draftFiles);
-    String body=FileAttachment.message(text,files);
-    JSONArray content=new JSONArray();
-    if(!body.isEmpty())content.put(Json.obj("type","text","text",body));
-    for(String path:attachments)content.put(Json.obj("type","localImage","path",path));
-    steering = true;
-    unsentText = text;
-    final String target = threadId;
-    Set<String> previous = new HashSet<>();
-    for (ChatItem item : items) previous.add(item.id);
-    request("turn/steer", Json.obj("threadId", target, "expectedTurnId", turnId,
-        "input", content), r -> {
-      steering = false;
-      if (threadId.equals(target)) {
-        boolean echoed = false;
-        for (ChatItem item : items) if (!previous.contains(item.id) && item.user() && item.text.equals(body) && item.images.equals(attachments)) echoed = true;
-        if (!echoed) {
-          ChatItem item=new ChatItem("local-"+UUID.randomUUID(),"userMessage",body);item.images.addAll(attachments);items.add(item);
-        }
-        draftImages.removeAll(attachments);for(String path:attachments)draftImagePreviews.remove(path);draftFiles.removeAll(files);
-        if (unsentText.equals(text)) unsentText = "";
-      }
-      changed();
-      drainQueuedMessage();
-    });
-    changed();
-    return true;
-  }
-
-  private void startTurn(String text, List<String> attachments) {
-    startTurn(text,attachments,null,null);
-  }
-
-  private void startTurn(String text,List<String> attachments,Runnable accepted,java.util.function.Consumer<Throwable> failure) {
-    ChatItem optimistic = new ChatItem("local-" + UUID.randomUUID(), "userMessage", text);
-    optimistic.images.addAll(attachments);
-    items.add(optimistic);
-    changed();
-    JSONArray content = new JSONArray();
-    if (!text.isEmpty()) content.put(Json.obj("type", "text", "text", text));
-    for (String path : attachments) content.put(Json.obj("type", "localImage", "path", path));
-    JSONObject params =
-        Json.obj(
-            "threadId",
-            threadId,
-            "input",
-            content);
-    try {
-      if (!model.isEmpty()) params.put("model", model);
-      if (!reasoningEffort.isEmpty()) params.put("effort", reasoningEffort);
-      if (shouldSendServiceTier()) params.put("serviceTier", requestedServiceTier());
-      params.put("summary", "auto");
-      permissionMode.applyTurn(params);
-    } catch (JSONException ignored) {
-    }
-    final String sentDefaultTier = inheritedTierKnown ? (inheritedServiceTier.isEmpty() ? ServiceTierOptions.STANDARD : inheritedServiceTier)
-        : defaultServiceTier(selectedModel(model));
-    request(
-        "turn/start",
-        params,
-        r -> {
-          if (params.has("serviceTier")) {
-            effectiveServiceTier = params.optString("serviceTier");
-            // A selection changed while the request was pending belongs to the next turn.
-            tierOverrideApplied = !ServiceTierOptions.same(params.optString("serviceTier"), sentDefaultTier);
-          }
-          if (params.has("model")) effectiveModel = params.optString("model");
-          if(permissionMode!=PermissionMode.INHERIT)effectivePermissionMode=permissionMode;
-          saveServiceTier();
-          unsentText = "";
-          draftImages.removeAll(attachments);
-          for (String path : attachments) draftImagePreviews.remove(path);
-          JSONObject turn = Json.object(r, "turn");
-          if (busy) {
-            turnId = turn.optString("id");
-            if (stopping) interrupt();
-          }
-          if(accepted!=null)accepted.run();
-          changed();
-        },failure);
-  }
-
-  public void attachImage(android.net.Uri uri) {
-    attachImages(Collections.singletonList(uri));
-  }
-
-  public void attachImages(List<android.net.Uri> selected) {
-    List<android.net.Uri> uris = new ArrayList<>(new LinkedHashSet<>(selected));
-    uris.removeAll(Collections.singleton(null));
-    if (uris.isEmpty()) return;
-    if (!canAttach()) {
-      error = attachmentUnavailable(); changed(); return;
-    }
-    int remaining = remainingImages();
-    if (uris.size() > remaining) {
-      error = "每条消息最多 " + MediaFiles.MAX_ATTACHMENTS + " 张图片，目前还能添加 " + Math.max(0, remaining) + " 张，请重新选择";
-      changed(); return;
-    }
-    if (transport == null) { error = "请先连接 SSH 主机"; changed(); return; }
-    attaching = true; attachingFiles=false;
-    pendingImagePreview = null;
-    imageUploadIndex = 1; imageUploadCount = uris.size();
-    final int token = generation;
-    final SshTransport current = transport;
-    changed();
-    worker.execute(() -> {
-      List<String> failures = new ArrayList<>();
-      for (int i = 0; i < uris.size(); i++) {
-        final int index = i + 1;
-        // Synchronize cancellation through the main looper before each file.
-        CompletableFuture<Boolean> active = new CompletableFuture<>();
-        main.post(() -> active.complete(token == generation && connected && attaching && transport == current));
-        try { if (!active.get()) break; }
-        catch (Exception canceled) { break; }
-        java.io.File file = null;
-        try {
-          main.post(() -> { if (token == generation) { imageUploadIndex = index; pendingImagePreview = null; changed(); } });
-          java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
-          try (java.io.InputStream in = getContentResolver().openInputStream(uris.get(i))) {
-            if (in == null) throw new java.io.IOException("无法读取图片");
-            MediaFiles.copy(in, bytes, MediaFiles.IMAGE_LIMIT);
-          }
-          MediaFiles.Image image = MediaFiles.prepareImage(bytes.toByteArray());
-          main.post(() -> { if (token == generation) { pendingImagePreview = image.preview; changed(); } });
-          file = java.io.File.createTempFile("attachment-", image.extension, getCacheDir());
-          try (java.io.OutputStream out = new java.io.FileOutputStream(file)) { out.write(image.bytes); }
-          String path = current.uploadImage(file);
-          main.post(() -> {
-            if (token == generation) {
-              draftImages.add(path); draftImagePreviews.put(path, image.preview);
-              pendingImagePreview = null; changed();
-            }
-          });
-        } catch (Exception e) {
-          failures.add("第 " + index + " 张：" + ConnectionFailure.reason(e));
-        } finally { if (file != null) file.delete(); }
-      }
-      main.post(() -> {
-        if (token != generation) return;
-        pendingImagePreview = null; attaching = false; imageUploadIndex = imageUploadCount = 0;
-        if (!failures.isEmpty()) error = (failures.size() == uris.size() ? "图片上传失败" : "部分图片上传失败，成功的图片已保留")
-            + "\n" + android.text.TextUtils.join("\n", failures);
-        changed();drainQueuedMessage();
-      });
-    });
-  }
-
-  boolean canAttach() {
-    return connected && !attaching && !steering && !stopping && !restartingRemote
-        && !recoveryInProgress() && (!busy || !turnId.isEmpty());
-  }
-  String attachmentUnavailable() {
-    if(!connected)return "请先连接服务器";
-    if(attaching)return "附件正在上传，请稍候";
-    return "正在接续或提交消息，请稍候再添加附件";
-  }
-  public void attachFiles(List<android.net.Uri> selected) {
-    List<android.net.Uri> uris=new ArrayList<>(new LinkedHashSet<>(selected));uris.removeAll(Collections.singleton(null));
-    if(uris.isEmpty())return;
-    if(!canAttach()){error=attachmentUnavailable();changed();return;}
-    if(uris.size()>remainingFiles()) {
-      error="每条消息最多 "+FileAttachment.MAX_FILES+" 个文件，目前还能添加 "+remainingFiles()+" 个，请重新选择";
-      changed();return;
-    }
-    if(transport==null){error="请先连接 SSH 主机";changed();return;}
-    attaching=true;attachingFiles=true;pendingImagePreview=null;imageUploadIndex=1;imageUploadCount=uris.size();
-    final int token=generation;final SshTransport current=transport;changed();
-    worker.execute(()->{
-      List<String> failures=new ArrayList<>();
-      for(int i=0;i<uris.size();i++) {
-        final int index=i+1;
-        CompletableFuture<Boolean> active=new CompletableFuture<>();
-        main.post(()->active.complete(token==generation && connected && attaching && transport==current));
-        try {if(!active.get())break;}catch(Exception canceled){break;}
-        java.io.File file=null;
-        try {
-          main.post(()->{if(token==generation){imageUploadIndex=index;changed();}});
-          String name=FileAttachment.displayName(getContentResolver(),uris.get(i));
-          file=java.io.File.createTempFile("file-attachment-",".tmp",getCacheDir());
-          // Stream directly to disk; documents are never decoded as images or buffered entirely in memory.
-          try(java.io.InputStream in=getContentResolver().openInputStream(uris.get(i));
-              java.io.OutputStream out=new java.io.FileOutputStream(file)) {
-            if(in==null)throw new java.io.IOException("无法读取文件");
-            MediaFiles.copy(in,out,FileAttachment.LIMIT,()->token==generation && transport==current);
-          }
-          long size=file.length();String path=current.uploadFile(file,name);
-          FileAttachment attachment=new FileAttachment(name,path,size);
-          main.post(()->{if(token==generation){draftFiles.add(attachment);changed();}});
-        }catch(Exception failure){failures.add("第 "+index+" 个文件："+ConnectionFailure.reason(failure));}
-        finally{if(file!=null)file.delete();}
-      }
-      main.post(()->{
-        if(token!=generation)return;
-        attaching=false;attachingFiles=false;imageUploadIndex=imageUploadCount=0;
-        if(!failures.isEmpty())error=(failures.size()==uris.size()?"文件上传失败":"部分文件上传失败，成功的文件已保留")
-            +"\n"+android.text.TextUtils.join("\n",failures);
-        changed();drainQueuedMessage();
-      });
-    });
-  }
-
+  public void attachImage(android.net.Uri uri) { attachments.attachImage(uri); }
+  public void attachImages(List<android.net.Uri> selected) { attachments.attachImages(selected); }
+  public void attachFiles(List<android.net.Uri> selected) { attachments.attachFiles(selected); }
+  boolean canAttach() { return attachments.canAttach(); }
+  String attachmentUnavailable() { return attachments.attachmentUnavailable(); }
   public void readMedia(String source, java.io.OutputStream out, long limit) throws Exception {
-    readMedia(source,out,limit,()->true);
+    attachments.readMedia(source, out, limit);
   }
-
   public void readMedia(String source, java.io.OutputStream out, long limit, java.util.function.BooleanSupplier active) throws Exception {
-    MediaFiles.check(active);
-    SshTransport current = transport;
-    String cwd = profile == null ? "" : profile.cwd;
-    if (source.startsWith("data:image/")) {
-      int comma = source.indexOf(',');
-      if (comma < 0 || !source.substring(0, comma).endsWith(";base64") || source.length() > limit * 2) throw new java.io.IOException("无效或过大的图片");
-      byte[] bytes = android.util.Base64.decode(source.substring(comma + 1), android.util.Base64.DEFAULT);
-      if (bytes.length > limit) throw new java.io.IOException("图片过大");
-      MediaFiles.check(active);
-      out.write(bytes);
-    } else if (source.startsWith("https://")) {
-      java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(source).openConnection();
-      c.setConnectTimeout(15000); c.setReadTimeout(20000); c.setInstanceFollowRedirects(false);
-      try {
-        if (c.getResponseCode() != 200) throw new java.io.IOException("图片服务器返回 HTTP " + c.getResponseCode());
-        try (java.io.InputStream in = c.getInputStream()) { MediaFiles.copy(in, out, limit,active); }
-      } finally { c.disconnect(); }
-    } else {
-      if (!connected || current == null) throw new java.io.IOException("请先连接图片所在 SSH 主机");
-      current.download(MediaFiles.remotePath(source, cwd), out, limit,active);
-    }
+    attachments.readMedia(source, out, limit, active);
   }
 
-  public void browseDirectory(
-      String path,
-      java.util.function.Consumer<RemoteDirectory> success,
-      java.util.function.Consumer<String> failure) {
-    SshTransport current = transport;
-    directoryOperation("sftp/list", path, () -> current.listDirectories(path), success, failure);
-  }
+  public void browseDirectory(String path, java.util.function.Consumer<RemoteDirectory> success,
+      java.util.function.Consumer<String> failure) { directories.browseDirectory(path, success, failure); }
 
-  public void createProject(
-      String parent,
-      String name,
-      java.util.function.Consumer<RemoteDirectory> success,
-      java.util.function.Consumer<String> failure) {
-    SshTransport current = transport;
-    directoryOperation(
-        "sftp/mkdir", parent, () -> current.createDirectory(parent, name), success, failure);
-  }
-
-  private void directoryOperation(
-      String method,
-      String path,
-      Callable<RemoteDirectory> task,
-      java.util.function.Consumer<RemoteDirectory> success,
-      java.util.function.Consumer<String> failure) {
-    if (!connected || transport == null) {
-      failure.accept("请先连接 SSH 主机");
-      return;
-    }
-    int g = generation;
-    worker.execute(
-        () -> {
-          try {
-            RemoteDirectory result = task.call();
-            main.post(
-                () -> {
-                  if (g != generation) {
-                    failure.accept("SSH 连接已改变，请重新打开目录");
-                    return;
-                  }
-                  success.accept(result);
-                });
-          } catch (Exception e) {
-            main.post(
-                () -> {
-                  if (g != generation) {
-                    failure.accept("SSH 连接已改变，请重新打开目录");
-                    return;
-                  }
-                  reportFailure(method, Json.obj("path", path), e);
-                  failure.accept(
-                      ConnectionFailure.operationError(method, Json.obj("path", path), e));
-                });
-          }
-        });
-  }
+  public void createProject(String parent, String name, java.util.function.Consumer<RemoteDirectory> success,
+      java.util.function.Consumer<String> failure) { directories.createProject(parent, name, success, failure); }
 
   public boolean useProject(String path) {
     if (profile == null || !canSwitchConversation()) {
@@ -1957,7 +1508,7 @@ public final class RemoteApp extends Application {
       }else {
         if(!validateServiceTier()){answering.remove(req);return;}
         busy=true;stopping=false;state="正在提交回答…";unsentText=text.toString();
-        startTurn(text.toString(),Collections.emptyList(),accepted,failure);
+        turns.startTurn(text.toString(),Collections.emptyList(),accepted,failure);
       }
     };
     if(readOnly)request("thread/resume",Json.obj("threadId",threadId),r->{applyThread(r,threadId,false);send.run();},failure);
@@ -2006,7 +1557,7 @@ public final class RemoteApp extends Application {
       }
     }
     if (!id.isEmpty() && !id.equals(threadId)) {
-      if (conversations.containsKey(id) || e.has("id") || e.optString("method").equals("thread/status/changed")) inConversation(id, () -> applyEvent(e));
+      if (conversationStore.contains(id) || e.has("id") || e.optString("method").equals("thread/status/changed")) inConversation(id, () -> applyEvent(e));
       return;
     }
     applyEvent(e);
@@ -2134,9 +1685,9 @@ public final class RemoteApp extends Application {
         liveStatus.complete(threadId);
       if (!historical) refreshThreads(false);
       if (!historical && turn.optString("status").equals("completed") && !readOnly && !queuedMessage().isEmpty()) {
-        readyMessages.add(queueKey());
+        turns.markReady();
         main.post(() -> inConversation(eventThread, this::drainQueuedMessage));
-      } else readyMessages.remove(queueKey());
+      } else turns.clearCurrentReady();
       String completedThread = threadId;
       if (!historical) main.post(() -> {
         if (!completedThread.equals(threadId))
