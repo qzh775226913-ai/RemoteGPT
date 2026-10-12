@@ -2,9 +2,9 @@
 
 原生 Android SSH 客户端，通过远端 `codex app-server` 管理项目、对话、审批和附件。手机没有内置模型服务，也没有调用 ChatGPT 私有接口。
 
-当前安装版本为 **1.0.49 / versionCode 50**，包名 `app.remotessh`。本版将问答历史固定在原始提问位置，避免回答及同轮次后续输出将旧卡片移到最下面；保留 1.0.48 的问答副本合并、重连图片恢复和有界重试。保留原签名和存储格式，可覆盖安装。最低 Android 8（API 26），compileSdk 36，targetSdk 35。
+当前交付版本为 **1.0.50 / versionCode 51**，包名 `app.remotessh`。本版增加首次连接环境诊断及经明确确认的会话级强制权限审批；保留此前的问答历史定位、图片重连恢复和有界重试。保留原签名和存储格式，可覆盖安装。最低 Android 8（API 26），compileSdk 36，targetSdk 35。
 
-[局域网下载安装包](http://192.168.1.74:8000/RemoteGPT-1.0.49-Android-universal-debug.apk)，或手机启用同一网络的 Tailscale 后使用 [Tailscale 下载](http://100.109.221.115:8000/RemoteGPT-1.0.49-Android-universal-debug.apk)。校验和及验收边界见 [1.0.49 交付记录](docs/verification/2026-10-12-1.0.49.md)。
+[局域网下载安装包](http://192.168.1.74:8000/RemoteGPT-1.0.50-Android-universal-debug.apk)，或手机启用同一网络的 Tailscale 后使用 [Tailscale 下载](http://100.109.221.115:8000/RemoteGPT-1.0.50-Android-universal-debug.apk)。校验和及验收边界见 [1.0.50 交付记录](docs/verification/2026-10-12-1.0.50.md)。
 
 ## 使用
 
@@ -16,7 +16,7 @@
 
 Tailscale 需先在手机连接同一网络。普通 SSH 仍需要密码或私钥；Tailscale SSH 免密码登录取决于 tailnet 的 SSH 策略。系统气泡、流体云和后台保活还取决于 Android 与厂商设置。
 
-当前源码新增连接环境诊断和临时强制审批，尚未单独发布新版 APK。持久模式检查 Python 3.8 以上及托管标准库；缺少 Python 时可在错误详情中明确选择关闭持久模式重连。环境检查不调用模型，不能代替模型服务网络验收。
+本版包含连接环境诊断和临时强制审批。持久模式检查 Python 3.8 以上及托管标准库；缺少 Python 时可在错误详情中明确选择关闭持久模式重连。环境检查不调用模型，不能代替模型服务网络验收。
 
 权限审批窗口的红字“全部允许(强制)”经警告确认后，仅自动允许本对话的命令／文件权限请求，方案选择和补充信息仍正常弹出。底部和权限菜单显示红色闪电“强制允许”；启用后下一轮选择完全访问，用户仍可改选权限，下一轮成功应用后结束临时授权。再次点击菜单中的强制允许可关闭，断开连接也会清除临时授权。
 
@@ -56,7 +56,8 @@ export ANDROID_HOME="/path/to/android-sdk"
 | [验收边界](docs/ACCEPTANCE.md) | 自动化能证明什么、哪些仍需真机或真实服务 |
 | [维护规则与技术债](docs/MAINTENANCE.md) | 变更流程、风险、后续整理顺序 |
 | [回退说明](docs/ROLLBACK.md) | 原始提交、备份、分阶段撤回、手机安装限制 |
-| [1.0.49 验证与下载](docs/verification/2026-10-12-1.0.49.md) | 问答历史排序修复、安装包与下载地址 |
+| [1.0.50 验证与下载](docs/verification/2026-10-12-1.0.50.md) | 连接诊断、强制权限审批、安装包与下载地址 |
+| [1.0.49 验证](docs/verification/2026-10-12-1.0.49.md) | 前一版问答历史排序修复 |
 | [1.0.48 验证](docs/verification/2026-10-11-1.0.48.md) | 前一版问答副本／图片修复的实际证据 |
 | [项目整理验证](docs/verification/2026-10-11.md) | 整理基线、模块拆分与恢复证据 |
 | [图标系统](docs/icon-system.md) | 图标来源和生成方式 |
