@@ -17,7 +17,8 @@
       "ConversationPreferences",
       "TurnController",
       "AttachmentController",
-      "DirectoryController"
+      "DirectoryController",
+      "ForcedApprovalController"
     ],
     "protocol_transport": [
       "SshTransport",
@@ -64,7 +65,8 @@
       "FilePicker",
       "ImagePicker",
       "Markdown",
-      "ConnectionSetupUi"
+      "ConnectionSetupUi",
+      "PermissionPicker"
     ],
     "media": [
       "FileAttachment",

@@ -168,6 +168,9 @@ final class TurnController {
   }
 
   void startTurn(String text,List<String> attachments,Runnable accepted,java.util.function.Consumer<Throwable> failure) {
+    final PermissionMode sentPermission = app.permissionMode;
+    final ForcedApprovalController.State forceGrant = app.forcedApprovalState;
+    final long forceRevision = forceGrant.revision;
     ChatItem optimistic = new ChatItem("local-" + UUID.randomUUID(), "userMessage", text);
     optimistic.images.addAll(attachments);
     app.items.add(optimistic);
@@ -186,7 +189,7 @@ final class TurnController {
       if (!app.reasoningEffort.isEmpty()) params.put("effort", app.reasoningEffort);
       if (app.shouldSendServiceTier()) params.put("serviceTier", app.requestedServiceTier());
       params.put("summary", "auto");
-      app.permissionMode.applyTurn(params);
+      sentPermission.applyTurn(params);
     } catch (JSONException ignored) {
     }
     final String sentDefaultTier = app.inheritedTierKnown ? (app.inheritedServiceTier.isEmpty() ? ServiceTierOptions.STANDARD : app.inheritedServiceTier)
@@ -201,7 +204,8 @@ final class TurnController {
             app.tierOverrideApplied = !ServiceTierOptions.same(params.optString("serviceTier"), sentDefaultTier);
           }
           if (params.has("model")) app.effectiveModel = params.optString("model");
-          if(app.permissionMode!=PermissionMode.INHERIT)app.effectivePermissionMode=app.permissionMode;
+          if(sentPermission!=PermissionMode.INHERIT)app.effectivePermissionMode=sentPermission;
+          app.forcedApprovals.permissionApplied(sentPermission, forceGrant, forceRevision);
           app.saveServiceTier();
           app.unsentText = "";
           app.draftImages.removeAll(attachments);

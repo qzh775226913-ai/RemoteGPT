@@ -25,6 +25,8 @@ public final class RemoteApp extends Application {
   private boolean serviceTierProtocol;
   public PermissionMode permissionMode = PermissionMode.INHERIT;
   PermissionMode effectivePermissionMode = PermissionMode.INHERIT;
+  ForcedApprovalController.State forcedApprovalState = new ForcedApprovalController.State();
+  final ForcedApprovalController forcedApprovals = new ForcedApprovalController(this);
   String journalPath = "";
   ConversationJournal journal = new ConversationJournal();
   private String journalScript;
@@ -242,10 +244,11 @@ public final class RemoteApp extends Application {
 
   JSONObject visibleApproval() {
     if (!replayThread.isEmpty()) return null;
-    if (!replaying && !approvals.isEmpty()) return approvals.get(0);
+    JSONObject selected = replaying ? null : forcedApprovals.visible(approvals, forcedApprovalState, !readOnly);
+    if (selected != null) return selected;
     checkpoint();
     for (ConversationState c : conversationStore.values())
-      if (!c.replaying && !c.approvals.isEmpty()) return c.approvals.get(0);
+      if (!c.replaying) { JSONObject request = forcedApprovals.visible(c.approvals, c.forcedApproval, !c.readOnly); if (request != null) return request; }
     return null;
   }
 
@@ -380,7 +383,7 @@ public final class RemoteApp extends Application {
   }
 
   void restorePermission(ConversationState state, String id) { preferences.restorePermission(state, id); }
-  void choosePermission(PermissionMode mode) { permissionMode = mode; savePermission(); changed(); }
+  void choosePermission(PermissionMode mode) { permissionMode = mode; forcedApprovals.selectionChanged(); savePermission(); changed(); }
   void savePermission() { preferences.savePermission(); }
   PermissionMode displayedPermission() {return permissionMode==PermissionMode.INHERIT ? effectivePermissionMode:permissionMode;}
 
@@ -412,6 +415,7 @@ public final class RemoteApp extends Application {
   public void changed() {
     if (conversationStore.deferChanges()) return;
     checkpoint();
+    forcedApprovals.schedule();
     if (profile != null && connected) {
       Set<String> remembered = new HashSet<>(recoveringThreads);
       remembered.addAll(loadedThreads);
@@ -951,6 +955,7 @@ public final class RemoteApp extends Application {
   }
 
   public void disconnect() {
+    forcedApprovalState = new ForcedApprovalController.State();
     journalPolling.clear();
     recoveringThreads.clear();
     statusPolling.clear();
@@ -1471,7 +1476,7 @@ public final class RemoteApp extends Application {
                 () -> {
                   if (g == generation) {
                     answering.remove(req);
-                    inConversation(target, () -> { interactions.answered(req,result);saveInteractions();approvals.remove(req); changed(); });
+                    inConversation(target, () -> { interactions.answered(req,result);saveInteractions();approvals.remove(req);forcedApprovals.settled(req); changed(); });
                   }
                 });
           } catch (Exception e) {
@@ -1479,7 +1484,7 @@ public final class RemoteApp extends Application {
                 () -> {
                   if (g == generation) {
                     answering.remove(req);
-                    inConversation(target, () -> { error = message(e); changed(); });
+                    inConversation(target, () -> { forcedApprovals.failed(req); error = message(e); changed(); });
                   }
                 });
           }

@@ -17,6 +17,7 @@
 | 目录／会话偏好 | `DirectoryController` 管理目录操作的 worker 和迟到结果；`ConversationPreferences` 管理稳定存储键及权限／速度／问答历史快照 |
 | 传输／协议 | `SshTransport` 管理 SSH、SFTP 和辅助通道；`RpcClient` 管理 JSON-RPC framing、请求匹配和事件分发，不操作 Android View |
 | 连接诊断 | `ConnectionPreflight` 生成无凭据输出的环境探测并解析分类失败、检查公开账户状态；`ConnectionSetupUi` 拥有用户显式关闭持久模式的确认窗口。探测有超时／输出上限，关闭或连接 generation 变化使后续初始化无效 |
+| 强制权限审批 | `ForcedApprovalController` 调度已显式授权的命令／文件审批，按会话和连接 generation 隔离、去重和失败恢复；临时 State 在 `ConversationState.capture/apply` 中归属该会话，不保存到偏好。`PermissionPicker` 拥有权限列表／警告窗口并释放监听器；下一轮请求捕获权限选择与授权 revision，成功响应只能结束它实际应用的授权 |
 | 配置／数据 | `Vault`／`Profile` 保存连接；模型、额度、权限、版本、线程快照与问答日志由对应类解析 |
 | 后台／通知 | `ConnectionService` 维持前台服务与唤醒锁；`LiveStatusNotifications` 及 `LiveActionReceiver` 处理会话通知、请求身份和点击路由 |
 | 远端资产 | `remote_session.py` 托管 Codex 进程、SQLite 事件及重放；`conversation_state.py` 有界读取问答日志；`remote_maintenance.py` 检查／更新／明确重启 |

@@ -28,6 +28,7 @@ public final class MainActivity extends Activity {
   private DialogUi ui;
   private ProfileEditor profileEditor;
   private ModelPicker modelPicker;
+  private PermissionPicker permissionPicker;
   private IconView send, permissionButton;
   private ProgressBar runningIndicator;
   private LinearLayout attachmentStrip, queuedBar;
@@ -218,6 +219,7 @@ public final class MainActivity extends Activity {
     if (drawer != null) drawer.dismiss();
     if (profileEditor != null) profileEditor.dismiss();
     if (modelPicker != null) modelPicker.dismiss();
+    if (permissionPicker != null) permissionPicker.dismiss();
     if (browser != null) browser.dismiss();
     if (versionDialog != null) versionDialog.dismiss();
     if (directoryPicker != null) directoryPicker.dismiss();
@@ -253,6 +255,7 @@ public final class MainActivity extends Activity {
     body.setGravity(Gravity.TOP);
     root.addView(body, new LinearLayout.LayoutParams(-1, -1));
     wide = getResources().getConfiguration().screenWidthDp >= 840;
+    permissionPicker = new PermissionPicker(this, app, ui, wide);
     int available = getResources().getConfiguration().screenWidthDp - (wide ? 260 : 0);
     if (wide) {
       sidebar = column();
@@ -522,10 +525,11 @@ public final class MainActivity extends Activity {
     renderQueuedMessage();
     updateSend();
     PermissionMode displayedPermission=app.displayedPermission();
-    permissionButton.icon = permissionIcon(displayedPermission);
-    permissionButton.color = permissionColor(displayedPermission);
-    permissionButton.setContentDescription("权限：" + displayedPermission.label);
-    permissionButton.setTooltipText(displayedPermission.label + (app.permissionMode==PermissionMode.INHERIT && displayedPermission!=PermissionMode.INHERIT ? " · 当前远端状态" : ""));
+    boolean forced = app.forcedApprovals.active();
+    permissionButton.icon = forced ? "bolt" : PermissionPicker.icon(displayedPermission);
+    permissionButton.color = forced ? permissionPicker.red() : permissionPicker.color(displayedPermission);
+    permissionButton.setContentDescription("权限：" + (forced ? "强制允许" : displayedPermission.label));
+    permissionButton.setTooltipText(forced ? "强制允许 · 新权限生效前自动允许审批" : displayedPermission.label + (app.permissionMode==PermissionMode.INHERIT && displayedPermission!=PermissionMode.INHERIT ? " · 当前远端状态" : ""));
     permissionButton.invalidate();
     modelButton.setText(ModelOptions.displayName(app.models, app.model)
         + (app.reasoningEffort.isEmpty() ? "" : " · " + ModelOptions.label(app.reasoningEffort))
@@ -1059,46 +1063,8 @@ public final class MainActivity extends Activity {
         .show();
   }
 
-  private int permissionColor(PermissionMode mode) {
-    switch (mode) {
-      case DEFAULT: return Color.rgb(40, 151, 110);
-      case READ_ONLY: return Color.rgb(62, 133, 225);
-      case FULL: return Color.rgb(221, 133, 37);
-      default: return muted;
-    }
-  }
-
-  private String permissionIcon(PermissionMode mode) {
-    switch (mode) {
-      case DEFAULT: return "shieldCheck";
-      case READ_ONLY: return "lock";
-      case FULL: return "bolt";
-      default: return "shield";
-    }
-  }
-
   private void choosePermission() {
-    LinearLayout choices = column();
-    choices.setPadding(dp(12), 0, dp(12), dp(4));
-    Dialog[] holder = new Dialog[1];
-    for (PermissionMode mode : PermissionMode.values()) {
-      LinearLayout option = row();
-      option.setPadding(dp(8), 0, dp(12), 0);
-      option.setBackground(rounded(mode == app.permissionMode ? panel : bg, 16));
-      IconView glyph = new IconView(this, permissionIcon(mode), permissionColor(mode));
-      option.addView(glyph, new LinearLayout.LayoutParams(dp(44), dp(52)));
-      TextView label = text(mode == PermissionMode.INHERIT ? "沿用当前对话" : mode.label, 15, fg);
-      option.addView(label, new LinearLayout.LayoutParams(0, dp(52), 1));
-      label.setGravity(Gravity.CENTER_VERTICAL);
-      if (mode == app.permissionMode) option.addView(new IconView(this, "check", fg), new LinearLayout.LayoutParams(dp(28), dp(28)));
-      option.setContentDescription("权限选项：" + mode.label);
-      clickable(option, () -> { app.choosePermission(mode); holder[0].dismiss(); });
-      choices.addView(option);
-    }
-    TextView note = text("下一轮生效" + (app.effectivePermissionMode==PermissionMode.INHERIT ? "" : "\n当前远端："+app.effectivePermissionMode.label), 12, muted);
-    note.setPadding(dp(16), dp(12), 0, 0);
-    choices.addView(note);
-    holder[0] = sheet("权限", choices);
+    permissionPicker.show();
   }
 
   private String detailText(ChatItem item) {
@@ -1623,6 +1589,7 @@ public final class MainActivity extends Activity {
             .setTitle("需要你的确认")
             .setView(sc)
             .setCancelable(false)
+            .setNeutralButton("全部允许(强制)", null)
             .setNegativeButton(
                 "拒绝",
                 (d, w) -> {
@@ -1638,6 +1605,9 @@ public final class MainActivity extends Activity {
                   shownApproval = "";
                 })
             .show();
+    AlertDialog approvals = (AlertDialog) approvalDialog;
+    approvals.getButton(AlertDialog.BUTTON_NEUTRAL).setTextColor(permissionPicker.red());
+    approvals.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> permissionPicker.confirm(req));
   }
 
   private void showQuestions(JSONObject req, JSONObject p) {

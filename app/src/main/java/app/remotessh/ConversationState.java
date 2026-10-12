@@ -8,6 +8,7 @@ final class ConversationState {
   String threadId = "", turnId = "", title = "", cwd = "", state = "已连接", error = "", model = "", effort = "", unsent = "", draft = "";
   PermissionMode permission = PermissionMode.INHERIT;
   PermissionMode effectivePermission = PermissionMode.INHERIT;
+  ForcedApprovalController.State forcedApproval = new ForcedApprovalController.State();
   String journalPath = "";
   ConversationJournal journal = new ConversationJournal();
   InteractionHistory interactions = new InteractionHistory();
@@ -21,6 +22,7 @@ final class ConversationState {
   final List<FileAttachment> files = new ArrayList<>();
   final Map<String, android.graphics.Bitmap> previews = new HashMap<>();
   void capture(RemoteApp a) {
+    forcedApproval = a.forcedApprovalState;
     threadId=a.threadId; turnId=a.turnId; title=a.threadTitle; cwd=a.threadCwd; state=a.state; error=a.error;
     model=a.model; effort=a.reasoningEffort; unsent=a.unsentText; draft=a.draftText;
     serviceTier=a.serviceTier; inheritedServiceTier=a.inheritedServiceTier; effectiveServiceTier=a.effectiveServiceTier;
@@ -33,6 +35,7 @@ final class ConversationState {
     files.clear();files.addAll(a.draftFiles);
   }
   void apply(RemoteApp a) {
+    a.forcedApprovalState = forcedApproval;
     a.threadId=threadId; a.turnId=turnId; a.threadTitle=title; a.threadCwd=cwd; a.state=state; a.error=error;
     a.model=model; a.reasoningEffort=effort; a.unsentText=unsent; a.draftText=draft;
     a.serviceTier=serviceTier; a.inheritedServiceTier=inheritedServiceTier; a.effectiveServiceTier=effectiveServiceTier;
