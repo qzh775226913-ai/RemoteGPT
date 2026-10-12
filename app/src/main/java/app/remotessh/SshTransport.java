@@ -54,6 +54,8 @@ public final class SshTransport implements AutoCloseable {
       for (String id : persistentIdentities) if (id != null && !id.isEmpty()) identities.put(id);
       if (identities.length() == 0) identities.put(p.id);
       return "python3 " + quote(script) + " " + quote(identities.toString()) + " " + quote(p.command);
+    } catch (SftpException e) {
+      throw ConnectionPreflight.failure("HOST_INSTALL_FAILED", "SFTP 已连接，但无法在家目录的 .remote-gpt 中安装托管脚本。请检查目录归属、写入权限、磁盘空间和 SFTP 的 chmod/rename 支持。");
     } finally { files.disconnect(); }
   }
 
@@ -144,6 +146,15 @@ public final class SshTransport implements AutoCloseable {
       s.disconnect();
       throw new IOException("连接已取消");
     }
+    phase("检查远端环境（SSH 已认证）");
+    ConnectionPreflight.check(p, this::checkCommand);
+    phase("检查 SFTP 与家目录");
+    try {
+      ChannelSftp files = sftp();
+      try { files.stat(files.getHome()); } finally { files.disconnect(); }
+    } catch (Exception e) {
+      throw ConnectionPreflight.failure("SFTP_UNAVAILABLE", "SSH 已认证，但 SFTP 或家目录不可访问。请启用服务器的 SFTP 子系统并检查账号目录权限；持久部署、目录浏览和附件都依赖 SFTP。");
+    }
     ChannelExec c = (ChannelExec) s.openChannel("exec");
     phase("启动远端程序");
     channel = c;
@@ -177,6 +188,35 @@ public final class SshTransport implements AutoCloseable {
 
   public String phase() {
     return phase;
+  }
+
+  private String checkCommand(String command) throws Exception {
+    ChannelExec check = (ChannelExec) session.openChannel("exec");
+    try {
+      check.setPty(false);
+      check.setCommand(command);
+      check.setInputStream(null);
+      check.setErrStream(new OutputStream() { public void write(int value) {} });
+      InputStream input = check.getInputStream();
+      check.connect(15000);
+      ByteArrayOutputStream output = new ByteArrayOutputStream();
+      long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(20);
+      byte[] buffer = new byte[1024];
+      while (true) {
+        while (input.available() > 0) {
+          int count = input.read(buffer);
+          if (count < 0) break;
+          if (output.size() + count > 8192) throw ConnectionPreflight.failure("CHECK_OUTPUT", "环境检查输出异常，请检查非交互 shell 是否输出了额外内容。");
+          output.write(buffer, 0, count);
+        }
+        if (closed || !session.isConnected()) throw new IOException("连接已取消");
+        if (check.isClosed() && input.available() == 0) break;
+        if (System.nanoTime() > deadline) throw ConnectionPreflight.failure("CHECK_TIMEOUT", "环境检查超时，请检查远端程序是否卡住或账号是否限制执行命令；尚未启动 Codex。");
+        Thread.sleep(25);
+      }
+      if (check.getExitStatus() != 0) throw ConnectionPreflight.failure("CHECK_UNAVAILABLE", "远端无法执行环境检查，请确认账号允许运行 sh 和非交互命令。");
+      return output.toString(StandardCharsets.UTF_8.name());
+    } finally { check.disconnect(); }
   }
 
   public int exitStatus() {

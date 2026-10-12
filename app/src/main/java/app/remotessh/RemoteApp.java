@@ -642,6 +642,7 @@ public final class RemoteApp extends Application {
         () -> {
           try {
             c.notify("initialized", new JSONObject());
+            if (t != null) ConnectionPreflight.checkAccount(c);
             main.post(
                 () -> {
                   if (g != generation) return;

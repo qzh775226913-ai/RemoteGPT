@@ -1046,8 +1046,11 @@ public final class MainActivity extends Activity {
         .setView(sc)
         .setNegativeButton("复制诊断", (d, w) -> copy(diagnostic))
         .setNeutralButton(
-            app.unsentText.isEmpty() ? null : "恢复消息",
+            ConnectionSetupUi.canContinue(app, diagnostic) ? "关闭持久模式" : app.unsentText.isEmpty() ? null : "恢复消息",
             (d, w) -> {
+              if (ConnectionSetupUi.canContinue(app, diagnostic)) {
+                ConnectionSetupUi.continueWithoutPersistence(this, app); return;
+              }
               input.setText(app.unsentText);
               input.setSelection(input.length());
               app.clearError();

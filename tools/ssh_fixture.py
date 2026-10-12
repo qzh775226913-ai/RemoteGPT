@@ -107,13 +107,32 @@ class Fixture(paramiko.ServerInterface):
         return paramiko.AUTH_SUCCESSFUL if username == "fixture" and key == CLIENT_KEY else paramiko.AUTH_FAILED
 
     def check_auth_password(self, username, password):
-        return paramiko.AUTH_SUCCESSFUL if (username, password) == ("fixture", "test-only") else paramiko.AUTH_FAILED
+        self.username = username
+        return paramiko.AUTH_SUCCESSFUL if username in ('fixture', 'fixture-no-python', 'fixture-no-sftp') and password == 'test-only' else paramiko.AUTH_FAILED
+
+    def check_channel_subsystem_request(self, channel, name):
+        if name == 'sftp' and getattr(self, 'username', '') == 'fixture-no-sftp':
+            return False
+        return super().check_channel_subsystem_request(channel, name)
 
     def check_channel_request(self, kind, chanid):
         return paramiko.OPEN_SUCCEEDED if kind == "session" else paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
     def check_channel_exec_request(self, channel, command):
         args = shlex.split(command.decode())
+        if len(args) == 3 and args[:2] == ['sh', '-c'] and 'REMOTE_GPT_CHECK_V1' in args[2]:
+            def preflight():
+                try:
+                    environment = os.environ.copy()
+                    if getattr(self, 'username', '') == 'fixture-no-python':
+                        environment['PATH'] = '/nonexistent-fixture-only'
+                    result = subprocess.run(['/bin/sh', '-c', args[2]], env=environment, capture_output=True, timeout=25)
+                    channel.sendall(result.stdout)
+                    channel.send_exit_status(result.returncode)
+                finally:
+                    channel.close()
+            threading.Thread(target=preflight, daemon=True).start()
+            return True
         if len(args) == 4 and args[:2] == ['python3', '-c']:
             # An auxiliary JSON channel must leave the main RPC channel alive.
             def auxiliary():

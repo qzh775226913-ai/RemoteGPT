@@ -147,6 +147,33 @@ public class SshIntegrationTest {
     }
   }
 
+  @Test public void missingPythonFailsBeforeHostingAndDoesNotSilentlyDowngrade() throws Exception {
+    profile.user = "fixture-no-python"; profile.persistent = true;
+    try { connect((host, fingerprint) -> true); fail("Missing Python accepted"); }
+    catch (java.io.IOException error) {
+      assertTrue(error.getMessage().contains("PYTHON_MISSING"));
+      assertTrue(profile.persistent);
+    }
+  }
+
+  @Test public void directModeStillConnectsWithoutPython() throws Exception {
+    profile.user = "fixture-no-python";
+    rpc = connect((host, fingerprint) -> true); rpc.start();
+    assertEquals("real-ssh", rpc.request("test", Json.obj()).get(5, TimeUnit.SECONDS).getString("transport"));
+  }
+
+  @Test public void sftpFailureIsDistinguishedFromSshAuthentication() throws Exception {
+    profile.user = "fixture-no-sftp";
+    try { connect((host, fingerprint) -> true); fail("Missing SFTP accepted"); }
+    catch (java.io.IOException error) { assertTrue(error.getMessage().contains("SFTP_UNAVAILABLE")); }
+  }
+
+  @Test public void missingCodexIsDiagnosedOnActualExecChannel() throws Exception {
+    profile.command = "/nonexistent-fixture/codex app-server";
+    try { connect((host, fingerprint) -> true); fail("Missing Codex accepted"); }
+    catch (java.io.IOException error) { assertTrue(error.getMessage().contains("CODEX_MISSING")); }
+  }
+
   @Test
   public void authenticatesWithEncryptedPrivateKey() throws Exception {
     profile.password = "";

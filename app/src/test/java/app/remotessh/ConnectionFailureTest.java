@@ -44,4 +44,9 @@ public class ConnectionFailureTest {
     assertTrue(message.contains("按应用分流"));
     assertFalse(message.contains("用免密码方式"));
   }
+  @Test public void pythonExitDoesNotSuggestInstallingCodex() {
+    String message = ConnectionFailure.describe(new EOFException("exited"), "远端协议握手", 127, "sh: python3: command not found");
+    assertTrue(message.contains("Python 3.8"));
+    assertFalse(message.contains("command -v codex"));
+  }
 }

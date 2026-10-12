@@ -25,7 +25,8 @@
       "RpcException",
       "ConnectionFailure",
       "HostPins",
-      "ThreadSnapshot"
+      "ThreadSnapshot",
+      "ConnectionPreflight"
     ],
     "data_configuration": [
       "Profile",
@@ -62,7 +63,8 @@
       "LiveProgressTextView",
       "FilePicker",
       "ImagePicker",
-      "Markdown"
+      "Markdown",
+      "ConnectionSetupUi"
     ],
     "media": [
       "FileAttachment",

@@ -16,6 +16,7 @@
 | 消息图片 | `MessageImageTile` 拥有可见缩略图、读取任务与有界重试；同服务器／会话的连接 generation 变化时释放旧任务并重新绑定，主线程核对作用域后才显示结果。消息区暂停更新仍刷新图片连接状态；`ThumbnailLoader`／`ThumbnailCache` 分别提供任务调度和共享有界缓存 |
 | 目录／会话偏好 | `DirectoryController` 管理目录操作的 worker 和迟到结果；`ConversationPreferences` 管理稳定存储键及权限／速度／问答历史快照 |
 | 传输／协议 | `SshTransport` 管理 SSH、SFTP 和辅助通道；`RpcClient` 管理 JSON-RPC framing、请求匹配和事件分发，不操作 Android View |
+| 连接诊断 | `ConnectionPreflight` 生成无凭据输出的环境探测并解析分类失败、检查公开账户状态；`ConnectionSetupUi` 拥有用户显式关闭持久模式的确认窗口。探测有超时／输出上限，关闭或连接 generation 变化使后续初始化无效 |
 | 配置／数据 | `Vault`／`Profile` 保存连接；模型、额度、权限、版本、线程快照与问答日志由对应类解析 |
 | 后台／通知 | `ConnectionService` 维持前台服务与唤醒锁；`LiveStatusNotifications` 及 `LiveActionReceiver` 处理会话通知、请求身份和点击路由 |
 | 远端资产 | `remote_session.py` 托管 Codex 进程、SQLite 事件及重放；`conversation_state.py` 有界读取问答日志；`remote_maintenance.py` 检查／更新／明确重启 |
