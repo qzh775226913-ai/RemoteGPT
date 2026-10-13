@@ -31,3 +31,13 @@
 发布前两次源码 Verify（[主分支](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38354682540)、[版本标签](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38354688678)）均成功。临时文件服务的下载按钮提供带时效的正式下载 URL；制品实际使用该链接完整下载并校验。Python 默认下载请求返回 403，发布器改用服务文档支持的 curl 客户端，并限制 HTTPS、下载大小和超时；未绕过验证码、账户授权或访问权限。此修复单独提交，尚未公开 Release 的版本标签使用明确旧值的 lease 更新至修复提交，源应用与 APK 不变。
 
 首次 [发布任务](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355279194) 在解析输入时失败，未创建公开 Release：Checkout 将本地临时注释标签替换成了剥离后的 commit，导致注释为空。发布器改为通过 GitHub 只读 API 取得远端注释标签，核对其对象与源码 SHA；临时制品使用可分享页面 URL，按其公开下载按钮即时取得短时效下载链接，避免排队期间失效。修复仍单独提交，不改应用或签名。
+
+## 实际公开结果
+
+2026-10-13 14:17（UTC+8），[发布任务](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355684278) 成功公开 [RemoteGPT 1.0.51](https://github.com/qzh775226913-ai/RemoteGPT/releases/tag/v1.0.51)，Release ID `411346657`，正式标签固定指向 `930515ffadeba3376cee95b585c71519e1c15516`。`releases/latest` 实际返回该版本，draft=false、prerelease=false。
+
+五个附件均为 uploaded，GitHub 返回的文件大小和 SHA-256 与本地原制品逐一匹配。实际从公开 GitHub APK 链接完整下载，SHA-256 与原包一致；无需 tailnet。图片链接指向正式版本标签，首页及 Release 正文均包含四张真机图和轻量、直连、通知、审批与恢复说明。
+
+同一源码的三个完整 Verify 运行均成功：[主分支](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355595981)、[正式标签](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355609346)、[发布触发](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355684307)。本机一次后续临时 ZIP 下载补测因网络超时失败，不冒充成功；远端发布任务已实际完成全部制品下载、校验与上传，正式 GitHub APK 下载也通过。
+
+两个临时发布标签已从远端和本地删除；临时上传输入与本机传输目录清理，托管文件按上传设定自动到期。正式版本标签、GitHub Release 附件及原 tailnet 下载保留；既有 Funnel／SSH 配置和生产任务未改动。
