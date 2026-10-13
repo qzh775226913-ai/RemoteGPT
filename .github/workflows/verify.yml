@@ -29,6 +29,8 @@ jobs:
           cache: pip
           cache-dependency-path: tools/requirements-dev.txt
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - name: Install required SDK packages
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - name: Install synthetic SSH fixture dependencies

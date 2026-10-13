@@ -53,6 +53,8 @@ python3 tools/generate_icons.py --check
 
 [GitHub Actions](../.github/workflows/verify.yml) 在 push、pull_request 和手动触发时设置 JDK 17、SDK 36、Python 3.12，运行同一个完整入口并保存报告。仅有 `contents: read` 权限，不读取生产 SSH／模型凭据，不安装手机，不发布 APK，也不更新服务器。
 
+SDK 初始化显式安装 `platform-tools`，再安装指定 platform／build-tools；不请求上游已不可下载的旧 `tools` 包。该配置不改变应用工具链版本。
+
 本地可执行结果不代表托管 CI 已跑过；CI 需要仓库推送后才会触发。维护报告必须区分“工作流已配置”与“远端 CI 已通过”。
 
 ## 交付和日常变更

@@ -39,3 +39,9 @@ Gradle 完整执行耗时 1 分 31 秒。SSH 检查使用入口拥有的合成�
 上传前扫描 HEAD 可达历史的 509 个 blob，未发现私钥块、常见 GitHub token 或 OpenAI 项目密钥格式；历史路径检查未发现被跟踪的 `.env`、`local.properties`、私钥文件或签名密钥。该结果限于所列格式与路径检查，不等于任意敏感信息的穷尽检测。
 
 GitHub Actions 以远端实际运行结果为准，本地通过不表示 CI 已通过。未验证真实 Codex 服务、macOS 主机、手机安装、厂商通知／后台表现或跨设备 Tailscale SSH；当前 [验收边界](../ACCEPTANCE.md) 保持有效。APK 分发与签名沿用已有 [1.0.51 交付](2026-10-13-1.0.51.md)，本阶段不发布新版本。
+
+## 实际上传核对
+
+首次推送提交 `709a06b4df639609e1388165e5145a0663637000` 已写入公开仓库的 `main`。通过 HTTPS 在独立临时目录实际克隆，核对远端 HEAD、全部可达 Git 对象与本地一致：43 个提交、212 个当前文件，`git fsck --full` 通过。原提交历史与恢复提交均保留，私钥和个人 Git 配置未上传。
+
+首次 [GitHub Actions 运行](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38349503145) 在 SDK 初始化阶段失败：`setup-android@v3` 默认请求旧 `tools` 包，服务器返回 `Failed to find package 'tools'`，完整测试尚未执行。后续 CI 修复单独提交，不与应用功能或依赖升级混合。
