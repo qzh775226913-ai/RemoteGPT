@@ -1,0 +1,30 @@
+name: Publish verified APK
+
+on:
+  push:
+    tags:
+      - 'publish-release-*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-apk-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify assets and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/publish_release.py

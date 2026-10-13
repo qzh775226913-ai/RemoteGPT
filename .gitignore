@@ -11,6 +11,7 @@ local.properties
 
 # Release/build artifacts
 /dist/
+/release-assets/
 
 # Personal settings and local environment
 .claude/settings.local.json
