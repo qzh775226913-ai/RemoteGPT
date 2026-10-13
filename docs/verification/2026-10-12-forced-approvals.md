@@ -1,3 +1,5 @@
+> 公开版隐私整理（2026-10-13）：个人账户、机器路径与网络地址已替换为示例；这些示例不是当时执行命令中的原始值，验证结果和结论保留。
+
 # 首次连接诊断与强制权限审批交付验证
 
 变更前恢复提交：`8da2d25`（源码与 `b8c0866` 的 1.0.49 相同）。第一阶段连接诊断提交：`cfa4a23`，单独验证见 [连接诊断记录](2026-10-12-connection-diagnostics.md)。本记录覆盖最终源码的完整验收；阶段分别提交，保持版本、依赖、包名、签名和偏好格式，不发布或部署生产服务。
@@ -12,7 +14,7 @@
 
 ## 实际验证
 
-最终执行：`JAVA_HOME=/home/qzh-n100/.local/jdk/jdk-17.0.20.1+1 ANDROID_HOME=/home/qzh-n100/Android/Sdk PYTHONPATH=/tmp/remote-ssh-test-libs python3 tools/verify.py --offline`。
+最终执行：`JAVA_HOME=/home/example/.local/jdk/jdk-17.0.20.1+1 ANDROID_HOME=/home/example/Android/Sdk PYTHONPATH=/tmp/remote-ssh-test-libs python3 tools/verify.py --offline`。
 
 | 检查 | 结果 |
 | --- | --- |

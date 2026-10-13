@@ -1,3 +1,5 @@
+> 公开版隐私整理（2026-10-13）：个人账户、机器路径与网络地址已替换为示例；这些示例不是当时执行命令中的原始值，验证结果和结论保留。
+
 > 历史归档：保留当时的说明与验收结论，不代表当前版本。当前需求和验证入口见 [项目首页](../../README.md)。
 
 ## 1.0.31 相册与多图上传验收
@@ -9,7 +11,7 @@
 - 格式测试验证 PNG 原字节保留、缩略图有界、平台可解码的 BMP 转换为可解码 JPEG、损坏内容拒绝。HEIF / AVIF 采用相同的“手机可解码才转换”路径，未用真机或实际 HEIF / AVIF 样本验收。每条消息最多 4 张，每张原文件最多 20 MiB；转换后的 JPEG 最长边不超过 2560 像素。
 - 测试使用 Robolectric、模拟内容提供器及回环 SSH 夹具，没有真实 Android 手机、厂商相册或云相册账号；厂商相册是否在选图界面开放智能搜索、多选与正确 URI 授权仍由其实现决定。系统照片 / 文件选择器作为兼容回退，不增加全相册、媒体或存储访问权限。未调用真实模型或重启生产远端。
 - 交付 `dist/RemoteGPT-1.0.31-Android-universal-debug.apk`，包名 `app.remotessh`，名称 RemoteGPT，版本 1.0.31 / versionCode 32。签名验证通过，证书与 1.0.30 相同，可覆盖安装；截图位于 `dist/screenshots/1.0.31/`。
-- APK 为 4,641,362 字节，SHA-256：`1052ac554b87d3794f011d2b0e7dc4e509caa8ce5d51114ad1b9fa7e1a9fe091`。已发布并经 Tailscale HTTP 完整下载，HTTP 200，字节数和哈希一致：[下载安装包](http://100.109.221.115:8000/RemoteGPT-1.0.31-Android-universal-debug.apk)。
+- APK 为 4,641,362 字节，SHA-256：`1052ac554b87d3794f011d2b0e7dc4e509caa8ce5d51114ad1b9fa7e1a9fe091`。已发布并经 Tailscale HTTP 完整下载，HTTP 200，字节数和哈希一致：[下载安装包](http://100.64.0.1:8000/RemoteGPT-1.0.31-Android-universal-debug.apk)。
 
 ## 1.0.30 目录布局与模型手势滚动验收
 
@@ -18,7 +20,7 @@
 - 320dp 窄屏目录截图已检查：顶部仅“上一级 / 输入路径”，底部“新建项目 / 使用此文件夹”并排，四个按钮均为单行，新建操作仍能打开确认输入框。模型列表具有轻微不同的圆角背景，已检查深色与浅色面板截图。
 - 验证使用 Robolectric 原生绘制和回环 SSH 夹具，没有连接 Android 真机，也没有发起真实模型任务或重启远端。截图位于 `dist/screenshots/1.0.30/`。
 - 交付 `dist/RemoteGPT-1.0.30-Android-universal-debug.apk`；包名 `app.remotessh`，名称 RemoteGPT，版本 1.0.30 / versionCode 31。签名验证通过，证书与 1.0.29 相同，可覆盖安装。
-- APK 为 4,636,954 字节，SHA-256：`db97d665f9c722e189d4534b6b4ac7b64eb6d695265cd5f16c1fd6fb5fe8b947`。已发布并经 Tailscale HTTP 完整下载，HTTP 200，字节数和哈希一致：[下载安装包](http://100.109.221.115:8000/RemoteGPT-1.0.30-Android-universal-debug.apk)。
+- APK 为 4,636,954 字节，SHA-256：`db97d665f9c722e189d4534b6b4ac7b64eb6d695265cd5f16c1fd6fb5fe8b947`。已发布并经 Tailscale HTTP 完整下载，HTTP 200，字节数和哈希一致：[下载安装包](http://100.64.0.1:8000/RemoteGPT-1.0.30-Android-universal-debug.apk)。
 
 ## 1.0.29 远端运行速度选择验收
 
@@ -27,7 +29,7 @@
 - 覆盖动态档位、现代与旧版协议、配置默认模型、项目和全局功能开关、分页、刷新失败、模型切换、每条对话存储、重新连接、恢复默认、请求期间改选、成功更新托管恢复配置及拒绝请求不更新配置。已查看普通和小屏原生模型面板截图，固定完成按钮可见。
 - 核对本机 Codex 0.162.0 的实际模型目录和生成协议：快速档位 ID 为 `priority`，显式普通档位为 `default`；界面以每台远端实际返回的能力和说明为准。只进行了配置读取及临时线程协议探测，没有发起真实模型推理，也未重启实际远端会话。
 - APK 包名 `app.remotessh`，名称 RemoteGPT，版本 1.0.29 / versionCode 30；签名验证通过，与 1.0.28 证书相同，可覆盖安装。交付 `dist/RemoteGPT-1.0.29-Android-universal-debug.apk`，4,797,701 字节，SHA-256：`91b8b6b79dea22700c4f9dd5bc26f2c8b10ac3a5cabe6bfa5ea4ab2ca100739a`。
-- 已发布到现有 Tailscale HTTP 服务，并完整下载核对字节数与 SHA-256：[下载安装包](http://100.109.221.115:8000/RemoteGPT-1.0.29-Android-universal-debug.apk)。截图位于 `dist/screenshots/1.0.29/`。未进行 Android 真机验收或实际速度测量；旧托管仍可继续运行，新托管的恢复配置更新在其下次启动后生效。
+- 已发布到现有 Tailscale HTTP 服务，并完整下载核对字节数与 SHA-256：[下载安装包](http://100.64.0.1:8000/RemoteGPT-1.0.29-Android-universal-debug.apk)。截图位于 `dist/screenshots/1.0.29/`。未进行 Android 真机验收或实际速度测量；旧托管仍可继续运行，新托管的恢复配置更新在其下次启动后生效。
 
 ## 1.0.28 App 内确认重启验收
 
@@ -176,7 +178,7 @@
 
 完成内容：只在消息底部跟随更新；Android 系统气泡及展开审批界面；通过 SSH/SFTP 安装的独立远端托管进程与重连事件恢复。未查看路径中含 claude 字符的目录内容。
 
-执行：`JAVA_HOME=/home/qzh-n100/local/jdk-17.0.19+10 ANDROID_HOME=/home/qzh-n100/Android/Sdk ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug -PsshFixture`。
+执行：`JAVA_HOME=/home/example/local/jdk-17.0.19+10 ANDROID_HOME=/home/example/Android/Sdk ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug -PsshFixture`。
 
 结果：BUILD SUCCESSFUL，91 项测试全部通过，0 失败、0 跳过。其中 10 项在本机回环地址的隔离 SSH 服务上执行，覆盖主机指纹、密码/私钥认证、SFTP 操作，以及托管脚本经 SFTP 安装后断开 SSH、重连同一远端进程、补回 3,000 条流式更新和审批请求。Lint 0 errors、7 warnings（文字国际化及已有资源目录限定符提示）。
 
@@ -198,7 +200,7 @@ APK 包名 app.remotessh，versionCode 13 / versionName 1.0.12。apksigner 验�
 
 日期：2026-09-25。
 
-执行：`JAVA_HOME=/home/qzh-n100/local/jdk-17.0.19+10 ANDROID_HOME=/home/qzh-n100/Android/Sdk ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`。
+执行：`JAVA_HOME=/home/example/local/jdk-17.0.19+10 ANDROID_HOME=/home/example/Android/Sdk ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`。
 
 结果：BUILD SUCCESSFUL。86 项测试中 77 项通过、0 失败、9 项 SSH 集成测试因未启用测试服务而跳过。Lint 0 errors、6 warnings：5 项文字国际化提示，1 项 minSdk 26 下资源目录 v26 限定符冗余提示。
 
@@ -214,7 +216,7 @@ APK versionCode 12 / versionName 1.0.11，包名仍为 app.remotessh；apksigner
 
 日期：2026-09-25。
 
-执行：`JAVA_HOME=/home/qzh-n100/local/jdk-17.0.19+10 ANDROID_HOME=/home/qzh-n100/Android/Sdk ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`。
+执行：`JAVA_HOME=/home/example/local/jdk-17.0.19+10 ANDROID_HOME=/home/example/Android/Sdk ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`。
 
 结果：BUILD SUCCESSFUL。86 项测试中 77 项通过，0 失败，9 项 SSH 集成测试因未启用本地 SSH 夹具而跳过。Lint 0 errors、5 warnings，均为界面文字国际化提示。
 
@@ -336,7 +338,7 @@ APK 签名验证成功，证书 SHA-256 与 1.0.3 一致；versionCode 5、versi
 
 日期：2026-09-24。
 
-执行：`JAVA_HOME=/home/qzh-n100/local/jdk-17.0.19+10 ANDROID_HOME=/home/qzh-n100/Android/Sdk ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug -PsshFixture`。
+执行：`JAVA_HOME=/home/example/local/jdk-17.0.19+10 ANDROID_HOME=/home/example/Android/Sdk ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug -PsshFixture`。
 
 结果：**BUILD SUCCESSFUL，60 项测试通过，0 失败，0 跳过**。Lint 0 errors、4 warnings（现有及新增界面文字的国际化提示）。
 
@@ -365,8 +367,8 @@ APK 签名验证成功，证书 SHA-256 与 1.0.3 一致；versionCode 5、versi
 执行命令：
 
 ```sh
-JAVA_HOME=/home/qzh-n100/local/jdk-17.0.19+10 \
-ANDROID_HOME=/home/qzh-n100/Android/Sdk \
+JAVA_HOME=/home/example/local/jdk-17.0.19+10 \
+ANDROID_HOME=/home/example/Android/Sdk \
 ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug -PsshFixture
 ```
 

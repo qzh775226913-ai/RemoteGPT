@@ -1,3 +1,5 @@
+> 公开版隐私整理（2026-10-13）：个人账户、机器路径与网络地址已替换为示例；这些示例不是当时执行命令中的原始值，验证结果和结论保留。
+
 # 强制审批入口按频率显示验证
 
 恢复提交 `7743a9b`，源码与 1.0.50 交付 `8ed50e5` 一致。本轮仅调整权限面板说明和强制审批入口资格，保持版本号、依赖、包名、签名及偏好格式，不更改模型／provider，不发布或部署远端。
@@ -12,7 +14,7 @@ Burst 状态放在既有 ForcedApprovalController.State 内，由 ConversationSt
 
 ## 实际结果
 
-完整执行 `JAVA_HOME=/home/qzh-n100/.local/jdk/jdk-17.0.20.1+1 ANDROID_HOME=/home/qzh-n100/Android/Sdk PYTHONPATH=/tmp/remote-ssh-test-libs python3 tools/verify.py --offline`：356 项 Android 测试，失败／错误／跳过均为 0；44 项 Python 测试通过；文档、结构、规模和图标一致性通过；assembleDebug 与 lintDebug 成功；Lint 无 Error/Fatal，17 项既有 Warning。Gradle 全量执行 1 分 48 秒，summary scope=full、full_acceptance=true。AGP/compileSdk 既有提示保留。
+完整执行 `JAVA_HOME=/home/example/.local/jdk/jdk-17.0.20.1+1 ANDROID_HOME=/home/example/Android/Sdk PYTHONPATH=/tmp/remote-ssh-test-libs python3 tools/verify.py --offline`：356 项 Android 测试，失败／错误／跳过均为 0；44 项 Python 测试通过；文档、结构、规模和图标一致性通过；assembleDebug 与 lintDebug 成功；Lint 无 Error/Fatal，17 项既有 Warning。Gradle 全量执行 1 分 48 秒，summary scope=full、full_acceptance=true。AGP/compileSdk 既有提示保留。
 
 新增 10 项回归：3 项窗口／边界／去重，4 项实时事件与重放、背景会话、异常恢复、断开和权限生效边界，3 项正常菜单隐藏／精简说明、前三次隐藏第四次显示、迟到窗口关闭监听器。已有强制审批 UI 回归改为通过真实合成事件连续触发资格后操作，不从正常菜单绕过。
 

@@ -1,5 +1,7 @@
 # 回退与恢复
 
+2026-10-13 公开文档隐私整理前恢复提交：`1809557`。仅整理文档、截图展示与发布说明，不改变 APK、应用行为或签名；旧历史与已发布标签保留，当前文档中的本机路径和地址已替换为示例。
+
 2026-10-13 首次公开 APK 发布前恢复提交：`7f857f7`（空快照，与许可交付 `8075dfc` 一致）。本阶段复用已发布的 1.0.51 APK，添加 Release 说明和显式发布流程，不重构、不改版本或签名。源码回退不会自动删除 GitHub Release 或撤销已下载副本。
 
 2026-10-13 项目专用许可添加前恢复提交：`bb954cc`（空快照，源码与 `a061d3a` 一致）。最终范围按用户确认的建议执行：正常使用免费，商业再利用及修改版发布须书面授权。本阶段只添加 LICENSE 和文档说明，不改应用行为或签名。源码 revert 不会自动撤销已经授予的许可或使权利状态追溯改变；法律效果须另行判断。
@@ -20,9 +22,9 @@
 
 - `main` 保持原始提交。
 - Git 标签 `maintenance-baseline-20261011` 与备份分支 `backup/before-maintenance-20261011` 指向原始提交。
-- 仓库外完整历史备份：`/home/qzh-n100/AI-Workspace/remotesshapp-before-maintenance-20261011.bundle`，已执行 `git bundle verify`。
-- 仓库外基线 APK：`/home/qzh-n100/AI-Workspace/remotesshapp-before-maintenance-20261011.apk`。
-- 基线验证摘要：`/home/qzh-n100/AI-Workspace/remotesshapp-before-maintenance-20261011-validation.json`。
+- 仓库外完整历史备份：`/home/example/AI-Workspace/remotesshapp-before-maintenance-20261011.bundle`，已执行 `git bundle verify`。
+- 仓库外基线 APK：`/home/example/AI-Workspace/remotesshapp-before-maintenance-20261011.apk`。
+- 基线验证摘要：`/home/example/AI-Workspace/remotesshapp-before-maintenance-20261011-validation.json`。
 
 这些是本机备份位置；迁移机器时同时保存 bundle 和 APK。Git bundle 包含已提交源码／历史，**不包含** ignored 文件、Android SDK、Gradle 缓存、个人配置、签名密钥或远端数据库。本轮未改变这些内容或生产远端。
 
@@ -65,12 +67,12 @@ git diff maintenance-baseline-20261011..HEAD --stat
 ## 仓库损坏时从 bundle 重建
 
 ```sh
-git bundle verify /home/qzh-n100/AI-Workspace/remotesshapp-before-maintenance-20261011.bundle
-git clone /home/qzh-n100/AI-Workspace/remotesshapp-before-maintenance-20261011.bundle /path/to/recovered-project
+git bundle verify /home/example/AI-Workspace/remotesshapp-before-maintenance-20261011.bundle
+git clone /home/example/AI-Workspace/remotesshapp-before-maintenance-20261011.bundle /path/to/recovered-project
 git -C /path/to/recovered-project switch backup/before-maintenance-20261011
 ```
 
-该 bundle 是**整理前**快照，不包含后续维护提交。整理完成后的完整历史另存为 `/home/qzh-n100/AI-Workspace/remotesshapp-after-maintenance-20261011.bundle`，恢复维护成果时使用它并切换维护分支。前后备份各自保留，不覆盖基线。
+该 bundle 是**整理前**快照，不包含后续维护提交。整理完成后的完整历史另存为 `/home/example/AI-Workspace/remotesshapp-after-maintenance-20261011.bundle`，恢复维护成果时使用它并切换维护分支。前后备份各自保留，不覆盖基线。
 
 已在独立临时目录实际执行整理前 bundle 的克隆和切换，核对原始提交与干净工作区，并通过 `git fsck --full`；证据见本轮验证记录。
 

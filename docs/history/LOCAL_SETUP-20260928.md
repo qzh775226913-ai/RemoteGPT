@@ -1,15 +1,17 @@
+> 公开版隐私整理（2026-10-13）：个人账户、机器路径与网络地址已替换为示例；这些示例不是当时执行命令中的原始值，验证结果和结论保留。
+
 > 历史归档：保留当时的说明与验收结论，不代表当前版本。当前需求和验证入口见 [项目首页](../../README.md)。
 
 # 本机远端配置记录
 
-日期：2026-09-28。账户：qzh-n100。
+日期：2026-09-28。账户：example-user。
 
 - Python 3.12.3 / sqlite3 3.45.1 可用。
 - codex-cli 0.156.1 已安装，现有 ChatGPT 登录有效；未读取或输出凭据，未变更登录。
 - 系统 SSH 服务 active/running，SFTP 子系统 `/usr/lib/openssh/sftp-server` 已配置且可访问托管目录。
 - 非交互 SSH shell 的 PATH 可解析 `codex` 和 `python3`；启动命令保持 `codex app-server`。
 - 用户 linger 已启用；未更改 SSH 认证策略、系统端口、现有任务或其他项目。
-- 已安装与 1.0.12 APK 完全一致的托管脚本：`/home/qzh-n100/.remote-gpt/host-aS_cSb3Bogetn7mCnHGOiIquaUmCA4T84l2VtS_J6G4.py`。目录 0700，脚本 0600。
+- 已安装与 1.0.12 APK 完全一致的托管脚本：`/home/example/.remote-gpt/host-aS_cSb3Bogetn7mCnHGOiIquaUmCA4T84l2VtS_J6G4.py`。目录 0700，脚本 0600。
 
 使用真实 Codex 完成 initialize 握手，杀掉检查客户端后托管与 Codex 进程仍存活，重连复用原 PID。未发送 thread/start 或 turn/start，不创建模型任务。检查专用进程和目录已清理。
 
@@ -19,7 +21,7 @@
 
 ## 1.0.16 更新
 
-新版托管脚本已安装到 `/home/qzh-n100/.remote-gpt/host-pXsPdV2KKY2ozXzW9YDwABlfCmNLvCIS15KrVZ9cKAs.py`，权限 0600，与 APK 资产一致。支持返回托管会话列表与恢复期间其他会话事件补发。
+新版托管脚本已安装到 `/home/example/.remote-gpt/host-pXsPdV2KKY2ozXzW9YDwABlfCmNLvCIS15KrVZ9cKAs.py`，权限 0600，与 APK 资产一致。支持返回托管会话列表与恢复期间其他会话事件补发。
 
 检测到旧托管实例还有活跃任务，因此未终止或重启该进程。1.0.16 手机端包含旧端兼容：记录已加载会话 ID，并在历史重放后补读其他会话快照。新脚本启动时仍优先连接存活的原托管实例，只有新建实例使用新守护进程代码，避免升级中断任务。
 

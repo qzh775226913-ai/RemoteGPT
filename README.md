@@ -71,6 +71,7 @@ python3 -m venv .venv
 
 ## 项目文档
 
+- [项目介绍与试用反馈](docs/PROMOTION.md)：可分享的介绍、准备条件和反馈入口。
 - [使用说明](docs/USAGE.md)：服务器准备、手机配置、权限与故障排查。
 - [开发手册](docs/DEVELOPMENT.md)：工具链、测试入口、CI 和构建产物。
 - [需求](docs/REQUIREMENTS.md)、[架构](docs/ARCHITECTURE.md)、[验收边界](docs/ACCEPTANCE.md)：当前行为和证据范围。
@@ -80,12 +81,8 @@ python3 -m venv .venv
 
 ## 真机展示
 
-以下为用户提供的截图，展示拍摄设备上的实际界面；流体云样式与模型目录随系统和远端配置变化。
+以下为用户提供的真机截图；流体云样式与模型目录取决于系统和远端配置。为减少个人环境信息展示，未展示带有主机、目录或任务内容的截图。截图不代表所有设备或功能均已完成真机验收。
 
-| 流体云状态 | 多会话通知 |
+| 流体云状态 | 模型与推理设置 |
 | --- | --- |
-| <img src="docs/screenshots/live-status.jpg" alt="流体云显示执行中" width="340"> | <img src="docs/screenshots/multi-session-notifications.jpg" alt="不同会话的执行与思考通知" width="340"> |
-
-| 模型与推理设置 | 聊天首页 |
-| --- | --- |
-| <img src="docs/screenshots/model-settings.jpg" alt="远端模型目录与推理强度设置" width="300"> | <img src="docs/screenshots/chat-home.jpg" alt="连接远端项目后的聊天首页" width="300"> |
+| <img src="https://raw.githubusercontent.com/qzh775226913-ai/RemoteGPT/main/docs/screenshots/live-status.jpg" alt="流体云显示执行中" width="340"> | <img src="https://raw.githubusercontent.com/qzh775226913-ai/RemoteGPT/main/docs/screenshots/model-settings.jpg" alt="远端模型与推理设置" width="300"> |
