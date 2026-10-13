@@ -5,6 +5,7 @@ No signing key is uploaded, no APK is rebuilt, and no model is called.
 Only this explicitly triggered job receives repository contents-write access.
 """
 import hashlib
+from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
@@ -24,11 +25,26 @@ def git(*args):
 
 
 def download_asset(url):
-    return subprocess.check_output([
-        'curl', '--silent', '--show-error', '--fail', '--location',
-        '--proto', '=https', '--proto-redir', '=https', '--retry', '2',
-        '--max-time', '60', '--max-filesize', str(12 * 1024 * 1024), url,
-    ])
+    def fetch(link):
+        return subprocess.check_output([
+            'curl', '--silent', '--show-error', '--fail', '--location',
+            '--proto', '=https', '--proto-redir', '=https', '--retry', '2',
+            '--max-time', '60', '--max-filesize', str(12 * 1024 * 1024), link,
+        ])
+    parts = urllib.parse.urlsplit(url)
+    if parts.hostname == 'tmpfiles.org' and not parts.path.startswith('/dl/'):
+        class DownloadLink(HTMLParser):
+            link = None
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if tag == 'a' and attrs.get('class') == 'download':
+                    self.link = attrs.get('href')
+        parser = DownloadLink()
+        parser.feed(fetch(url).decode())
+        if not parser.link or not parser.link.startswith('https://tmpfiles.org/dl/'):
+            raise RuntimeError('Temporary host did not provide a public download link')
+        url = parser.link
+    return fetch(url)
 
 
 def api(method, path, body=None, content_type='application/json'):
@@ -64,9 +80,15 @@ def main():
     ref = os.environ['GITHUB_REF_NAME']
     if not re.fullmatch(r'publish-release-[A-Za-z0-9-]+', ref):
         raise RuntimeError('An explicit temporary publish tag is required')
-    manifest = json.loads(git('for-each-ref', '--format=%(contents)', 'refs/tags/' + ref))
+    repo = os.environ['GITHUB_REPOSITORY']
+    # Checkout can replace an annotated tag ref with its peeled commit locally.
+    tag_ref = api('GET', f'/repos/{repo}/git/ref/tags/{ref}')['object']
+    if tag_ref['type'] != 'tag':
+        raise RuntimeError('Publish input must be an annotated tag')
+    tag_input = api('GET', f'/repos/{repo}/git/tags/' + tag_ref['sha'])
+    manifest = json.loads(tag_input['message'])
     head = git('rev-parse', 'HEAD')
-    if manifest['source_commit'] != head:
+    if manifest['source_commit'] != head or tag_input['object']['sha'] != head:
         raise RuntimeError('Publish input does not match checked-out source')
     build = (ROOT / 'app/build.gradle').read_text()
     version = re.search(r"versionName\s+'([^']+)'", build).group(1)
@@ -108,7 +130,6 @@ def main():
     notes = (ROOT / f'docs/releases/{version}.md').read_text()
     if apk_digest not in notes:
         raise RuntimeError('Release notes do not identify the verified APK checksum')
-    repo = os.environ['GITHUB_REPOSITORY']
     wait_for_verification(repo, head)
     existing = [r for r in api('GET', f'/repos/{repo}/releases') if r['tag_name'] == tag]
     if existing and not existing[0]['draft']:
