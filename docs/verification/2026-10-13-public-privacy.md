@@ -21,4 +21,4 @@ GitHub 连接器未提供仓库 About／Topics 修改接口，现有 SSH 部署�
 
 ## 验证
 
-本地开发环境运行 `python3 tools/verify.py --offline`：完整验收通过；356 个 Android 测试，失败／错误／跳过均为 0；Python、结构、图标检查及 APK 构建通过；Lint 无阻塞项，17 个既有警告。工作流 YAML 与内嵌 Python 语法检查通过，文档链接及差异空白检查通过。公开 Release 正文更新结果将另行补记。
+本地开发环境运行 `python3 tools/verify.py --offline`：完整验收通过；356 个 Android 测试，失败／错误／跳过均为 0；44 个 Python 测试、结构、图标检查及 APK 构建通过；Lint 无阻塞项，17 个既有警告。工作流 YAML 与内嵌 Python 语法检查通过，文档链接及差异空白检查通过。GitHub 更新说明任务 `38359055511` 成功；读取公开首页确认两张截图引用已撤下，Release API 正文与仓库说明一致，五个附件名称／大小与原发布一致，APK digest 保持原值。临时触发标签在完成后删除；`v1.0.51` 不变。
