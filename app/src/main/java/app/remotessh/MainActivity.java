@@ -1589,7 +1589,7 @@ public final class MainActivity extends Activity {
             .setTitle("需要你的确认")
             .setView(sc)
             .setCancelable(false)
-            .setNeutralButton("全部允许(强制)", null)
+            .setNeutralButton(app.forcedApprovals.canOffer(req) ? "全部允许(强制)" : null, null)
             .setNegativeButton(
                 "拒绝",
                 (d, w) -> {
@@ -1606,8 +1606,10 @@ public final class MainActivity extends Activity {
                 })
             .show();
     AlertDialog approvals = (AlertDialog) approvalDialog;
-    approvals.getButton(AlertDialog.BUTTON_NEUTRAL).setTextColor(permissionPicker.red());
-    approvals.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> permissionPicker.confirm(req));
+    if (app.forcedApprovals.canOffer(req)) {
+      approvals.getButton(AlertDialog.BUTTON_NEUTRAL).setTextColor(permissionPicker.red());
+      approvals.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> permissionPicker.confirm(req));
+    }
   }
 
   private void showQuestions(JSONObject req, JSONObject p) {

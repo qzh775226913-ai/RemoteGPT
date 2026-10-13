@@ -1620,6 +1620,7 @@ public final class RemoteApp extends Application {
       if (method.equals("item/commandExecution/requestApproval")
           || method.equals("item/fileChange/requestApproval")
           || method.equals("item/tool/requestUserInput")) {
+        forcedApprovals.observe(e, historical);
         approvals.removeIf(a -> String.valueOf(a.opt("id")).equals(String.valueOf(e.opt("id"))));
         approvals.add(e);
         interactions.question(e);saveInteractions();

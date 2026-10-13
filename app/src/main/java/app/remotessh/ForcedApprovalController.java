@@ -5,12 +5,30 @@ import org.json.JSONObject;
 
 /** An explicit, temporary permission grant scoped to a conversation and SSH generation. */
 final class ForcedApprovalController {
+  /** Unique live permissions only; eligibility belongs to the request when it arrived. */
+  static final class Burst {
+    private final Set<String> seen = new HashSet<>(), offered = new HashSet<>();
+    private final ArrayDeque<Long> recent = new ArrayDeque<>();
+
+    void record(String key, long now) {
+      if (!seen.add(key)) return;
+      while (!recent.isEmpty() && now - recent.peekFirst() > 30_000L) recent.removeFirst();
+      if (recent.size() == 3) offered.add(key);
+      recent.addLast(now);
+      if (recent.size() > 3) recent.removeFirst();
+    }
+
+    boolean offers(String key) { return offered.contains(key); }
+    void reset() { seen.clear(); offered.clear(); recent.clear(); }
+  }
+
   static final class State {
     boolean enabled;
     int generation;
     long revision;
     String thread = "";
     final Set<String> submitted = new HashSet<>();
+    final Burst burst = new Burst();
   }
 
   private final RemoteApp app;
@@ -21,6 +39,22 @@ final class ForcedApprovalController {
   boolean active() { return active(app.forcedApprovalState); }
   private boolean active(State state) {
     return app.connected && state.enabled && state.generation == app.connectionGeneration();
+  }
+
+  void observe(JSONObject request, boolean historical) {
+    if (!historical && app.connected && !app.readOnly && !app.recoveryInProgress()
+        && LiveStatusNotifications.isApproval(request) && !request.isNull("id"))
+      app.forcedApprovalState.burst.record(key(request), android.os.SystemClock.elapsedRealtime());
+  }
+
+  boolean canOffer(JSONObject request) {
+    if (!app.connected || app.recoveryInProgress() || !LiveStatusNotifications.isApproval(request) || request.isNull("id")) return false;
+    String thread = Json.object(request, "params").optString("threadId", app.threadId);
+    if (thread.equals(app.threadId)) return !app.readOnly && !active() && app.approvals.contains(request)
+        && app.forcedApprovalState.burst.offers(key(request));
+    ConversationState state = app.conversationStore.get(thread);
+    return state != null && !state.readOnly && !state.replaying && !active(state.forcedApproval)
+        && state.approvals.contains(request) && state.forcedApproval.burst.offers(key(request));
   }
 
   boolean enable(String thread) {
@@ -50,6 +84,7 @@ final class ForcedApprovalController {
   void permissionApplied(PermissionMode sent, State state, long revision) {
     // A selection/grant made after submission belongs to a later turn.
     if (app.forcedApprovalState == state && state.revision == revision && sent == app.permissionMode) {
+      if (state.enabled) state.burst.reset();
       state.enabled = false;
       state.submitted.clear();
     }

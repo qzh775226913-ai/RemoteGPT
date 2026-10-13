@@ -69,26 +69,27 @@ final class PermissionPicker {
         dismiss();
       });
     }
-    LinearLayout force = option(choices, "bolt", red(), "强制允许", red(), app.forcedApprovals.active());
-    force.setContentDescription("权限选项：强制允许");
-    ui.clickable(force, () -> {
-      boolean active = app.forcedApprovals.active();
-      dismiss();
-      if (active) app.forcedApprovals.disable(); else confirm(null);
-    });
-    TextView note = ui.text("下一轮生效" + (app.effectivePermissionMode == PermissionMode.INHERIT ? "" : "\n当前远端：" + app.effectivePermissionMode.label)
-        + "\n强制允许仅处理本对话的权限审批；方案选择和补充信息仍需回答。启用后下一轮选择完全访问，成功生效后结束临时授权。再次点击强制允许可关闭。", 12, ui.muted);
+    if (forcedAtOpen) {
+      LinearLayout force = option(choices, "bolt", red(), "强制允许", red(), true);
+      force.setContentDescription("权限选项：强制允许");
+      ui.clickable(force, () -> {
+        if (app.profile == profile && app.threadId.equals(thread) && generation == app.connectionGeneration()) app.forcedApprovals.disable();
+        dismiss();
+      });
+    }
+    TextView note = ui.text("发送消息以更新权限", 12, ui.muted);
     note.setPadding(ui.dp(16), ui.dp(12), ui.dp(8), 0);
     choices.addView(note);
     dialog = ui.sheet("权限", choices, wide);
-    listener = () -> {
+    Runnable ownedListener = () -> {
       if (app.profile != profile || !app.threadId.equals(thread) || generation != app.connectionGeneration()
           || forcedAtOpen != app.forcedApprovals.active() || selectedAtOpen != app.permissionMode) dismiss();
     };
-    app.stateListeners.add(listener);
+    listener = ownedListener;
+    app.stateListeners.add(ownedListener);
     dialog.setOnDismissListener(ignored -> {
-      if (listener != null) app.stateListeners.remove(listener);
-      listener = null;
+      app.stateListeners.remove(ownedListener);
+      if (listener == ownedListener) listener = null;
     });
   }
 
@@ -107,31 +108,28 @@ final class PermissionPicker {
 
   void confirm(JSONObject request) {
     if (warning != null && warning.isShowing()) return;
-    if (!app.connected || app.profile == null || (request == null && (app.readOnly || app.threadId.isEmpty()))) {
-      ui.toast("请先连接并接续对话"); return;
-    }
+    if (request == null || app.profile == null || !app.forcedApprovals.canOffer(request)) return;
     Profile profile = app.profile;
     int generation = app.connectionGeneration();
-    String thread = request == null ? app.threadId : Json.object(request, "params").optString("threadId", app.threadId);
+    String thread = Json.object(request, "params").optString("threadId", app.threadId);
     warning = new AlertDialog.Builder(activity).setTitle("全部允许(强制)").setMessage(WARNING)
         .setNegativeButton("取消", null)
         .setPositiveButton("继续", (ignored, which) -> {
           if (app.profile != profile || generation != app.connectionGeneration() || !app.connected) return;
-          if (request == null && !thread.equals(app.threadId)) return;
-          if (request != null && (!LiveStatusNotifications.isApproval(request) || !app.allApprovals().contains(request))) return;
+          if (!app.forcedApprovals.canOffer(request)) return;
           if (!app.forcedApprovals.enable(thread)) ui.toast("对话正在恢复或仅查看历史，未启用强制允许");
         }).create();
     warning.show();
     ((AlertDialog) warning).getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(red());
-    warningListener = () -> {
+    Runnable ownedWarningListener = () -> {
       if (app.profile != profile || generation != app.connectionGeneration() || !app.connected
-          || (request == null && !thread.equals(app.threadId))
-          || (request != null && !app.allApprovals().contains(request))) warning.dismiss();
+          || !app.forcedApprovals.canOffer(request)) warning.dismiss();
     };
-    app.stateListeners.add(warningListener);
+    warningListener = ownedWarningListener;
+    app.stateListeners.add(ownedWarningListener);
     warning.setOnDismissListener(ignored -> {
-      if (warningListener != null) app.stateListeners.remove(warningListener);
-      warningListener = null;
+      app.stateListeners.remove(ownedWarningListener);
+      if (warningListener == ownedWarningListener) warningListener = null;
     });
   }
 }

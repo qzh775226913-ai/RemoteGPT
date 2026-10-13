@@ -237,4 +237,67 @@ public class ForcedApprovalTest {
     assertEquals("turn-B", app.turnId);
     app.observer = null;
   }
+
+  @Test public void onlyLiveUniquePermissionsCountAndEachConversationOwnsItsBurst() throws Exception {
+    for (int n = 1; n <= 3; n++) {
+      emit(request("prior-" + n, "A", "item/commandExecution/requestApproval"));
+      emit("serverRequest/resolved", Json.obj("threadId", "A", "requestId", "prior-" + n));
+    }
+    JSONObject fourth = request("fourth", "A", "item/fileChange/requestApproval"); emit(fourth);
+    assertTrue(app.forcedApprovals.canOffer(fourth));
+    JSONObject background = request("first-B", "B", "item/commandExecution/requestApproval"); emit(background);
+    assertFalse(app.forcedApprovals.canOffer(background));
+    assertEquals("A", app.threadId);
+    app.inConversation("B", () -> {
+      assertFalse(app.forcedApprovals.canOffer(background));
+      assertNotSame(app.forcedApprovalState, app.conversationStore.get("A").forcedApproval);
+    });
+    assertTrue(app.forcedApprovals.canOffer(fourth));
+    assertFalse(app.forcedApprovals.active());
+  }
+
+  @Test public void duplicateQuestionsAndReplayCannotUnlockTheForceButton() throws Exception {
+    JSONObject first = request("first", "A", "item/commandExecution/requestApproval");
+    emit(first); emit(new JSONObject(first.toString()));
+    emit(request("question", "A", "item/tool/requestUserInput"));
+    emit("remote/replayStarted", Json.obj("threadId", "A"));
+    for (int n = 1; n <= 4; n++) emit(request("replayed-" + n, "A", "item/fileChange/requestApproval"));
+    emit("remote/replayCompleted", Json.obj("threadId", "A"));
+    JSONObject second = request("second", "A", "item/commandExecution/requestApproval"); emit(second);
+    assertFalse(app.forcedApprovals.canOffer(second));
+    JSONObject third = request("third", "A", "item/fileChange/requestApproval"); emit(third);
+    assertFalse(app.forcedApprovals.canOffer(third));
+    JSONObject fourth = request("fourth", "A", "item/fileChange/requestApproval"); emit(fourth);
+    assertTrue(app.forcedApprovals.canOffer(fourth));
+  }
+
+  @Test public void ordinaryTurnStartPreservesBurstButAppliedForcedPermissionResetsIt() throws Exception {
+    for (int n = 1; n <= 3; n++) emit(request("prior-" + n, "A", "item/commandExecution/requestApproval"));
+    ForcedApprovalController.State state = app.forcedApprovalState;
+    app.forcedApprovals.permissionApplied(app.permissionMode, state, state.revision);
+    JSONObject fourth = request("fourth", "A", "item/fileChange/requestApproval"); emit(fourth);
+    assertTrue(app.forcedApprovals.canOffer(fourth));
+    assertTrue(app.forcedApprovals.enable("A"));
+    app.forcedApprovals.permissionApplied(app.permissionMode, state, state.revision);
+    assertFalse(app.forcedApprovals.active());
+    JSONObject fresh = request("fresh", "A", "item/fileChange/requestApproval"); emit(fresh);
+    assertFalse(app.forcedApprovals.canOffer(fresh));
+  }
+
+  @Test public void disconnectClearsEligibilityAndScopedExceptionCannotMoveBurstToAnotherThread() throws Exception {
+    try {
+      app.inConversation("B", () -> {
+        for (int n = 1; n <= 3; n++) app.forcedApprovals.observe(request("B-" + n, "B", "item/fileChange/requestApproval"), false);
+        throw new IllegalStateException("fixture exception");
+      });
+      fail("Expected scoped failure");
+    } catch (IllegalStateException expected) { assertEquals("fixture exception", expected.getMessage()); }
+    JSONObject first = request("first-A", "A", "item/fileChange/requestApproval"); emit(first);
+    assertFalse(app.forcedApprovals.canOffer(first));
+    JSONObject fourth = request("fourth-B", "B", "item/fileChange/requestApproval"); emit(fourth);
+    assertTrue(app.forcedApprovals.canOffer(fourth));
+    app.disconnect(); app.connected = true;
+    JSONObject fresh = request("fresh", "A", "item/fileChange/requestApproval"); emit(fresh);
+    assertFalse(app.forcedApprovals.canOffer(fresh));
+  }
 }

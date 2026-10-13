@@ -58,9 +58,19 @@ public class ForcedApprovalUiTest {
     Method method = MainActivity.class.getDeclaredMethod(name); method.setAccessible(true); method.invoke(activity);
   }
   private AlertDialog approval() throws Exception {
-    app.approvals.add(Json.obj("id", "permission", "method", "item/commandExecution/requestApproval",
+    for (int n = 1; n <= 3; n++) {
+      permission("prior-" + n);
+      emit(Json.obj("method", "serverRequest/resolved", "params", Json.obj("threadId", "A", "requestId", "prior-" + n)));
+    }
+    return permission("permission");
+  }
+  private void emit(JSONObject event) throws Exception {
+    Method method = RemoteApp.class.getDeclaredMethod("event", JSONObject.class); method.setAccessible(true); method.invoke(app, event);
+  }
+  private AlertDialog permission(String id) throws Exception {
+    emit(Json.obj("id", id, "method", "item/commandExecution/requestApproval",
         "params", Json.obj("threadId", "A", "turnId", "turn-A", "command", "git status", "cwd", "/fixture/project")));
-    app.changed(); invoke("showPending");
+    invoke("showPending");
     return (AlertDialog) ShadowDialog.getLatestDialog();
   }
   private AlertDialog warning(AlertDialog approval) {
@@ -113,10 +123,13 @@ public class ForcedApprovalUiTest {
     TextView label = (TextView) ((ViewGroup) row).getChildAt(1);
     assertEquals("bolt", bolt.icon); assertEquals(indicator.color, bolt.color);
     assertEquals(indicator.color, label.getCurrentTextColor());
+    assertNotNull(find(menu.getWindow().getDecorView(), "发送消息以更新权限"));
     capture(menu.getWindow().getDecorView(), "force-permission-menu");
     row.performClick(); idle();
     assertFalse(app.forcedApprovals.active());
     assertNotNull(find(activity.findViewById(android.R.id.content), "权限：完全访问"));
+    invoke("choosePermission");
+    assertNull(find(ShadowDialog.getLatestDialog().getWindow().getDecorView(), "权限选项：强制允许"));
   }
 
   @Test public void structuredQuestionsStillOpenNormallyWithoutForceButton() throws Exception {
@@ -145,8 +158,9 @@ public class ForcedApprovalUiTest {
     int before = app.stateListeners.size();
     invoke("choosePermission"); assertEquals(before + 1, app.stateListeners.size());
     Dialog menu = ShadowDialog.getLatestDialog();
-    find(menu.getWindow().getDecorView(), "权限选项：强制允许").performClick();
-    AlertDialog warning = (AlertDialog) ShadowDialog.getLatestDialog();
+    assertNull(find(menu.getWindow().getDecorView(), "权限选项：强制允许"));
+    menu.dismiss(); idle();
+    AlertDialog warning = warning(approval());
     assertTrue(warning.isShowing()); assertEquals(before + 1, app.stateListeners.size());
     controller.pause().stop().destroy();
     assertFalse(warning.isShowing()); assertEquals(before, app.stateListeners.size());
@@ -172,5 +186,39 @@ public class ForcedApprovalUiTest {
     assertTrue(Color.red(indicator.color) > Color.green(indicator.color));
     indicator.performClick();
     capture(ShadowDialog.getLatestDialog().getWindow().getDecorView(), "force-permission-menu-dark");
+  }
+
+  @Test public void normalPermissionMenuHasOnlyTheRequestedFooterAndNoForceEntry() throws Exception {
+    invoke("choosePermission");
+    Dialog menu = ShadowDialog.getLatestDialog(); View content = menu.getWindow().getDecorView();
+    assertNull(find(content, "权限选项：强制允许"));
+    assertNotNull(find(content, "发送消息以更新权限"));
+    assertNull(find(content, "下一轮生效"));
+    capture(content, "permission-menu-normal");
+  }
+
+  @Test public void firstThreeApprovalsHaveNoForceButtonAndFourthHasOne() throws Exception {
+    for (int n = 1; n <= 4; n++) {
+      AlertDialog dialog = permission("sequence-" + n);
+      assertEquals(n == 4, dialog.getButton(AlertDialog.BUTTON_NEUTRAL).getVisibility() == View.VISIBLE);
+      if (n <= 3) {
+        emit(Json.obj("method", "serverRequest/resolved", "params", Json.obj("threadId", "A", "requestId", "sequence-" + n)));
+        invoke("showPending");
+      }
+    }
+    assertFalse(app.forcedApprovals.active());
+    invoke("choosePermission");
+    assertNull(find(ShadowDialog.getLatestDialog().getWindow().getDecorView(), "权限选项：强制允许"));
+  }
+
+  @Test public void lateDismissalCannotRemoveTheNewPermissionMenusListener() throws Exception {
+    int before = app.stateListeners.size();
+    invoke("choosePermission");
+    invoke("choosePermission");
+    Dialog newest = ShadowDialog.getLatestDialog();
+    idle();
+    assertTrue(newest.isShowing()); assertEquals(before + 1, app.stateListeners.size());
+    app.threadId = "B"; app.changed(); idle();
+    assertFalse(newest.isShowing()); assertEquals(before, app.stateListeners.size());
   }
 }
