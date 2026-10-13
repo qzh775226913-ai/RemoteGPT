@@ -23,6 +23,14 @@ def git(*args):
     return subprocess.check_output(['git', *args], cwd=ROOT).decode().strip()
 
 
+def download_asset(url):
+    return subprocess.check_output([
+        'curl', '--silent', '--show-error', '--fail', '--location',
+        '--proto', '=https', '--proto-redir', '=https', '--retry', '2',
+        '--max-time', '60', '--max-filesize', str(12 * 1024 * 1024), url,
+    ])
+
+
 def api(method, path, body=None, content_type='application/json'):
     url = path if path.startswith('https://uploads.github.com/') else 'https://api.github.com' + path
     request = urllib.request.Request(url, data=body, method=method, headers={
@@ -80,8 +88,7 @@ def main():
             raise RuntimeError('Asset input must be a public HTTPS URL without credentials')
         if not re.fullmatch(r'[0-9a-f]{64}', asset['sha256']):
             raise RuntimeError('Each asset requires an explicit SHA-256')
-        with urllib.request.urlopen(asset['url'], timeout=60) as response:
-            data = response.read(12 * 1024 * 1024 + 1)
+        data = download_asset(asset['url'])
         if len(data) > 12 * 1024 * 1024 or hashlib.sha256(data).hexdigest() != asset['sha256']:
             raise RuntimeError('Asset size or checksum validation failed: ' + asset['name'])
         (folder / asset['name']).write_bytes(data)
