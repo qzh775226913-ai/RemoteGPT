@@ -6,9 +6,9 @@
 
 **小而美的手机端工作入口**：APK 约 **3.8 MB（不到 4 MB）**，原生界面、SSH 直连，轻量便捷。
 
-当前版本：**1.0.51 / versionCode 52**。最低 Android 8（API 26），包名 `app.remotessh`。
+当前版本：**1.0.52 / versionCode 53**（本次仅 tailnet 交付，未更新 GitHub Release）。最低 Android 8（API 26），包名 `app.remotessh`。
 
-**[下载 APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.51/RemoteGPT-1.0.51-Android-universal-debug.apk)** · [发布说明与附件](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest)
+**[公开版 1.0.51 下载 APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.51/RemoteGPT-1.0.51-Android-universal-debug.apk)** · [发布说明与附件](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest)
 
 ## 使用许可
 
@@ -67,7 +67,7 @@ python3 -m venv .venv
 
 完整验证运行合成 SSH 夹具、Python／Android 测试、结构与图标检查、APK 构建和 Lint，不连接生产 SSH 或调用真实模型。APK 位于 `app/build/outputs/apk/debug/app-debug.apk`；自行构建的签名可能与作者提供的安装包不同，覆盖安装前应核对。仅需构建时运行 `./gradlew :app:assembleDebug`。
 
-1.0.51 的本地完整验收和 [GitHub CI 验收](docs/verification/2026-10-13-github-ci.md)均已通过；安装包与未验证范围见 [交付记录](docs/verification/2026-10-13-1.0.51.md)。GitHub Actions 使用同一验证入口，后续提交的结果以仓库 Actions 页面为准。
+1.0.52 已通过[本地完整验收并交付 tailnet](docs/verification/2026-10-15-1.0.52.md)。1.0.51 的本地完整验收和 [GitHub CI 验收](docs/verification/2026-10-13-github-ci.md)均已通过；安装包与未验证范围见 [交付记录](docs/verification/2026-10-13-1.0.51.md)。GitHub Actions 使用同一验证入口，后续提交的结果以仓库 Actions 页面为准。
 
 ## 项目文档
 

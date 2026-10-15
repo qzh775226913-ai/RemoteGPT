@@ -1,6 +1,6 @@
 # 验收标准与证据边界
 
-适用需求：[R-01 至 R-20](REQUIREMENTS.md)。最后核对：2026-10-15。本文件描述通过标准，当前源码结果见 [模型目录与保存类型验证](verification/2026-10-15-catalog-media.md)，前次源码结果见 [强制入口条件显示验证](verification/2026-10-13-conditional-forced-approvals.md)，当前交付记录为 [1.0.51 验证](verification/2026-10-13-1.0.51.md)；前一交付见 [1.0.50 验证](verification/2026-10-12-1.0.50.md)；功能阶段见 [连接诊断与强制权限审批验证](verification/2026-10-12-forced-approvals.md)；之前的 [1.0.48 验证](verification/2026-10-11-1.0.48.md) 和 [项目整理验证](verification/2026-10-11.md) 保留作追溯。
+适用需求：[R-01 至 R-20](REQUIREMENTS.md)。最后核对：2026-10-15。本文件描述通过标准，当前源码结果见 [模型目录与保存类型验证](verification/2026-10-15-catalog-media.md)，前次源码结果见 [强制入口条件显示验证](verification/2026-10-13-conditional-forced-approvals.md)，当前交付记录为 [1.0.52 tailnet 验证](verification/2026-10-15-1.0.52.md)；上一交付为 [1.0.51 验证](verification/2026-10-13-1.0.51.md)；前一交付见 [1.0.50 验证](verification/2026-10-12-1.0.50.md)；功能阶段见 [连接诊断与强制权限审批验证](verification/2026-10-12-forced-approvals.md)；之前的 [1.0.48 验证](verification/2026-10-11-1.0.48.md) 和 [项目整理验证](verification/2026-10-11.md) 保留作追溯。
 
 ## 自动化合并门槛
 
