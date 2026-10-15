@@ -33,18 +33,27 @@ final class ServiceTierOptions {
   static boolean isFast(String id) { return id.equals("fast") || id.equals("priority"); }
   static String supportedId(JSONObject model, String choice) {
     if (choice.isEmpty() || choice.equals(STANDARD)) return choice;
+    // Prefer the exact wire id when a server advertises both aliases.
+    for (JSONObject tier : tiers(model)) if (tier.optString("id").equals(choice)) return choice;
     for (JSONObject tier : tiers(model)) if (same(tier.optString("id"), choice)) return tier.optString("id");
     return "";
   }
   static String label(String id, JSONObject model) {
     if (id.isEmpty()) return "远端默认";
     if (id.equals(STANDARD)) return "普通";
-    if (isFast(id)) return "快速";
-    for (JSONObject tier : tiers(model)) if (same(tier.optString("id"), id)) {
+    String supported = supportedId(model, id);
+    for (JSONObject tier : tiers(model)) if (tier.optString("id").equals(supported)) {
       String name = tier.isNull("name") ? "" : tier.optString("name").trim();
       if (!name.isEmpty()) return name;
     }
+    if (isFast(id)) return "快速";
     return id;
+  }
+  static String description(String id, JSONObject model) {
+    String supported = supportedId(model, id);
+    for (JSONObject tier : tiers(model)) if (tier.optString("id").equals(supported))
+      return tier.isNull("description") ? "" : tier.optString("description");
+    return "";
   }
   static JSONObject model(JSONArray models, String id) {
     for (int i = 0; i < models.length(); i++) {

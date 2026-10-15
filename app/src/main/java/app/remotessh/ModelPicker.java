@@ -107,12 +107,10 @@ final class ModelPicker {
       modelScroll.getLayoutParams().height = ui.dp(Math.min(240, (app.models.length() + 1) * 52 + 8));
       modelScroll.requestLayout();
       modelList.removeAllViews();
-      JSONObject chosen = null;
       for (int i = -1; i < app.models.length(); i++) {
         JSONObject model = i < 0 ? null : app.models.optJSONObject(i);
         if (i >= 0 && model == null) continue;
         String id = model == null ? "" : ModelOptions.id(model);
-        if (selected[0].equals(id) || (selected[0].isEmpty() && model != null && model.optBoolean("isDefault"))) chosen = model;
         boolean checked = selected[0].equals(id);
         LinearLayout option = ui.row(); option.setPadding(ui.dp(14), 0, ui.dp(10), 0);
         option.setBackground(ui.rounded(checked ? ui.panel : modelListBackground, 14));
@@ -129,7 +127,7 @@ final class ModelPicker {
         modelList.addView(option);
       }
       JSONObject resolved = app.selectedModel(selected[0]);
-      if (resolved != null) chosen = resolved;
+      JSONObject chosen = resolved;
       speedChoices.removeAllViews();
       String supported = ServiceTierOptions.supportedId(resolved, selected[2]);
       boolean revoked = !selected[2].isEmpty() && (!app.supportsServiceTier()
@@ -162,14 +160,13 @@ final class ModelPicker {
       if (selected[2].isEmpty()) speedDetail = app.inheritedTierKnown || app.modelSettings.configKnown
           ? "沿用远端默认 · " + ServiceTierOptions.label(app.defaultServiceTier(resolved), resolved) : "沿用远端默认，不覆盖远端配置";
       else if (selected[2].equals(ServiceTierOptions.STANDARD)) speedDetail = "普通速度 · 下一轮生效";
-      else for (JSONObject tier : ServiceTierOptions.tiers(resolved))
-        if (ServiceTierOptions.same(tier.optString("id"), selected[2]) && !tier.isNull("description")) speedDetail = tier.optString("description");
+      else speedDetail = ServiceTierOptions.description(selected[2], resolved);
       if (!selected[2].isEmpty() && !selected[2].equals(ServiceTierOptions.STANDARD) && speedDetail.isEmpty())
-        speedDetail = "更快响应，用量可能增加 · 下一轮生效";
+        speedDetail = "远端档位 · " + selected[2] + " · 下一轮生效";
       if (!app.supportsServiceTier()) speedDetail = "远端未提供速度选项，可沿用远端默认";
       else if (!app.speedSelectionEnabled()) speedDetail += "\n远端已关闭速度档位选择";
       else if (resolved == null) speedDetail += app.modelSettingsLoading ? "\n正在确认远端默认模型…" : "\n请选择具体模型或刷新以确认速度选项";
-      else if (ServiceTierOptions.tiers(resolved).isEmpty()) speedDetail += "\n此模型未提供快速档位";
+      else if (ServiceTierOptions.tiers(resolved).isEmpty()) speedDetail += "\n此模型未提供额外速度档位";
       if (revoked) speedDetail = "所选速度已不可用，恢复远端默认\n" + speedDetail;
       speedHint.setText(speedDetail);
       List<String> efforts = ModelOptions.efforts(chosen);

@@ -13,6 +13,31 @@ final class MediaFiles {
   static final long DOWNLOAD_LIMIT = 100L * 1024 * 1024;
   static final Pattern IMAGE = Pattern.compile("!\\[([^\\]]*)\\]\\(([^\\s)]+)\\)");
 
+  /** Metadata for Android's document creator; the payload is still saved unchanged. */
+  static android.content.Intent saveIntent(String source) {
+    String name, mime = "";
+    android.webkit.MimeTypeMap types = android.webkit.MimeTypeMap.getSingleton();
+    if (source.startsWith("data:image/")) {
+      int end = source.indexOf(';');
+      if (end < 0) end = source.indexOf(',');
+      if (end > 5) mime = source.substring(5, end).toLowerCase(Locale.ROOT);
+      String extension = types.getExtensionFromMimeType(mime);
+      name = "image" + (extension == null ? "" : "." + extension);
+    } else {
+      name = android.net.Uri.parse(source).getLastPathSegment();
+      if (name == null || name.isEmpty()) name = "download";
+      int dot = name.lastIndexOf('.');
+      if (dot >= 0) {
+        String known = types.getMimeTypeFromExtension(name.substring(dot + 1).toLowerCase(Locale.ROOT));
+        if (known != null) mime = known;
+      }
+    }
+    return new android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT)
+        .setType(mime.isEmpty() ? "application/octet-stream" : mime)
+        .addCategory(android.content.Intent.CATEGORY_OPENABLE)
+        .putExtra(android.content.Intent.EXTRA_TITLE, name);
+  }
+
   static void copy(InputStream in, OutputStream out, long limit) throws IOException {
     copy(in,out,limit,()->true);
   }

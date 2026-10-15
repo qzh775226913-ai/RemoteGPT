@@ -1017,10 +1017,7 @@ public final class MainActivity extends Activity {
       if (pendingDownload.length() > 0) { toast("请先完成当前保存操作"); return; }
       pendingDownload = resolved;
       pendingDownloadHost = app.profile == null ? "" : app.profile.id;
-      String name = source.startsWith("data:") ? "image.png" : android.net.Uri.parse(resolved).getLastPathSegment();
-      if (name == null || name.isEmpty()) name = "download";
-      startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/octet-stream")
-          .addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE, name), 44);
+      startActivityForResult(MediaFiles.saveIntent(resolved), 44);
     } catch (Exception e) { pendingDownload = ""; toast(ConnectionFailure.reason(e)); }
   }
 

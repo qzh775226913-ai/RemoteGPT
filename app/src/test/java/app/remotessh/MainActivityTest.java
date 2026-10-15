@@ -371,6 +371,18 @@ public class MainActivityTest {
     assertTrue(app.connected);
   }
 
+  @Test public void savingPngOpensDocumentCreatorAsAnImage() throws Exception {
+    shadowOf(android.webkit.MimeTypeMap.getSingleton()).addExtensionMimeTypeMapping("png", "image/png");
+    RemoteApp app = (RemoteApp) activity.getApplication(); app.profile = new Profile();
+    java.lang.reflect.Method save = MainActivity.class.getDeclaredMethod("saveMedia", String.class);
+    save.setAccessible(true); save.invoke(activity, "sandbox:/tmp/generated.png");
+    var request = shadowOf(activity).getNextStartedActivityForResult();
+    assertEquals(44, request.requestCode);
+    assertEquals(android.content.Intent.ACTION_CREATE_DOCUMENT, request.intent.getAction());
+    assertEquals("image/png", request.intent.getType());
+    assertEquals("generated.png", request.intent.getStringExtra(android.content.Intent.EXTRA_TITLE));
+  }
+
   @Test public void modelPanelUpdatesWhileOpenAndKeepsRemoteDefault() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
     app.models = new org.json.JSONArray(); app.changed();
@@ -384,6 +396,11 @@ public class MainActivityTest {
     app.changed();
     assertNotNull(find(shell, "选择模型：gpt-6.1-sol"));
     assertNotNull(find(shell, "刷新模型"));
+    // Catalog recommendation is not proof of the configured/inherited model.
+    assertNotNull(find(shell, "此模型未提供可选强度"));
+    app.modelSettings = new ModelSettings(); app.modelSettings.configKnown = true;
+    app.modelSettings.model = "gpt-6.1-sol"; app.changed();
+    assertNotNull(find(shell, "默认 · Medium"));
     find(shell, "完成").performClick();
     assertEquals("", app.model); assertEquals("", app.reasoningEffort);
   }
@@ -403,7 +420,7 @@ public class MainActivityTest {
     find(shell, "完成").performClick();
     assertEquals("priority", app.serviceTier);
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
-    assertTrue(((TextView) find(content(), "选择模型与推理强度")).getText().toString().contains("快速"));
+    assertTrue(((TextView) find(content(), "选择模型与推理强度")).getText().toString().contains("Fast"));
     find(content(), "选择模型与推理强度").performClick();
     shell = org.robolectric.shadows.ShadowDialog.getLatestDialog().getWindow().getDecorView();
     find(shell, "选择模型：ordinary-model").performClick();

@@ -13,6 +13,30 @@ import org.robolectric.annotation.Config;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 35)
 public class MediaTest {
+  @Test public void documentCreatorUsesMatchingMimeAndOriginalFilename() {
+    // Robolectric's MIME table starts empty; supply Android's standard mappings.
+    var types = Shadows.shadowOf(android.webkit.MimeTypeMap.getSingleton());
+    types.addExtensionMimeTypeMapping("png", "image/png");
+    types.addExtensionMimeTypeMapping("jpg", "image/jpeg");
+    types.addExtensionMimeTypeMapping("webp", "image/webp");
+    types.addExtensionMimeTypeMapping("gif", "image/gif");
+    types.addExtensionMimeTypeMapping("pdf", "application/pdf");
+    String[][] cases = {{"/tmp/中文 图.PNG", "image/png", "中文 图.PNG"},
+        {"https://example.test/a/photo.jpg?token=ignored", "image/jpeg", "photo.jpg"},
+        {"/tmp/a.webp", "image/webp", "a.webp"}, {"/tmp/a.gif", "image/gif", "a.gif"},
+        {"data:image/png;base64,AA==", "image/png", "image.png"},
+        {"data:image/jpeg;base64,AA==", "image/jpeg", "image.jpg"},
+        {"data:image/webp;base64,AA==", "image/webp", "image.webp"},
+        {"/tmp/report.pdf", "application/pdf", "report.pdf"},
+        {"/tmp/unknown", "application/octet-stream", "unknown"}};
+    for (String[] row : cases) {
+      android.content.Intent intent = MediaFiles.saveIntent(row[0]);
+      assertEquals(row[0], row[1], intent.getType());
+      assertEquals(row[0], row[2], intent.getStringExtra(android.content.Intent.EXTRA_TITLE));
+      assertEquals(android.content.Intent.ACTION_CREATE_DOCUMENT, intent.getAction());
+      assertTrue(intent.hasCategory(android.content.Intent.CATEGORY_OPENABLE));
+    }
+  }
   @Test public void parsesImagesAlongsideTextAndGeneratedImages() {
     ChatItem item = ChatItem.from(Json.obj("id", "u", "type", "userMessage", "content", new JSONArray()
         .put(Json.obj("type", "text", "text", "看看这张图"))
