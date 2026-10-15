@@ -42,13 +42,11 @@ final class ModelPicker {
     final String modelThread = app.threadId;
     LinearLayout panelView = ui.column();
     panelView.setPadding(ui.dp(20), 0, ui.dp(20), ui.dp(8));
-    TextView subtitle = ui.text("模型、推理强度与运行速度 · 下一轮生效", 12, ui.muted);
+    TextView subtitle = ui.text("发送消息以更新模型", 12, ui.muted);
     subtitle.setPadding(ui.dp(4), 0, 0, ui.dp(16));
     panelView.addView(subtitle);
     TextView catalogStatus = ui.text("", 12, ui.muted);
     panelView.addView(catalogStatus);
-    TextView refresh = ui.action("刷新模型", () -> { app.refreshModels(); app.refreshModelSettings(); });
-    panelView.addView(refresh);
     ScrollView modelScroll = new ModelListScrollView(activity);
     int modelListBackground = ui.bg == Color.BLACK ? 0xff161616 : 0xfff8f8f8;
     modelScroll.setContentDescription("可滚动的模型列表");
@@ -103,7 +101,6 @@ final class ModelPicker {
     Runnable[] redraw = new Runnable[1];
     redraw[0] = () -> {
       catalogStatus.setText(app.modelsStatus.isEmpty() ? "模型由远端提供；未列出新模型时请检查远端 Codex 版本和账号" : app.modelsStatus);
-      refresh.setEnabled(!app.modelsLoading && app.connected);
       modelScroll.getLayoutParams().height = ui.dp(Math.min(240, (app.models.length() + 1) * 52 + 8));
       modelScroll.requestLayout();
       modelList.removeAllViews();
@@ -165,7 +162,7 @@ final class ModelPicker {
         speedDetail = "远端档位 · " + selected[2] + " · 下一轮生效";
       if (!app.supportsServiceTier()) speedDetail = "远端未提供速度选项，可沿用远端默认";
       else if (!app.speedSelectionEnabled()) speedDetail += "\n远端已关闭速度档位选择";
-      else if (resolved == null) speedDetail += app.modelSettingsLoading ? "\n正在确认远端默认模型…" : "\n请选择具体模型或刷新以确认速度选项";
+      else if (resolved == null) speedDetail += app.modelSettingsLoading ? "\n正在确认远端默认模型…" : "\n请选择具体模型或等待自动同步以确认速度选项";
       else if (ServiceTierOptions.tiers(resolved).isEmpty()) speedDetail += "\n此模型未提供额外速度档位";
       if (revoked) speedDetail = "所选速度已不可用，恢复远端默认\n" + speedDetail;
       speedHint.setText(speedDetail);
@@ -234,7 +231,6 @@ final class ModelPicker {
         dismiss(); return;
       }
       catalogStatus.setText(app.modelsStatus);
-      refresh.setEnabled(!app.modelsLoading);
       if (rendered[0] != app.models || renderedSettings[0] != app.modelSettings || settingsLoading[0] != app.modelSettingsLoading) {
         rendered[0] = app.models;
         renderedSettings[0] = app.modelSettings; settingsLoading[0] = app.modelSettingsLoading;

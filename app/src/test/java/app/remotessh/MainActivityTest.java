@@ -395,7 +395,8 @@ public class MainActivityTest {
         new org.json.JSONArray().put("low").put("medium").put("future")));
     app.changed();
     assertNotNull(find(shell, "选择模型：gpt-6.1-sol"));
-    assertNotNull(find(shell, "刷新模型"));
+    assertNull(find(shell, "刷新模型"));
+    assertNotNull(find(shell, "发送消息以更新模型"));
     // Catalog recommendation is not proof of the configured/inherited model.
     assertNotNull(find(shell, "此模型未提供可选强度"));
     app.modelSettings = new ModelSettings(); app.modelSettings.configKnown = true;
@@ -407,12 +408,14 @@ public class MainActivityTest {
 
   @Test public void speedPickerUsesRemoteDetailsAndRevokesUnsupportedModelChoice() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
+    app.modelsStatus = "已同步远端模型";
     app.models = new org.json.JSONArray().put(Json.obj("model", "fast-model", "displayName", "Fast model", "serviceTiers",
         new org.json.JSONArray().put(Json.obj("id", "priority", "name", "Fast", "description", "Server speed and usage details"))))
         .put(Json.obj("model", "ordinary-model", "displayName", "Ordinary model", "serviceTiers", new org.json.JSONArray()));
     app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     find(content(), "选择模型与推理强度").performClick();
     android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog(); View shell = dialog.getWindow().getDecorView();
+    assertNotNull(find(shell, "已同步远端模型"));
     find(shell, "选择模型：fast-model").performClick();
     find(shell, "选择运行速度：priority").performClick();
     assertNotNull(find(shell, "Server speed and usage details"));

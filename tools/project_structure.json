@@ -18,7 +18,8 @@
       "TurnController",
       "AttachmentController",
       "DirectoryController",
-      "ForcedApprovalController"
+      "ForcedApprovalController",
+      "ModelRefreshScheduler"
     ],
     "protocol_transport": [
       "SshTransport",

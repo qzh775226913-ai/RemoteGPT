@@ -25,7 +25,7 @@ public class ModelRefreshTest {
     Field field = RemoteApp.class.getDeclaredField("rpc"); field.setAccessible(true); field.set(app, rpc);
     app.models = new JSONArray().put(Json.obj("model", "old"));
   }
-  @After public void close() { rpc.close(); }
+  @After public void close() { app.modelRefresh.stop(); rpc.close(); }
   void waitFor(java.util.function.BooleanSupplier condition) throws Exception {
     long deadline = System.nanoTime() + 3_000_000_000L;
     while (!condition.getAsBoolean() && System.nanoTime() < deadline) {
@@ -40,6 +40,43 @@ public class ModelRefreshTest {
   void reply(JSONObject request, String type, JSONObject value) throws Exception {
     Method receive = RpcClient.class.getDeclaredMethod("receive", JSONObject.class); receive.setAccessible(true);
     receive.invoke(rpc, Json.obj("id", request.get("id"), type, value));
+  }
+  @Test public void automaticRefreshRunsEveryThirtySecondsWithoutPickerOrDuplicateTimers() throws Exception {
+    app.modelRefresh.start(); app.modelRefresh.start();
+    Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(29));
+    assertEquals(0, output.size());
+    Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));
+    JSONObject a = request(0), b = request(1);
+    java.util.Set<String> methods = new java.util.HashSet<>();
+    methods.add(a.getString("method")); methods.add(b.getString("method"));
+    assertEquals(new java.util.HashSet<>(java.util.Arrays.asList("model/list", "config/read")), methods);
+    JSONObject catalog = a.getString("method").equals("model/list") ? a : b;
+    // A slow config request stays in flight; the next tick must not duplicate it.
+    reply(catalog, "error", Json.obj("code", -1, "message", "offline"));
+    waitFor(() -> !app.modelsLoading);
+    assertEquals("old", ModelOptions.id(app.models.getJSONObject(0)));
+    Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(30));
+    JSONObject retry = request(2); assertEquals("model/list", retry.getString("method"));
+    assertEquals(3, output.toString("UTF-8").trim().split("\n").length);
+    reply(retry, "result", Json.obj("data", new JSONArray().put(Json.obj("model", "automatic-new"))));
+    waitFor(() -> !app.modelsLoading);
+    assertEquals("automatic-new", ModelOptions.id(app.models.getJSONObject(0)));
+    assertEquals("已同步远端模型", app.modelsStatus);
+  }
+  @Test public void disconnectCancelsAutomaticRefresh() {
+    app.modelRefresh.start(); app.disconnect();
+    Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(90));
+    assertEquals(0, output.size());
+  }
+  @Test public void oldConnectionTimerCannotRefreshANewGeneration() throws Exception {
+    app.modelRefresh.start();
+    Field g = RemoteApp.class.getDeclaredField("generation"); g.setAccessible(true); g.setInt(app, g.getInt(app) + 1);
+    Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(90));
+    assertEquals(0, output.size());
+    app.modelRefresh.start();
+    Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(30));
+    request(1);
+    assertEquals(2, output.toString("UTF-8").trim().split("\n").length);
   }
   @Test public void refreshIsAtomicAndCanDiscoverNewModelsWithoutReconnect() throws Exception {
     app.refreshModels(); app.refreshModels();

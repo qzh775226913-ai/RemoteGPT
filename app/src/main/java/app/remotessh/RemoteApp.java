@@ -93,6 +93,7 @@ public final class RemoteApp extends Application {
   private final TurnController turns = new TurnController(this);
   private final AttachmentController attachments = new AttachmentController(this);
   private final DirectoryController directories = new DirectoryController(this);
+  final ModelRefreshScheduler modelRefresh = new ModelRefreshScheduler(this);
   private final ArrayDeque<String> restoreQueue = new ArrayDeque<>();
   private String restoringThread = "", pendingNavigation = "", loadingThread = "", replayThread = "";
   private String loadingStage="";
@@ -670,6 +671,7 @@ public final class RemoteApp extends Application {
                   } else if (!resumeId.isEmpty()) viewConversation(resumeId);
                   refreshModels();
                   refreshModelSettings();
+                  modelRefresh.start();
                   checkRemoteVersion(true);
                 });
           } catch (Exception e) {
@@ -955,6 +957,7 @@ public final class RemoteApp extends Application {
   }
 
   public void disconnect() {
+    modelRefresh.stop();
     forcedApprovalState = new ForcedApprovalController.State();
     journalPolling.clear();
     recoveringThreads.clear();
