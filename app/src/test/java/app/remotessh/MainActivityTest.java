@@ -1006,7 +1006,12 @@ public class MainActivityTest {
     android.app.AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
     assertEquals("编辑当前连接",menu.getListView().getAdapter().getItem(1));menu.getListView().performItemClick(null,1,1);
     android.app.Dialog editor=org.robolectric.shadows.ShadowDialog.getLatestDialog();
-    assertEquals("100.100.100.100",inputField(editor.findViewById(R.id.connection_editor),"主机").getText().toString());editor.dismiss();browser.dismiss();
+    assertEquals("100.100.100.100",inputField(editor.findViewById(R.id.connection_editor),"主机").getText().toString());
+    View shell=editor.getWindow().getDecorView();captureView(shell,"connection-editor-actions");
+    ScrollView form=(ScrollView)find(shell,"SSH 连接表单");
+    form.scrollTo(0,form.getChildAt(0).getHeight());
+    captureLaidOutView(shell,"connection-editor-actions");
+    editor.dismiss();browser.dismiss();
   }
 
   @Test public void tailscaleModePassesCredentialValidation() {

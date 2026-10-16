@@ -229,6 +229,8 @@ final class ProfileEditor {
                                 .show())
                     .show();
               }));
+      LinearLayout.LayoutParams removeLayout = new LinearLayout.LayoutParams(-1, -2);
+      removeLayout.topMargin = ui.dp(12);
       form.addView(
           ui.action(
               "移除此连接",
@@ -247,7 +249,7 @@ final class ProfileEditor {
                             dialog.dismiss();
                             actions.removed();
                           })
-                      .show()));
+                      .show()), removeLayout);
     }
   }
 
