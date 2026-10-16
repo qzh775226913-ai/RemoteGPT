@@ -22,9 +22,9 @@
 | 后台／通知 | `ConnectionService` 维持前台服务与唤醒锁；`LiveStatusNotifications` 及 `LiveActionReceiver` 处理会话通知、请求身份和点击路由 |
 | 远端资产 | `remote_session.py` 托管 Codex 进程、SQLite 事件及重放；`conversation_state.py` 有界读取问答日志；`remote_maintenance.py` 检查／更新／明确重启 |
 
-所有主 Java 文件按职责登记在 [模块登记](../tools/project_structure.json)。添加新类时登记所属模块，不靠一个平铺目录猜归属。当前保留包名与目录，避免纯目录搬迁造成大范围引用／测试变更。
+所有主 Java 文件的模块归属及规模上限登记在 [模块登记](../tools/project_structure.json)。
 
-`DialogUi` 和 `RemoteScreens` 分别保存聊天窗口与导航页面的现有视觉风格；本轮没有强行统一两套颜色或按钮尺寸。
+`DialogUi` 和 `RemoteScreens` 分别提供聊天窗口与导航页面的 UI 组件。
 
 ## 三种状态生命周期
 
@@ -38,11 +38,11 @@
 
 ## 会话分发与兼容接口
 
-现有 UI 和通知读取 `RemoteApp` 的选中会话字段。为保持行为，本轮保留该兼容接口，`ConversationState.capture/apply` 做显式快照；**它尚未变成完全无副本的状态模型**。
+现有 UI 和通知读取 `RemoteApp` 的选中会话字段。该兼容接口通过 `ConversationState.capture/apply` 做显式快照；选中状态与会话快照同时存在。
 
 `ConversationStore.dispatch` 按以下顺序运行：保存选中会话 → 应用目标会话 → 执行动作 → 在 finally 中保存目标并恢复选中会话 → 最外层结束后发布合并的变化。嵌套动作／异常也恢复选择、项目和最后会话。缓存的读写及作用域切换必须在主线程；后台分发期间不得让通知或 UI 看见临时选择。
 
-新增会话字段须同时更新 `ConversationState` 的声明、capture/apply，并验证 A/B 隔离、异常恢复和重连。不要增加第二套手写切换代码。直接按状态对象工作的下一阶段迁移见 [技术债](MAINTENANCE.md)。
+新增会话字段须同时更新 `ConversationState` 的声明、capture/apply，并验证 A/B 隔离、异常恢复和重连。切换入口统一使用 ConversationStore；相关技术债见 [维护规则](MAINTENANCE.md)。
 
 ## 异步和协议规则
 
@@ -62,6 +62,6 @@
 
 保留已有 Vault 加密格式、SharedPreferences 名称／键、包名和签名。权限／速度键对可能含私人值的启动身份做哈希；不得把命令或凭据直接打印到日志。重构数据格式必须有旧数据迁移和可逆性说明。
 
-远端托管脚本按内容哈希安装到 `~/.remote-gpt`，目录 0700、脚本 0600。生产 SSH、主机信任、上游登录和活跃任务不属于自动化夹具。此轮不更改资产协议或部署到真实远端。
+远端托管脚本按内容哈希安装到 `~/.remote-gpt`，目录 0700、脚本 0600。生产 SSH、主机信任、上游登录和活跃任务不属于自动化夹具。自动化夹具与生产远端相互独立。
 
 模型目录通过 `ModelCatalog` 完整分页原子替换，`ServiceTierOptions` 解析服务端速度 ID／名称／描述，`ModelPicker` 在打开时发现能力；连接级 `ModelRefreshScheduler` 由 RemoteApp 在握手成功后启动、断开时停止，每 30 秒复用既有目录／配置读取入口，按 generation 和任务身份隔离旧定时器，既有 loading 标记避免请求重叠。定时器不属于 Activity，不增加会话字段。旧目录别名兼容不能覆盖精确 ID，未知档位说明不推测性能。`MediaFiles.saveIntent` 为系统保存窗口提供匹配的 MIME／文件名，`MainActivity` 仍负责保存结果与传输，原始字节不变。

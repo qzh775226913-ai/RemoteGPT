@@ -1,25 +1,7 @@
-# RemoteGPT：不到 4 MB，在手机上接续远端开发
+# 项目简介
 
-RemoteGPT 是通过 SSH 使用远端 Codex 的 Android 原生客户端。无需额外 Web 管理后台，在手机上发送任务、查看进度、处理权限审批、管理会话和附件。
+RemoteGPT 是通过 SSH 操作远端 Codex 的 Android 原生客户端。支持多会话、任务状态、权限审批、附件传输、远端持久会话和断线恢复。APK 约 3.8 MB，最低 Android 8。
 
-安装包约 3.8 MB，深色界面、统一图标和原生交互，轻量便捷。默认持久模式下，手机断线后远端任务可继续运行，重连后尝试恢复活动会话；兼容设备可通过流体云／实时通知查看任务状态。
+服务器需提供 SSH/SFTP，并为连接用户配置可用的 Codex CLI。持久模式需要 Python 3.8+。模型运行、账户权限和服务费用由远端处理。
 
-适合已经使用 Codex CLI、有可连接 SSH 主机的 Android 用户。手机需要 Android 8 或以上；远端需 SSH/SFTP、已安装并登录的 Codex CLI，默认持久模式需要 Python 3.8+。实际速度、恢复与通知效果取决于网络、远端进程及手机系统。
-
-APP 正常使用免费；Codex 服务费用自行承担。源码公开，采用自定义许可，商业再利用和修改版发布须书面授权，详情见 [LICENSE](../LICENSE)。
-
-[下载 APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [四步配置与常见问题](USAGE.md) · [提交反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
-
-## 试用反馈
-
-建议先邀请 5～10 位已有远端环境的用户试用，再根据实际反馈扩大推广。反馈请说明手机型号／系统版本、APP 版本、远端系统，以及问题发生的步骤；不要提交密码、密钥、Token、完整个人路径或未经脱敏的截图。
-
-## 演示建议
-
-录制 30～60 秒视频：连接示例主机 → 发送简单任务 → 处理一次权限审批 → 查看后台状态 → 演示网络恢复后接续。使用专门的非敏感示例项目，隐藏地址、用户名、账户用量与私人任务内容；未经实际验证的恢复效果不要演示为保证。
-
-## GitHub 展示设置
-
-仓库右侧 About 可填写：`不到 4 MB 的 Android 原生客户端，通过 SSH 使用远端 Codex，支持手机审批、远端持久会话和重连恢复。`
-
-Topics 建议：`android`、`java`、`ssh`、`codex`、`remote-development`、`developer-tools`。介绍时使用“源码公开、免费使用”，不标记为标准开源许可。
+[安装包](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [使用说明](USAGE.md) · [项目许可](../LICENSE) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)

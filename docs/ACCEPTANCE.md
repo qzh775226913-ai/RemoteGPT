@@ -1,6 +1,8 @@
 # 验收标准与证据边界
 
-适用需求：[R-01 至 R-20](REQUIREMENTS.md)。最后核对：2026-10-16。本文件描述通过标准，当前源码结果见 [连接编辑间距验证](verification/2026-10-16-profile-spacing.md)，前次源码结果见 [强制入口条件显示验证](verification/2026-10-13-conditional-forced-approvals.md)，当前版本记录为 [1.0.54 源码验证](verification/2026-10-16-1.0.54.md) 与 [GitHub APK 发布验证](verification/2026-10-16-github-release.md)；上一安装包交付为 [1.0.53 tailnet 验证](verification/2026-10-15-1.0.53.md)，前次交付见 [1.0.52 tailnet 验证](verification/2026-10-15-1.0.52.md)；上一交付为 [1.0.51 验证](verification/2026-10-13-1.0.51.md)；前一交付见 [1.0.50 验证](verification/2026-10-12-1.0.50.md)；功能阶段见 [连接诊断与强制权限审批验证](verification/2026-10-12-forced-approvals.md)；之前的 [1.0.48 验证](verification/2026-10-11-1.0.48.md) 和 [项目整理验证](verification/2026-10-11.md) 保留作追溯。
+适用版本：1.0.54；需求 R-01 至 R-20。最后核对：2026-10-16。
+
+[版本验证](verification/2026-10-16-1.0.54.md) · [公开制品验证](verification/2026-10-16-github-release.md)
 
 ## 自动化合并门槛
 
@@ -46,7 +48,7 @@
 | 图像格式 | 目标设备真实 HEIF/AVIF、云相册 URI、长图与缩放 | 平台可解码才支持；Robolectric 的分区解码 shadow 不是目标硬件解码器 |
 | 更新和分发 | 实际目标安装方式、安装包签名、覆盖安装、下载与校验 | 构建成功不代表已发布、已安装或真实远端升级完成 |
 
-本轮没有目标 Android 真机或真实模型验收；保持这项限制，不能把代码重构写成新增支持。
+当前自动化证据不覆盖目标 Android 真机或真实模型服务。
 
 ## 交付检查
 

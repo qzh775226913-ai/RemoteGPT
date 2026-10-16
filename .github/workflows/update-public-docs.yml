@@ -1,4 +1,4 @@
-name: Update public release description
+name: Update public release descriptions
 
 on:
   push:
@@ -6,10 +6,12 @@ on:
       - 'public-docs-*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   update:
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -34,13 +36,21 @@ jobs:
                       method='GET' if data is None else 'PATCH')
               with urllib.request.urlopen(req, timeout=30) as response:
                   return json.load(response)
-          release = request('/releases/tags/v1.0.51')
-          assert release['tag_name'] == 'v1.0.51' and not release['draft']
-          before = [(a['id'], a['name'], a['size']) for a in release['assets']]
-          body = pathlib.Path('docs/releases/1.0.51.md').read_text()
-          assert 'chat-home.jpg' not in body and 'multi-session-notifications.jpg' not in body
-          updated = request('/releases/' + str(release['id']), {'body': body})
-          assert updated['body'] == body
-          assert [(a['id'], a['name'], a['size']) for a in updated['assets']] == before
-          print('Release notes updated; existing tag and all APK assets preserved.')
+          def assets(release):
+              return sorted((a['id'], a['name'], a['size'], a.get('digest'))
+                            for a in release['assets'])
+          for version in ('1.0.51', '1.0.54'):
+              tag = 'v' + version
+              release = request('/releases/tags/' + tag)
+              assert release['tag_name'] == tag and not release['draft']
+              before = assets(release)
+              ref = request('/git/ref/tags/' + tag)['object']
+              body = pathlib.Path('docs/releases/' + version + '.md').read_text()
+              updated = request('/releases/' + str(release['id']), {'body': body})
+              assert updated['body'] == body
+              assert assets(updated) == before
+              assert request('/git/ref/tags/' + tag)['object'] == ref
+              for field in ('id', 'tag_name', 'target_commitish', 'name', 'draft', 'prerelease'):
+                  assert updated[field] == release[field]
+              print('Updated description: ' + tag)
           PY

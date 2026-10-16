@@ -2,7 +2,7 @@
 
 适用版本：1.0.54。手机通过 SSH 操作远端 Codex，账户与模型服务在服务器上配置。
 
-正常使用（包括工作和商业项目）免费；本人或组织内部修改可以进行。换皮／修改版发布、闭源产品交付和利用 App 提供商业产品或服务，须另获书面授权。完整条件见 [项目许可](../LICENSE)。
+软件使用与再分发条件见 [项目许可](../LICENSE)。Codex 服务费用另计。
 
 ## 1. 准备服务器
 
@@ -39,7 +39,7 @@ python3 -c 'import sys, sqlite3, fcntl, socket; assert sys.version_info >= (3, 8
 | 认证方式 | 密码或私钥；加密私钥同时填写口令。Tailscale SSH 身份认证需另有相应策略授权 |
 | 远端项目目录 | 服务器上的绝对路径，可留空后通过目录浏览选择 |
 | 远端启动命令 | 默认 `codex app-server`；找不到程序时填写 `command -v codex` 得到的完整路径加 `app-server` |
-| 远端持久会话 | 建议保持开启，需要上述 Python 环境 |
+| 远端持久会话 | 默认开启，需要上述 Python 环境 |
 
 例如程序路径为 `/home/me/.local/bin/codex`，启动命令填：
 

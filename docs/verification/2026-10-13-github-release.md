@@ -1,43 +1,24 @@
-# 首次公开 APK Release
+# 1.0.51 GitHub 发布验证
 
-版本：1.0.51 / versionCode 52。恢复提交：`7f857f7`。
+日期：2026-10-13。恢复基线：`7f857f7`。
 
-## 范围与制品
+## 变更
 
-首次将既有 1.0.51 APK 分发到 GitHub Release；这是新增分发渠道，不是新应用构建，版本、应用代码、依赖、包名、存储格式及签名均不变。README 和 [发布说明](../releases/1.0.51.md) 补充轻量原生、SSH 直连、流体云／实时通知、交互审批、远端断线续跑与活动会话恢复。
-
-公开 APK：`RemoteGPT-1.0.51-Android-universal-debug.apk`，3,812,491 字节，约 3.8 MB；不将安装包大小当成安装后的总占用。
-
-- SHA-256：`d53f0b7b40c15a56f48521c3b866c5e64626c27aafeb0af2369b7d123ca7b80e`。
-- `apksigner verify --print-certs` 通过，签名 SHA-256：`43ef05b33d4e9505eff7370a3a830af59dbc0b256c9925a12f76273e353f020a`，与此前分发一致。
-- 安装 ZIP 附同一 APK、LICENSE 与安装说明；另附 APK／ZIP 校验文件及 LICENSE.txt。
+公开已签名的 1.0.51 APK、安装 ZIP、校验文件及许可。
 
 ## 验证
 
-本阶段执行完整 `python3 tools/verify.py --offline`：文档／结构／预算及 28 个图标检查通过；44 项 Python 测试通过；356 项 Android 测试，0 失败、0 错误、0 跳过；APK 构建通过，Lint 0 Error/Fatal、17 项既有 Warning，`full_acceptance: true`，Gradle 1 分 24 秒。
+- Android：356 项通过，0 失败、0 错误、0 跳过。
+- Python、文档、结构、图标、APK 构建与 Lint 通过；Lint 0 Error/Fatal、17 项 Warning。
+Python 44 项。正式标签提交 930515ffadeba3376cee95b585c71519e1c15516，Release ID 411346657。五个附件的大小与摘要匹配，公开 APK 完整下载及验签通过。
 
-随后补充用户截图与优势说明，再次通过文档／结构检查、`git diff --check` 和发布器语法检查。发布器要求正式标签、源码版本、制品摘要、ZIP 内 APK／许可均一致，并等待同一源码提交完整 GitHub Verify 成功；草稿附件全部上传和核对后才公开，不覆盖已有公开 Release。
+[CI 1](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38354682540) · [CI 2](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38354688678) · [CI 3](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355279194) · [CI 4](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355684278) · [CI 5](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355595981) · [CI 6](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355609346) · [CI 7](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355684307)
 
-四张用户提供的真机 JPEG 解码与文件检查通过，清除 EXIF 等文件元数据，逐像素核对画面不变；原附件保留。截图分别展示流体云状态、多会话通知、模型设置及聊天首页，仅证明拍摄环境的展示效果，不证明所有 OEM 或断线恢复已完成真机验收。
+## 制品校验
 
-## 发布方式与边界
+- APK SHA-256：`d53f0b7b40c15a56f48521c3b866c5e64626c27aafeb0af2369b7d123ca7b80e`。
+- 签名证书 SHA-256：`43ef05b33d4e9505eff7370a3a830af59dbc0b256c9925a12f76273e353f020a`。
 
-现有连接没有 Release 写入接口，SSH deploy key 可推送代码／标签。新增显式发布工作流以临时注释标签接收制品 URL 与摘要，仅发布任务使用 GitHub 自有临时 token 的仓库写权限；正常 Verify 保持只读。签名私钥不上传，也不从新 runner 重建不同签名的 APK。
+## 适用范围
 
-新增 Funnel 端口因本机权限不足未开启，原有配置和下载服务不变。改用限时临时制品托管，公开制品上传设置 2 小时自动删除；上传 URL 不进入源码文件，临时触发标签完成后删除，永久下载由 GitHub Release 承担。传输制品均已实际完整下载并核对摘要。
-
-公开 Release 成功与附件下载结果须以实际远端执行核对；本记录不以流程配置代替已经发布。流体云受系统授权与厂商决定，SSH 速度／稳定性受网络影响，持久模式依赖远端进程存活。未运行真实模型、安装手机、部署或重启生产 Codex；[验收边界](../ACCEPTANCE.md) 继续有效。
-
-发布前两次源码 Verify（[主分支](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38354682540)、[版本标签](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38354688678)）均成功。临时文件服务的下载按钮提供带时效的正式下载 URL；制品实际使用该链接完整下载并校验。Python 默认下载请求返回 403，发布器改用服务文档支持的 curl 客户端，并限制 HTTPS、下载大小和超时；未绕过验证码、账户授权或访问权限。此修复单独提交，尚未公开 Release 的版本标签使用明确旧值的 lease 更新至修复提交，源应用与 APK 不变。
-
-首次 [发布任务](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355279194) 在解析输入时失败，未创建公开 Release：Checkout 将本地临时注释标签替换成了剥离后的 commit，导致注释为空。发布器改为通过 GitHub 只读 API 取得远端注释标签，核对其对象与源码 SHA；临时制品使用可分享页面 URL，按其公开下载按钮即时取得短时效下载链接，避免排队期间失效。修复仍单独提交，不改应用或签名。
-
-## 实际公开结果
-
-2026-10-13 14:17（UTC+8），[发布任务](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355684278) 成功公开 [RemoteGPT 1.0.51](https://github.com/qzh775226913-ai/RemoteGPT/releases/tag/v1.0.51)，Release ID `411346657`，正式标签固定指向 `930515ffadeba3376cee95b585c71519e1c15516`。`releases/latest` 实际返回该版本，draft=false、prerelease=false。
-
-五个附件均为 uploaded，GitHub 返回的文件大小和 SHA-256 与本地原制品逐一匹配。实际从公开 GitHub APK 链接完整下载，SHA-256 与原包一致；无需 tailnet。图片链接指向正式版本标签，首页及 Release 正文均包含四张真机图和轻量、直连、通知、审批与恢复说明。
-
-同一源码的三个完整 Verify 运行均成功：[主分支](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355595981)、[正式标签](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355609346)、[发布触发](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/38355684307)。本机一次后续临时 ZIP 下载补测因网络超时失败，不冒充成功；远端发布任务已实际完成全部制品下载、校验与上传，正式 GitHub APK 下载也通过。
-
-两个临时发布标签已从远端和本地删除；临时上传输入与本机传输目录清理，托管文件按上传设定自动到期。正式版本标签、GitHub Release 附件及原 tailnet 下载保留；既有 Funnel／SSH 配置和生产任务未改动。
+自动化使用 Robolectric、合成协议和回环 SSH/SFTP。真机、OEM 通知、后台网络、Tailscale、真实模型及覆盖安装的证据范围见 [验收标准](../ACCEPTANCE.md)。历史验证结果不代表后续版本已执行相同检查。
