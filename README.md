@@ -67,7 +67,7 @@ python3 -m venv .venv
 
 完整验证运行合成 SSH 夹具、Python／Android 测试、结构与图标检查、APK 构建和 Lint，不连接生产 SSH 或调用真实模型。APK 位于 `app/build/outputs/apk/debug/app-debug.apk`；自行构建的签名可能与作者提供的安装包不同，覆盖安装前应核对。仅需构建时运行 `./gradlew :app:assembleDebug`。
 
-1.0.54 已通过[本地完整验收](docs/verification/2026-10-16-1.0.54.md)。前一安装包交付见 [1.0.53 tailnet 验证](docs/verification/2026-10-15-1.0.53.md)。1.0.51 的本地完整验收和 [GitHub CI 验收](docs/verification/2026-10-13-github-ci.md)均已通过；安装包与未验证范围见 [交付记录](docs/verification/2026-10-13-1.0.51.md)。GitHub Actions 使用同一验证入口，后续提交的结果以仓库 Actions 页面为准。
+1.0.54 已通过[本地完整验收](docs/verification/2026-10-16-1.0.54.md)，APK 已[公开发布并完成下载核验](docs/verification/2026-10-16-github-release.md)。前一安装包交付见 [1.0.53 tailnet 验证](docs/verification/2026-10-15-1.0.53.md)。1.0.51 的本地完整验收和 [GitHub CI 验收](docs/verification/2026-10-13-github-ci.md)均已通过；安装包与未验证范围见 [交付记录](docs/verification/2026-10-13-1.0.51.md)。GitHub Actions 使用同一验证入口，后续提交的结果以仓库 Actions 页面为准。
 
 ## 项目文档
 
