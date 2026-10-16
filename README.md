@@ -6,9 +6,9 @@
 
 **小而美的手机端工作入口**：APK 约 **3.8 MB（不到 4 MB）**，原生界面、SSH 直连，轻量便捷。
 
-当前版本：**1.0.54 / versionCode 55**（本次源码更新，公开安装包仍为 1.0.51）。最低 Android 8（API 26），包名 `app.remotessh`。
+当前版本：**1.0.54 / versionCode 55**。最低 Android 8（API 26），包名 `app.remotessh`。
 
-**[公开版 1.0.51 下载 APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.51/RemoteGPT-1.0.51-Android-universal-debug.apk)** · [发布说明与附件](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest)
+**[下载 APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.54/RemoteGPT-1.0.54-Android-universal-debug.apk)** · [发布说明与附件](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest)
 
 ## 使用许可
 
