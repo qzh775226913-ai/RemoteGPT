@@ -14,6 +14,12 @@ final class PressFeedback {
     view.setClickable(true);
     view.setFocusable(true);
     int ripple = dark ? 0x33ffffff : 0x22000000;
+    if (view instanceof IconView && "copy".equals(((IconView) view).icon)) {
+      // Dialog icon controls already have a background ripple. Use one bounded layer.
+      if (view.getBackground() instanceof RippleDrawable) view.setBackground(null);
+      ((IconView) view).setCopyFeedback(ripple);
+      return;
+    }
     view.setForeground(
         new RippleDrawable(
             ColorStateList.valueOf(ripple), null, new ColorDrawable(Color.WHITE)));
