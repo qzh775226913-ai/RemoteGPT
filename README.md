@@ -6,9 +6,9 @@
 
 服务器继续负责 Codex 运行与账户登录；手机负责触摸交互、状态展示和文件传输。项目为独立客户端，与 OpenAI 无隶属关系。
 
-**[下载 Android APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.54/RemoteGPT-1.0.54-Android-universal-debug.apk)** · [首次连接指南](docs/USAGE.md) · [发布说明与校验文件](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[下载公开版 APK（1.0.54）](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.54/RemoteGPT-1.0.54-Android-universal-debug.apk)** · [首次连接指南](docs/USAGE.md) · [发布说明与校验文件](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-当前版本：**1.0.54 / versionCode 55**。Android 8+，包名 `app.remotessh`，APK 约 3.8 MB。
+当前源码版本：**1.0.55 / versionCode 56**。Android 8+，包名 `app.remotessh`，APK 约 3.8 MB。
 
 ## 图形化界面能做什么
 
