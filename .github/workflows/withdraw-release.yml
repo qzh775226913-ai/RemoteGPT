@@ -1,8 +1,12 @@
-name: Withdraw 1.0.55 release
+name: Manage 1.0.55 release visibility
 on:
   push:
     tags:
       - 'withdraw-release-1-0-55-*'
+      - 'restore-release-1-0-55-*'
+concurrency:
+  group: release-1-0-55-visibility
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
@@ -16,6 +20,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
+          RELEASE_TRIGGER: ${{ github.ref_name }}
         run: |
           python3 - <<'PYTHON'
           import json, os, urllib.request
@@ -31,14 +36,17 @@ jobs:
                   return json.load(response)
           tag = request('/git/ref/tags/v1.0.55')['object']
           assert tag['sha'] == '6cecd2e3064c223e12401e40dd0ce6c2ebcd1039'
-          release = request('/releases/tags/v1.0.55')
+          release = next(r for r in request('/releases?per_page=100') if r['tag_name'] == 'v1.0.55')
           assert release['tag_name'] == 'v1.0.55'
           def assets(r):
               return sorted((a['id'], a['name'], a['size'], a.get('digest')) for a in r['assets'])
-          updated = request('/releases/' + str(release['id']), {'draft': True})
-          assert updated['draft'] and updated['id'] == release['id']
+          draft = os.environ['RELEASE_TRIGGER'].startswith('withdraw-release-')
+          data = {'draft': draft}
+          if not draft: data['make_latest'] = 'true'
+          updated = request('/releases/' + str(release['id']), data)
+          assert updated['draft'] == draft and updated['id'] == release['id']
           assert assets(updated) == assets(release)
           assert request('/git/ref/tags/v1.0.55')['object'] == tag
-          print('Withdrawn public release v1.0.55; release ID:', updated['id'])
+          print('Updated release v1.0.55 visibility; release ID:', updated['id'])
           print('Assets and version tag preserved. Draft:', updated['draft'])
           PYTHON
