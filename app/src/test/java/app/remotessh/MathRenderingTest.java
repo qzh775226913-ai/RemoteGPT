@@ -20,7 +20,7 @@ import ru.noties.jlatexmath.JLatexMathAndroid;
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class MathRenderingTest {
   private static final String EQUATION="\\boxed{\\frac{x_N}{\\bar{c}}\\approx\\frac{x_{ac,w}}{\\bar{c}}+\\eta_t\\frac{a_t}{a_w}V_H\\left(1-\\frac{d\\epsilon}{d\\alpha}\\right)}";
-  @Before public void init(){JLatexMathAndroid.init(RuntimeEnvironment.getApplication());}
+  @Before public void init(){JLatexMathAndroid.init(RuntimeEnvironment.getApplication());MathGlyphs.init(RuntimeEnvironment.getApplication().getAssets());}
   private MessageBodyView body(boolean dark) {
     return new MessageBodyView(RuntimeEnvironment.getApplication(),dark?Color.WHITE:Color.BLACK,0xff888888,0xff333333,v->{},v->{});
   }
@@ -56,6 +56,14 @@ public class MathRenderingTest {
     MathRenderer.Formula fraction=MathRenderer.render("\\frac{a}{b}",true,32,Color.BLACK);
     MathRenderer.Formula plain=MathRenderer.render("a/b",true,32,Color.BLACK);
     assertTrue("A fraction has vertically stacked numerator and denominator",fraction.height>plain.height);
+  }
+  @Test public void longExplanationKeepsMoreThan64InlineAndDisplayExpressionsTypeset() throws Exception {
+    MessageBodyView body=body(false);StringBuilder source=new StringBuilder();
+    for(int i=0;i<100;i++)source.append("半径 \\(r_{"+i+"}\\)，");
+    source.append("\\[\\boxed{dT=\\frac12\\rho BW^2c(C_L\\cos\\phi+C_D\\sin\\phi)\\,dr}\\]");
+    source.append("最后变量 \\(T\\) 与 \\(v_i\\)。");
+    body.setSource(source.toString());await(()->spans(body)==102 && scroll(body)!=null);
+    body.setSource(source+"继续补充。");assertEquals(102,spans(body));
   }
   @Test public void unsafeUnsupportedAndExcessiveTexStaysLiteral() throws Exception {
     for(String tex:new String[]{"\\newcommand{\\x}{x}","\\input{/etc/passwd}","\\includegraphics{https://example.com/x}","\\jlmXML{file}","\\definecolor{x}{rgb}{1,0,0}","\\begin{document}x\\end{document}","{".repeat(33)+"x"+"}".repeat(33),"x".repeat(4097),"\\unknown{x}"}) {

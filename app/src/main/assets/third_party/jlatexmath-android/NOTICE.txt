@@ -4,3 +4,7 @@ Source archive: https://repo.maven.apache.org/maven2/ru/noties/jlatexmath-androi
 Library license: GNU GPL version 2 or later, with the independent-module linking exception in LICENSE. See COPYING for GPL terms.
 Font license texts are bundled under org/scilab/forge/jlatexmath/fonts/licences in the APK assets.
 The RemoteGPT project license applies to its independent modules, not to this library or its fonts.
+
+RemoteGPT uses the public TeX layout API with an independent Canvas adapter.
+math_glyphs.json contains original U+00AD glyph outlines extracted without modifying the fonts by tools/generate_math_glyphs.py.
+These outlines retain the licenses of their source fonts, bundled in the APK as described above.

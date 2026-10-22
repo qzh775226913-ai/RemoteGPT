@@ -94,7 +94,7 @@ python3 -c 'import sys, sqlite3, fcntl, socket; assert sys.version_info >= (3, 8
 
 在 [Issues](https://github.com/qzh775226913-ai/RemoteGPT/issues) 选择问题模板，注明应用版本、Android 版本、远端 Codex 版本、复现步骤和完整错误文字。截图前遮盖主机地址、用户名、项目路径和对话中的私人内容；不要附上密码、私钥、令牌或账户配置文件。
 
-## 6. 1.1.0 开发版公式显示
+## 6. 1.0.56 开发版公式显示
 
 当远端正文返回显式 LaTeX 标记时，应用在本地排版：
 

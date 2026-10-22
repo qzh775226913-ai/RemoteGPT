@@ -81,7 +81,7 @@ Open an [issue](https://github.com/qzh775226913-ai/RemoteGPT/issues) with the ap
 
 Use and redistribution are governed by the [project license](../LICENSE). Codex service charges are separate.
 
-## 6. Formula rendering in the 1.1.0 development build
+## 6. Formula rendering in the 1.0.56 development build
 
 Explicit inline `\(…\)` and `$…$`, and display `\[…\]` and `$$…$$` TeX in remote prose are typeset locally with native fonts. Common fractions, scripts, Greek symbols, roots and matrices are supported. Long expressions scroll horizontally; long-press a display formula to copy its original TeX. Full-message copy retains the original source.
 

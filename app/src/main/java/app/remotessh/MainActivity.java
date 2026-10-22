@@ -157,7 +157,7 @@ public final class MainActivity extends Activity {
     boolean dark = isDark();
     bg = Color.parseColor(dark ? "#000000" : "#FFFFFF");
     fg = Color.parseColor(dark ? "#ECECEC" : "#171717");
-    muted = Color.parseColor(dark ? "#A6A6A6" : "#777777");
+    muted = Color.parseColor(dark ? "#A6A6A6" : "#626262");
     panel = Color.parseColor(dark ? "#303030" : "#F4F4F4");
     line = Color.parseColor(dark ? "#424242" : "#E8E8E8");
     ui = new DialogUi(this, bg, fg, muted, panel, line);
@@ -518,7 +518,7 @@ public final class MainActivity extends Activity {
     input.setEnabled(true);
     input.setHint(app.readOnly ? "先准备消息，接续后发送" : "发送消息");
     status.setText(app.connected ? AppIcons.label(this,"●  " + app.profile.title() + "  ·  SSH","status",null,Color.rgb(48,148,112),dp(14)) : app.state);
-    status.setTextColor(app.connected ? Color.rgb(48, 148, 112) : muted);
+    status.setTextColor(app.connected ? Color.parseColor(isDark()?"#309470":"#247A5B") : muted);
     error.setText(app.error.isEmpty() ? "" : app.error.split("\n", 2)[0] + "\n点按查看原因和诊断信息");
     error.setVisibility(app.error.isEmpty() ? View.GONE : View.VISIBLE);
     renderAttachments();

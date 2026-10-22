@@ -115,6 +115,7 @@ def main():
             parser.error("Install tools/requirements-dev.txt in your development environment")
     run([sys.executable, "tools/check_project.py"])
     run([sys.executable, "tools/generate_icons.py", "--check"])
+    run([sys.executable, "tools/generate_math_glyphs.py", "--check"])
     run([sys.executable, "-m", "unittest", "discover", "-s", "tools", "-p", "test_*.py"])
     if args.python_only:
         summary.write_text(json.dumps({"scope": "python-only", "full_acceptance": False}, indent=2) + "\n")

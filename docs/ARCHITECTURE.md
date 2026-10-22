@@ -68,3 +68,5 @@
 模型目录通过 `ModelCatalog` 完整分页原子替换，`ServiceTierOptions` 解析服务端速度 ID／名称／描述，`ModelPicker` 在打开时发现能力；连接级 `ModelRefreshScheduler` 由 RemoteApp 在握手成功后启动、断开时停止，每 30 秒复用既有目录／配置读取入口，按 generation 和任务身份隔离旧定时器，既有 loading 标记避免请求重叠。定时器不属于 Activity，不增加会话字段。旧目录别名兼容不能覆盖精确 ID，未知档位说明不推测性能。`MediaFiles.saveIntent` 为系统保存窗口提供匹配的 MIME／文件名，`MainActivity` 仍负责保存结果与传输，原始字节不变。
 
 公式引擎为固定版本 `ru.noties:jlatexmath-android:0.2.0`，通过 Android Canvas 和本地字体绘制，不加载 WebView、脚本或远端资源。代码围栏在 MessageBodyView 层先拆分，仅正文进入公式扫描；普通无公式正文沿用原渲染路径。流式排版以 View 自己的 generation 丢弃旧结果，原始 ChatItem、ConversationState 和存储格式不变。第三方许可与源码入口见 [第三方组件](THIRD_PARTY.md)。
+
+`MathDrawable` 通过公开 TeX API 绘制，隔离文字与线框的 Paint 状态；`MathGlyphs` 按原字体映射绘制被 Android 隐藏的 U+00AD 原始轮廓。轮廓在公式 worker 加载并发布后只读，不改变原始消息、会话或存储格式。

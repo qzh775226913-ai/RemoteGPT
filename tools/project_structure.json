@@ -71,7 +71,9 @@
       "MathMarkup",
       "MathRenderer",
       "MathSpan",
-      "MathContentView"
+      "MathContentView",
+      "MathDrawable",
+      "MathGlyphs"
     ],
     "media": [
       "FileAttachment",

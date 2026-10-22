@@ -15,7 +15,7 @@ final class MathMarkup {
   static List<Part> parts(String source) {
     List<Part> out=new ArrayList<>();
     int last=0, count=0;
-    if(source.length()<=131072) for(int i=0;i<source.length() && count<64;) {
+    if(source.length()<=131072) for(int i=0;i<source.length() && count<512;) {
       char c=source.charAt(i);
       if(c=='`' && !escaped(source,i)) {
         int n=1;while(i+n<source.length() && source.charAt(i+n)=='`')n++;

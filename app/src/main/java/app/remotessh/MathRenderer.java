@@ -6,14 +6,14 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.regex.*;
-import ru.noties.jlatexmath.JLatexMathDrawable;
+
 
 /** Single-worker, bounded local TeX layout. No remote URL, macro definition or file command is accepted. */
 final class MathRenderer {
   static final class Formula {
-    final JLatexMathDrawable drawable;
+    final MathDrawable drawable;
     final int width,height,baseline;
-    Formula(JLatexMathDrawable drawable) {
+    Formula(MathDrawable drawable) {
       this.drawable=drawable;width=drawable.getIntrinsicWidth();height=drawable.getIntrinsicHeight();
       baseline=Math.round(drawable.icon().getBaseLine()*height);
     }
@@ -30,7 +30,7 @@ final class MathRenderer {
       + "Gamma Delta Theta Lambda Xi Pi Sigma Upsilon Phi Psi Omega "
       + "approx sim simeq cong equiv ne neq le leq ge geq ll gg in notin ni subset supset subseteq supseteq "
       + "pm mp times div cdot cdots dots ldots vdots ddots ast star circ bullet "
-      + "sum prod coprod int iint iiint oint lim limsup liminf min max inf sup sin cos tan cot sec csc sinh cosh tanh log ln exp det gcd Pr "
+      + "sum prod coprod int iint iiint oint lim limsup liminf min max inf sup sin cos tan cot sec csc arcsin arccos arctan arccot sinh cosh tanh log ln exp det gcd Pr "
       + "infty partial nabla ell hbar imath jmath Re Im forall exists nexists emptyset varnothing land lor neg to rightarrow leftarrow leftrightarrow Rightarrow Leftarrow Leftrightarrow mapsto "
       + "left right middle big Big bigg Bigg bigl bigr Bigl Bigr biggl biggr Biggl Biggr langle rangle lvert rvert lVert rVert vert Vert lfloor rfloor lceil rceil "
       + "text textrm textbf textit operatorname mathrm mathit mathbf mathsf mathtt mathcal mathbb mathfrak boldsymbol "
@@ -98,8 +98,7 @@ final class MathRenderer {
     if(CACHE.containsKey(key))return CACHE.get(key);
     Formula result=null;
     try {
-      JLatexMathDrawable drawable=JLatexMathDrawable.builder((display?"":"\\textstyle ")+tex)
-          .textSize(size).color(color).padding(2).build();
+      MathDrawable drawable=new MathDrawable(tex,display,size,color);
       if(drawable.getIntrinsicWidth()>0 && drawable.getIntrinsicWidth()<=8192
           && drawable.getIntrinsicHeight()>0 && drawable.getIntrinsicHeight()<=2048)result=new Formula(drawable);
     } catch(RuntimeException | StackOverflowError error) {

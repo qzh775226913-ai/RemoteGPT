@@ -29,7 +29,7 @@ final class MathContentView extends LinearLayout {
   MathContentView(Context context,int fg,int muted,int panel,Consumer<String> open,Consumer<String> copy) {
     super(context);setOrientation(VERTICAL);
     this.fg=fg;this.muted=muted;this.panel=panel;this.open=open;this.copy=copy;
-    JLatexMathAndroid.init(context);
+    JLatexMathAndroid.init(context);MathGlyphs.init(context.getApplicationContext().getAssets());
   }
   private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
   void setSource(String value) {

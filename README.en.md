@@ -8,7 +8,7 @@ Codex and its account configuration stay on the remote host. The phone provides 
 
 **[Download stable APK (1.0.55)](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.55/RemoteGPT-1.0.55-Android-universal-debug.apk)** · [First connection guide](docs/USAGE.en.md) · [Release notes and checksums](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [Report an issue](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-Development version: **1.1.0 / versionCode 57**. Android 8+, package `app.remotessh`, approximately 3.8 MB.
+Development version: **1.0.56 / versionCode 58**. Android 8+, package `app.remotessh`, approximately 4.4 MB.
 
 ## Graphical controls for remote work
 
@@ -54,6 +54,6 @@ Native Android Views, Java 17, JSch SSH/SFTP, stdio JSON-RPC, and a Python stand
 
 Normal use is free under the custom project license. Commercial reuse and distribution of modified versions are subject to the license terms. Codex service charges are separate.
 
-## 1.1.0 development
+## 1.0.56 development
 
 Native local formula rendering supports explicitly marked inline and display TeX, including fractions, scripts, Greek symbols and matrices. Long expressions can scroll horizontally. Source text is preserved for copying; unsupported or incomplete expressions remain literal. Stable GitHub APK: 1.0.55. [Third-party component notices](docs/THIRD_PARTY.md).

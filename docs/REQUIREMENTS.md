@@ -1,6 +1,6 @@
 # 当前需求与行为契约
 
-适用：1.1.0 / versionCode 57。最后核对：2026-10-22。
+适用：1.0.56 / versionCode 58。最后核对：2026-10-22。
 
 本文件是当前产品行为的唯一需求清单。版本记录说明曾经发生什么，不覆盖此处。编号永久保留；修改行为时修改对应条目和验收，取消需求时写明取消原因，不把编号转用于别的需求。
 
@@ -35,11 +35,11 @@
 | R-19 | 远端版本检查分清运行版本与磁盘安装版本；更新和重启需明确用户操作，检查失败不宣称最新，不自动重启活跃任务。 | [RemoteVersionTest](../app/src/test/java/app/remotessh/RemoteVersionTest.java)、[维护脚本测试](../tools/test_remote_maintenance.py)、[MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java) |
 | R-20 | 保持 1.0.47 导航：远程控制菜单为添加连接、编辑当前连接、刷新项目与对话、设置；对话菜单为新对话、最近一次错误、当前项目与对话。主题／字体／后台设置可用；编辑连接表单的“移除此连接”与上方主机指纹按钮保持 12dp 间距；Activity 销毁释放所拥有的模型监听器。 | [MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java)、[DialogStyleTest](../app/src/test/java/app/remotessh/DialogStyleTest.java)、[DialogLifecycleTest](../app/src/test/java/app/remotessh/DialogLifecycleTest.java) |
 
-## 1.1.0 公式显示
+## 1.0.56 公式显示
 
 | 编号 | 当前行为及失败边界 | 自动化入口 |
 | --- | --- | --- |
-| R-21 | 远端正文显式标记的 `\(…\)`、`$…$` 行内公式及 `\[…\]`、`$$…$$` 独立公式由本地原生 TeX 排版；支持分式、上下标、上横线、根式、希腊字母、求和／积分、矩阵及常用对齐环境。分式等与正文基线及行高匹配，跟随字号缩放和明暗主题；长公式可横向滚动，独立公式长按复制原始标记和 TeX。代码块、行内代码、转义标记、链接地址、普通货币和不完整流式片段不误转为公式。传输与会话原文不变；新片段、历史恢复、换会话和窗口释放不得发布迟到排版结果。排版在有界独立 worker 中执行，保留 64 项缓存；单正文最多 64 个公式、单式最多 4096 字符／32 层花括号／256 个命令，采用显式命令与环境允许列表，不执行文件、网络、宏定义或远端代码。队列拥塞、不支持、无效或超过尺寸限制时保留可读原文。 | [MathMarkupTest](../app/src/test/java/app/remotessh/MathMarkupTest.java)、[MathRenderingTest](../app/src/test/java/app/remotessh/MathRenderingTest.java) |
+| R-21 | Ω 与带边框公式必须保留完整实心字形，反三角函数及合法简写分式正常排版；浅色界面正文、公式、次要文字维持清晰对比度。 远端正文显式标记的 `\(…\)`、`$…$` 行内公式及 `\[…\]`、`$$…$$` 独立公式由本地原生 TeX 排版；支持分式、上下标、上横线、根式、希腊字母、求和／积分、矩阵及常用对齐环境。分式等与正文基线及行高匹配，跟随字号缩放和明暗主题；长公式可横向滚动，独立公式长按复制原始标记和 TeX。代码块、行内代码、转义标记、链接地址、普通货币和不完整流式片段不误转为公式。传输与会话原文不变；新片段、历史恢复、换会话和窗口释放不得发布迟到排版结果。排版在有界独立 worker 中执行，保留 64 项缓存；单正文最多 512 个公式、单式最多 4096 字符／32 层花括号／256 个命令，采用显式命令与环境允许列表，不执行文件、网络、宏定义或远端代码。队列拥塞、不支持、无效或超过尺寸限制时保留可读原文。 | [MathMarkupTest](../app/src/test/java/app/remotessh/MathMarkupTest.java)、[MathRenderingTest](../app/src/test/java/app/remotessh/MathRenderingTest.java)、[MathDefectsTest](../app/src/test/java/app/remotessh/MathDefectsTest.java)、[MathReadabilityTest](../app/src/test/java/app/remotessh/MathReadabilityTest.java) |
 
 ## 当前不承诺的能力
 

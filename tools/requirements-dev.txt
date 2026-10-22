@@ -1,2 +1,3 @@
-# Used only by the loopback SSH fixture, never by the Android application.
+# Development verification tools; never part of the Android application.
 paramiko==5.0.0
+fonttools==4.63.0

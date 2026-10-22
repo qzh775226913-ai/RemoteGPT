@@ -78,3 +78,5 @@ SDK 初始化显式安装 `platform-tools`，再安装指定 platform／build-to
 AGP 8.7.3 对 compileSdk 36 会发出兼容性提示，当前构建通过；Lint 另有已记录的既有警告。告警按原级别保留。工具链升级另开变更，验证 Android 8/旧 API 回退、API 36 通知、Robolectric 和原生绘制。
 
 环境记录使用通用变量；私钥、密码、token 和个人 SSH 配置不纳入源码。
+
+公式字形轮廓通过 `python3 tools/generate_math_glyphs.py --check` 检查；生成依赖 fontTools，版本在开发依赖文件中固定。首次检查无 Gradle 缓存时从 Maven Central 下载固定哈希的原始 AAR，已有缓存时无需联网。

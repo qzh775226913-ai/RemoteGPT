@@ -27,8 +27,8 @@ public class MathMarkupTest {
   }
   @Test public void emptyOrOversizedInputAndManyExpressionsHaveBoundedWork() {
     assertFalse(MathMarkup.containsMath("$$$$ \\( \\)"));
-    String source="$x$ ".repeat(100);
-    assertEquals(64,MathMarkup.parts(source).stream().filter(p->p.kind!=MathMarkup.Kind.TEXT).count());
+    String source="$x$ ".repeat(600);
+    assertEquals(512,MathMarkup.parts(source).stream().filter(p->p.kind!=MathMarkup.Kind.TEXT).count());
     assertEquals(source,MathMarkup.parts(source).stream().map(p->p.raw).reduce("",String::concat));
     assertFalse(MathMarkup.containsMath("a".repeat(131073)+"$x$"));
   }
