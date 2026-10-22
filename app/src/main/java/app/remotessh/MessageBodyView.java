@@ -79,14 +79,22 @@ final class MessageBodyView extends LinearLayout {
   void setSource(String value) {
     if (value.equals(source)) return;
     source=value; List<Block> parts=blocks(value);
+    boolean math=parts.size()==1 && !parts.get(0).code && MathMarkup.containsMath(parts.get(0).text);
+    if(math && getChildCount()==1 && getChildAt(0) instanceof MathContentView) {
+      ((MathContentView)getChildAt(0)).setSource(parts.get(0).text);return;
+    }
     // Ordinary streaming prose keeps its existing selectable view.
-    if(parts.size()==1 && !parts.get(0).code && getChildCount()==1 && getChildAt(0) instanceof TextView) {
+    if(!math && parts.size()==1 && !parts.get(0).code && getChildCount()==1 && getChildAt(0) instanceof TextView) {
       TextView prose=(TextView)getChildAt(0);CharSequence rendered=proseText(parts.get(0).text);
       prose.setText(rendered);prose.setVisibility(rendered.length()==0?GONE:VISIBLE);return;
     }
     removeAllViews(); int index=0;
     for (Block block : parts) {
       if (!block.code) {
+        if(MathMarkup.containsMath(block.text)) {
+          MathContentView formulas=new MathContentView(getContext(),fg,muted,panel,open,copy);
+          formulas.setSource(block.text);addView(formulas,new LayoutParams(-1,-2));continue;
+        }
         TextView prose=text("", 16, fg); prose.setLineSpacing(dp(5),1);
         prose.setIncludeFontPadding(false);
         CharSequence rendered=proseText(block.text);prose.setText(rendered);

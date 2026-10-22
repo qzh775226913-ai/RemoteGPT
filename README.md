@@ -6,9 +6,9 @@
 
 服务器继续负责 Codex 运行与账户登录；手机负责触摸交互、状态展示和文件传输。项目为独立客户端，与 OpenAI 无隶属关系。
 
-**[下载 Android APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.55/RemoteGPT-1.0.55-Android-universal-debug.apk)** · [首次连接指南](docs/USAGE.md) · [发布说明与校验文件](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[下载稳定版 APK（1.0.55）](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.55/RemoteGPT-1.0.55-Android-universal-debug.apk)** · [首次连接指南](docs/USAGE.md) · [发布说明与校验文件](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-当前版本：**1.0.55 / versionCode 56**。Android 8+，包名 `app.remotessh`，APK 约 3.8 MB。
+当前开发版：**1.1.0 / versionCode 57**。Android 8+，包名 `app.remotessh`，APK 约 3.8 MB。
 
 ## 图形化界面能做什么
 
@@ -65,3 +65,7 @@ python3 -m venv .venv
 [使用说明](docs/USAGE.md) · [需求](docs/REQUIREMENTS.md) · [架构](docs/ARCHITECTURE.md) · [维护规则](docs/MAINTENANCE.md) · [回退说明](docs/ROLLBACK.md) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
 采用 [项目自定义许可](LICENSE)。正常使用免费；商业再利用及修改版发布的授权条件以 LICENSE 为准。Codex 服务费用另计。
+
+## 1.1.0 开发版
+
+新增本地原生公式排版：支持显式标记的行内／独立 TeX、分式、上下标、希腊字母和矩阵，长公式可横向滚动。复制保留原文；不完整或不支持的公式显示原始文本。当前 GitHub 稳定版 APK 为 1.0.55。[第三方组件说明](docs/THIRD_PARTY.md)。

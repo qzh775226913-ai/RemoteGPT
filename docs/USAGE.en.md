@@ -80,3 +80,9 @@ Persistent recovery depends on the remote supervisor remaining alive. Device not
 Open an [issue](https://github.com/qzh775226913-ai/RemoteGPT/issues) with the app version, Android version, remote Codex version, reproduction steps and exact error text. Redact host addresses, usernames, private paths and conversation content from screenshots. Never include passwords, private keys, tokens or account configuration files.
 
 Use and redistribution are governed by the [project license](../LICENSE). Codex service charges are separate.
+
+## 6. Formula rendering in the 1.1.0 development build
+
+Explicit inline `\(…\)` and `$…$`, and display `\[…\]` and `$$…$$` TeX in remote prose are typeset locally with native fonts. Common fractions, scripts, Greek symbols, roots and matrices are supported. Long expressions scroll horizontally; long-press a display formula to copy its original TeX. Full-message copy retains the original source.
+
+Code, escaped markers and ordinary currency stay literal. Incomplete, unsupported, excessive or failed expressions remain readable source. No macro definitions, file access, remote resource loading or code execution is enabled. Whether the model emits formula markers depends on its actual response; this feature does not change the model or remote configuration.

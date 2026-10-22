@@ -9,6 +9,7 @@
 | 界面生命周期 | `MainActivity` 管理页面、消息渲染、系统选择器和 Activity 回调；`BubbleActivity` 管理绑定会话的气泡页面 |
 | 独立窗口 | `ProfileEditor` 管理连接草稿／凭据表单／私钥导入；`ModelPicker` 管理模型／强度／速度选择及监听器；`DialogUi` 保持聊天窗口的原有样式与触摸行为 |
 | 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；消息、问答、图像预览、缩略图和滚动各有独立组件 |
+| 公式排版 | `MathMarkup` 扫描正文显式公式标记并保护代码／货币；`MathRenderer` 在单 worker 中执行有界本地 TeX 排版与缓存；`MathSpan` 保持原文并提供行内基线；`MathContentView` 拥有正文块的异步 generation、可滚动独立公式和 detach／reattach 清理，不接触会话选择 |
 | 应用协调 | `RemoteApp` 维持连接、初始化、恢复、事件路由和当前选中状态的兼容接口；它不再实现窗口表单、完整发送流程或附件传输流程 |
 | 会话容器 | `ConversationStore` 是会话缓存和临时背景分发的唯一所有者；`ConversationState` 保存每条会话的消息、草稿、权限／速度和运行状态 |
 | 轮次／队列 | `TurnController` 管理创建／发送／引导轮次、一条待发消息及其附件、可自动发送标记；请求仍走统一回调路由 |
@@ -65,3 +66,5 @@
 远端托管脚本按内容哈希安装到 `~/.remote-gpt`，目录 0700、脚本 0600。生产 SSH、主机信任、上游登录和活跃任务不属于自动化夹具。自动化夹具与生产远端相互独立。
 
 模型目录通过 `ModelCatalog` 完整分页原子替换，`ServiceTierOptions` 解析服务端速度 ID／名称／描述，`ModelPicker` 在打开时发现能力；连接级 `ModelRefreshScheduler` 由 RemoteApp 在握手成功后启动、断开时停止，每 30 秒复用既有目录／配置读取入口，按 generation 和任务身份隔离旧定时器，既有 loading 标记避免请求重叠。定时器不属于 Activity，不增加会话字段。旧目录别名兼容不能覆盖精确 ID，未知档位说明不推测性能。`MediaFiles.saveIntent` 为系统保存窗口提供匹配的 MIME／文件名，`MainActivity` 仍负责保存结果与传输，原始字节不变。
+
+公式引擎为固定版本 `ru.noties:jlatexmath-android:0.2.0`，通过 Android Canvas 和本地字体绘制，不加载 WebView、脚本或远端资源。代码围栏在 MessageBodyView 层先拆分，仅正文进入公式扫描；普通无公式正文沿用原渲染路径。流式排版以 View 自己的 generation 丢弃旧结果，原始 ChatItem、ConversationState 和存储格式不变。第三方许可与源码入口见 [第三方组件](THIRD_PARTY.md)。

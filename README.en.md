@@ -6,9 +6,9 @@ Use a native **Android graphical interface** to work with Codex running on your 
 
 Codex and its account configuration stay on the remote host. The phone provides touch controls, task status and file transfer. This is an independent client, unaffiliated with OpenAI.
 
-**[Download Android APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.55/RemoteGPT-1.0.55-Android-universal-debug.apk)** · [First connection guide](docs/USAGE.en.md) · [Release notes and checksums](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [Report an issue](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[Download stable APK (1.0.55)](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.55/RemoteGPT-1.0.55-Android-universal-debug.apk)** · [First connection guide](docs/USAGE.en.md) · [Release notes and checksums](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [Report an issue](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-Current version: **1.0.55 / versionCode 56**. Android 8+, package `app.remotessh`, approximately 3.8 MB.
+Development version: **1.1.0 / versionCode 57**. Android 8+, package `app.remotessh`, approximately 3.8 MB.
 
 ## Graphical controls for remote work
 
@@ -53,3 +53,7 @@ Native Android Views, Java 17, JSch SSH/SFTP, stdio JSON-RPC, and a Python stand
 [Chinese documentation](README.md) · [Issue tracker](https://github.com/qzh775226913-ai/RemoteGPT/issues) · [License](LICENSE)
 
 Normal use is free under the custom project license. Commercial reuse and distribution of modified versions are subject to the license terms. Codex service charges are separate.
+
+## 1.1.0 development
+
+Native local formula rendering supports explicitly marked inline and display TeX, including fractions, scripts, Greek symbols and matrices. Long expressions can scroll horizontally. Source text is preserved for copying; unsupported or incomplete expressions remain literal. Stable GitHub APK: 1.0.55. [Third-party component notices](docs/THIRD_PARTY.md).

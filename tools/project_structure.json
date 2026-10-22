@@ -67,7 +67,11 @@
       "ImagePicker",
       "Markdown",
       "ConnectionSetupUi",
-      "PermissionPicker"
+      "PermissionPicker",
+      "MathMarkup",
+      "MathRenderer",
+      "MathSpan",
+      "MathContentView"
     ],
     "media": [
       "FileAttachment",

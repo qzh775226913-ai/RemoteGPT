@@ -6,8 +6,8 @@ android {
         applicationId 'app.remotessh'
         minSdk 26
         targetSdk 35
-        versionCode 56
-        versionName '1.0.55'
+        versionCode 57
+        versionName '1.1.0'
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     }
     compileOptions {
@@ -25,6 +25,7 @@ android {
     }
 }
 dependencies {
+    implementation 'ru.noties:jlatexmath-android:0.2.0'
     implementation 'com.github.mwiede:jsch:2.28.0'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.80'
     testImplementation 'junit:junit:4.13.2'
