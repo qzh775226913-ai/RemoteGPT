@@ -6,9 +6,9 @@ Use a native **Android graphical interface** to work with Codex running on your 
 
 Codex and its account configuration stay on the remote host. The phone provides touch controls, task status and file transfer. This is an independent client, unaffiliated with OpenAI.
 
-**[Download public APK (1.0.54)](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.54/RemoteGPT-1.0.54-Android-universal-debug.apk)** · [First connection guide](docs/USAGE.en.md) · [Release notes and checksums](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [Report an issue](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[Download Android APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.55/RemoteGPT-1.0.55-Android-universal-debug.apk)** · [First connection guide](docs/USAGE.en.md) · [Release notes and checksums](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [Report an issue](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-Current source version: **1.0.55 / versionCode 56**. Android 8+, package `app.remotessh`, approximately 3.8 MB.
+Current version: **1.0.55 / versionCode 56**. Android 8+, package `app.remotessh`, approximately 3.8 MB.
 
 ## Graphical controls for remote work
 
