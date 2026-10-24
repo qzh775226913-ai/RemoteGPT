@@ -1,0 +1,57 @@
+name: Retire superseded 1.0.56 release
+on:
+  push:
+    tags:
+      - 'retire-release-1-0-56-*'
+permissions:
+  contents: read
+concurrency:
+  group: public-apk-release
+  cancel-in-progress: false
+jobs:
+  retire:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Remove only the superseded prerelease after validating stable 1.0.57
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, urllib.request, urllib.error
+          base = 'https://api.github.com/repos/' + os.environ['GH_REPOSITORY']
+          def request(method, path):
+              req = urllib.request.Request(base + path, method=method, headers={
+                  'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28'})
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  data = response.read()
+                  return json.loads(data) if data else None
+          latest = request('GET', '/releases/latest')
+          assert latest['tag_name'] == 'v1.0.57' and not latest['draft'] and not latest['prerelease']
+          apk = next(a for a in latest['assets'] if a['name'] == 'RemoteGPT-1.0.57-Android-universal-debug.apk')
+          assert apk['size'] == 4371570
+          assert apk['digest'] == 'sha256:5fa14bb8cca3a636051325ab145233039fe11924a2882e5c50783be1fb8b03a0'
+          tag = request('GET', '/git/ref/tags/v1.0.56')['object']
+          try:
+              old = request('GET', '/releases/422580993')
+          except urllib.error.HTTPError as error:
+              if error.code != 404: raise
+              old = None
+          if old:
+              assert old['id'] == 422580993 and old['tag_name'] == 'v1.0.56' and old['prerelease']
+              request('DELETE', '/releases/422580993')
+          try:
+              request('GET', '/releases/tags/v1.0.56')
+          except urllib.error.HTTPError as error:
+              if error.code != 404: raise
+          else:
+              raise RuntimeError('The superseded release is still public')
+          assert request('GET', '/git/ref/tags/v1.0.56')['object'] == tag
+          assert request('GET', '/releases/latest')['id'] == latest['id']
+          print('Removed only the v1.0.56 release; source tag preserved; latest stable is v1.0.57')
+          PYTHON

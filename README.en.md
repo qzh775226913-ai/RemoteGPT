@@ -6,9 +6,9 @@ Use a native **Android graphical interface** to work with Codex running on your 
 
 Codex and its account configuration stay on the remote host. The phone provides touch controls, task status and file transfer. This is an independent client, unaffiliated with OpenAI.
 
-**[Download stable APK (1.0.55)](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.55/RemoteGPT-1.0.55-Android-universal-debug.apk)** · [First connection guide](docs/USAGE.en.md) · [Release notes and checksums](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [Report an issue](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[Download stable APK (1.0.57)](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.57/RemoteGPT-1.0.57-Android-universal-debug.apk)** · [First connection guide](docs/USAGE.en.md) · [Release notes and checksums](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [Report an issue](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-Development version: **1.0.57 / versionCode 59**. Android 8+, package `app.remotessh`, approximately 4.4 MB.
+Current version: **1.0.57 / versionCode 59**. Android 8+, package `app.remotessh`, approximately 4.4 MB.
 
 ## Graphical controls for remote work
 
@@ -56,6 +56,6 @@ Normal use is free under the custom project license. Commercial reuse and distri
 
 ## Formula and table rendering
 
-Native local formula rendering supports explicitly marked inline and display TeX, including fractions, scripts, Greek symbols and matrices. Long expressions can scroll horizontally. Source text is preserved for copying; unsupported or incomplete expressions remain literal. Stable GitHub APK: 1.0.55. [Third-party component notices](docs/THIRD_PARTY.md).
+Native local formula rendering supports explicitly marked inline and display TeX, including fractions, scripts, Greek symbols and matrices. Long expressions can scroll horizontally. Source text is preserved for copying; unsupported or incomplete expressions remain literal. Stable GitHub APK: 1.0.57. [Third-party component notices](docs/THIRD_PARTY.md).
 
-Development 1.0.57 adds horizontally scrollable native tables and clearer light-theme surfaces.
+Version 1.0.57 adds horizontally scrollable native tables and clearer light-theme surfaces.
