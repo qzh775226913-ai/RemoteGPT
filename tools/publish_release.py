@@ -87,6 +87,9 @@ def main():
         raise RuntimeError('Publish input must be an annotated tag')
     tag_input = api('GET', f'/repos/{repo}/git/tags/' + tag_ref['sha'])
     manifest = json.loads(tag_input['message'])
+    prerelease = manifest.get('prerelease', False)
+    if type(prerelease) is not bool:
+        raise RuntimeError('prerelease must be a boolean')
     head = git('rev-parse', 'HEAD')
     if manifest['source_commit'] != head or tag_input['object']['sha'] != head:
         raise RuntimeError('Publish input does not match checked-out source')
@@ -136,7 +139,7 @@ def main():
         raise RuntimeError('Release is already public; refusing to overwrite it')
     release = existing[0] if existing else api('POST', f'/repos/{repo}/releases', json.dumps({
         'tag_name': tag, 'target_commitish': head, 'name': 'RemoteGPT ' + version,
-        'body': notes, 'draft': True, 'prerelease': False,
+        'body': notes, 'draft': True, 'prerelease': prerelease,
     }).encode())
     release_id = release['id']
     present = {a['name']: a for a in api('GET', f'/repos/{repo}/releases/{release_id}/assets')}
@@ -154,7 +157,8 @@ def main():
         if result['size'] != len(data) or result.get('digest') != 'sha256:' + asset['sha256']:
             raise RuntimeError('GitHub uploaded asset verification failed')
     published = api('PATCH', f'/repos/{repo}/releases/{release_id}', json.dumps({
-        'body': notes, 'draft': False, 'make_latest': 'true',
+        'body': notes, 'draft': False, 'prerelease': prerelease,
+        'make_latest': 'false' if prerelease else 'true',
     }).encode())
     print('Published verified APK: ' + published['html_url'])
 
