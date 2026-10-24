@@ -22,11 +22,11 @@ public class MathReadabilityTest {
     try {
       java.lang.reflect.Field field=MainActivity.class.getDeclaredField("muted");field.setAccessible(true);
       int muted=field.getInt(controller.get());
-      for(int background:new int[]{0xffffffff,0xfffafafa,0xfff4f4f4,0xfff2f2f2,0xffececec})assertTrue(contrast(muted,background)>=4.5);
+      for(int background:new int[]{0xffffffff,0xfffafafa,0xfff4f4f4,0xfff2f2f2,0xffececec,0xfff5f6f7,0xffeceef1,0xffeff1f4})assertTrue(contrast(muted,background)>=4.5);
       RemoteApp app=(RemoteApp)controller.get().getApplication();app.profile=new Profile();app.connected=true;app.changed();
       java.lang.reflect.Field status=MainActivity.class.getDeclaredField("status");status.setAccessible(true);
       int color=((android.widget.TextView)status.get(controller.get())).getCurrentTextColor();
-      assertTrue(contrast(color,Color.WHITE)>=4.5);
+      assertTrue(contrast(color,0xfff5f6f7)>=4.5);
     } finally {controller.pause().stop().destroy();}
   }
   private static double contrast(int a,int b) {double x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}

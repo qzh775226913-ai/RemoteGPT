@@ -70,3 +70,5 @@
 公式引擎为固定版本 `ru.noties:jlatexmath-android:0.2.0`，通过 Android Canvas 和本地字体绘制，不加载 WebView、脚本或远端资源。代码围栏在 MessageBodyView 层先拆分，仅正文进入公式扫描；普通无公式正文沿用原渲染路径。流式排版以 View 自己的 generation 丢弃旧结果，原始 ChatItem、ConversationState 和存储格式不变。第三方许可与源码入口见 [第三方组件](THIRD_PARTY.md)。
 
 `MathDrawable` 通过公开 TeX API 绘制，隔离文字与线框的 Paint 状态；`MathGlyphs` 按原字体映射绘制被 Android 隐藏的 U+00AD 原始轮廓。轮廓在公式 worker 加载并发布后只读，不改变原始消息、会话或存储格式。
+
+`TableMarkup` 只解析 MessageBodyView 已拆出的正文，不解释代码围栏。`TableContentView` 以原生 TableLayout／TableRow 保持行列布局，单个 HorizontalScrollView 滚动整张表；复用 MessageBodyView 显示单元格内的既有 Markdown／公式。流式更新按表头及出现顺序复用表格和单元格，滚动位置仅归当前 View 所有，不写入会话缓存，不修改原文或协议。

@@ -86,3 +86,7 @@ Use and redistribution are governed by the [project license](../LICENSE). Codex 
 Explicit inline `\(…\)` and `$…$`, and display `\[…\]` and `$$…$$` TeX in remote prose are typeset locally with native fonts. Common fractions, scripts, Greek symbols, roots and matrices are supported. Long expressions scroll horizontally; long-press a display formula to copy its original TeX. Full-message copy retains the original source.
 
 Code, escaped markers and ordinary currency stay literal. Incomplete, unsupported, excessive or failed expressions remain readable source. No macro definitions, file access, remote resource loading or code execution is enabled. Whether the model emits formula markers depends on its actual response; this feature does not change the model or remote configuration.
+
+## 7. Tables and light surfaces in 1.0.57
+
+Standard Markdown tables use a native grid. Wide tables scroll horizontally as one unit; longer cells wrap within bounded column widths. Copy preserves the original table text. Appended rows retain the horizontal reading position. Code blocks, space-aligned prose and unsupported or oversized tables remain literal. Light mode separates the soft gray-white page, white replies and slightly darker input and table-header surfaces.

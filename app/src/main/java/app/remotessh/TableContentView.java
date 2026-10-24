@@ -1,0 +1,96 @@
+package app.remotessh;
+
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.text.TextPaint;
+import android.view.*;
+import android.widget.*;
+import java.util.*;
+import java.util.function.Consumer;
+
+/** One native grid, scrolled as a unit. Existing cells survive streaming updates. */
+@SuppressLint("ViewConstructor")
+final class TableContentView extends LinearLayout {
+  private final int fg,muted,panel;
+  private final Consumer<String> open,copy;
+  private final GridScroll scroll;
+  private final TableLayout grid;
+  private final List<List<Cell>> cells=new ArrayList<>();
+  private TableMarkup.Table data;
+  private int[] widths;
+
+  TableContentView(Context context,int fg,int muted,int panel,Consumer<String> open,Consumer<String> copy) {
+    super(context);setOrientation(VERTICAL);this.fg=fg;this.muted=muted;this.panel=panel;this.open=open;this.copy=copy;
+    LinearLayout toolbar=new LinearLayout(context);toolbar.setGravity(Gravity.CENTER_VERTICAL);
+    TextView label=new TextView(context);label.setText("表格");label.setTextSize(12);label.setTextColor(muted);
+    toolbar.addView(label,new LayoutParams(0,-2,1));
+    TextView button=new TextView(context);button.setText("复制");button.setTextSize(13);button.setTextColor(fg);
+    button.setGravity(Gravity.CENTER);button.setMinHeight(dp(48));button.setPadding(dp(12),0,dp(12),0);
+    button.setContentDescription("复制表格");PressFeedback.apply(button,(fg&0xffffff)>0x808080);
+    button.setOnClickListener(v->{if(copy!=null && data!=null)copy.accept(data.raw);});toolbar.addView(button);addView(toolbar);
+    scroll=new GridScroll(context);scroll.setFillViewport(true);scroll.setHorizontalScrollBarEnabled(true);
+    grid=new TableLayout(context);grid.setStretchAllColumns(true);grid.setShrinkAllColumns(false);
+    scroll.addView(grid,new HorizontalScrollView.LayoutParams(-2,-2));addView(scroll,new LayoutParams(-1,-2));
+  }
+  private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
+  String key(){return data==null?"":data.key;}
+  String raw(){return data==null?"":data.raw;}
+  int offset(){return scroll.getScrollX();}
+  void restoreOffset(int value){scroll.restoreX=value;requestLayout();}
+  void setTable(TableMarkup.Table next) {
+    if(data!=null && data.raw.equals(next.raw))return;
+    int previous=scroll.getScrollX();boolean append=data!=null && next.raw.startsWith(data.raw);
+    if(widths==null || widths.length!=next.columns() || !append)widths=new int[next.columns()];
+    data=next;
+    TextPaint paint=new TextPaint();paint.setTextSize(16*getResources().getDisplayMetrics().scaledDensity);
+    for(List<String> row:next.rows)for(int c=0;c<next.columns();c++) {
+      CharSequence display=Markdown.render(row.get(c),muted,panel);
+      float longest=0;for(String line:display.toString().split("\n",-1))longest=Math.max(longest,paint.measureText(line));
+      widths[c]=Math.max(widths[c],Math.max(dp(80),Math.min(dp(280),(int)Math.ceil(longest)+dp(28))));
+    }
+    while(cells.size()>next.rows.size()){cells.remove(cells.size()-1);grid.removeViewAt(grid.getChildCount()-1);}
+    for(int r=0;r<next.rows.size();r++) {
+      if(r==cells.size()) {
+        TableRow row=new TableRow(getContext());List<Cell> rowCells=new ArrayList<>();
+        for(int c=0;c<next.columns();c++) {
+          Cell cell=new Cell(r==0,next.align.get(c));rowCells.add(cell);row.addView(cell,new TableRow.LayoutParams(widths[c],-1));
+        }
+        cells.add(rowCells);grid.addView(row,new TableLayout.LayoutParams(-1,-2));
+      }
+      for(int c=0;c<next.columns();c++) {
+        Cell cell=cells.get(r).get(c);cell.body.setSource(next.rows.get(r).get(c));
+        TableRow.LayoutParams params=(TableRow.LayoutParams)cell.getLayoutParams();params.width=widths[c];cell.setLayoutParams(params);
+      }
+    }
+    scroll.restoreX=previous;requestLayout();
+  }
+  private final class Cell extends LinearLayout {
+    final MessageBodyView body;
+    private final boolean heading;private final int alignment;
+    Cell(boolean heading,int alignment) {
+      super(TableContentView.this.getContext());this.heading=heading;this.alignment=alignment;setOrientation(VERTICAL);
+      GradientDrawable background=new GradientDrawable();
+      background.setColor(heading?panel:android.graphics.Color.TRANSPARENT);
+      background.setStroke(dp(1),(fg&0xffffff)|0x28000000);setBackground(background);
+      setPadding(dp(12),dp(10),dp(12),dp(10));
+      body=new MessageBodyView(getContext(),fg,muted,panel,open,copy);addView(body,new LayoutParams(-1,-2));
+    }
+    @Override protected void onMeasure(int widthSpec,int heightSpec) {style(body);super.onMeasure(widthSpec,heightSpec);}
+    private void style(View view) {
+      if(view instanceof TextView) {
+        TextView text=(TextView)view;text.setGravity(alignment==1?Gravity.CENTER_HORIZONTAL:alignment==2?Gravity.RIGHT:Gravity.LEFT);
+        if(heading && (text.getTypeface()==null || !text.getTypeface().isBold()))text.setTypeface(text.getTypeface(),Typeface.BOLD);
+      }
+      if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++)style(((ViewGroup)view).getChildAt(i));
+    }
+  }
+  private static final class GridScroll extends HorizontalScrollView {
+    int restoreX=-1;
+    GridScroll(Context context){super(context);}
+    @Override protected void onLayout(boolean changed,int l,int t,int r,int b) {
+      super.onLayout(changed,l,t,r,b);if(restoreX>=0){scrollTo(restoreX,0);restoreX=-1;}
+    }
+  }
+}

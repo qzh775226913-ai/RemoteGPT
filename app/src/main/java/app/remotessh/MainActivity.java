@@ -155,11 +155,11 @@ public final class MainActivity extends Activity {
 
   private void colors() {
     boolean dark = isDark();
-    bg = Color.parseColor(dark ? "#000000" : "#FFFFFF");
+    bg = Color.parseColor(dark ? "#000000" : "#F5F6F7");
     fg = Color.parseColor(dark ? "#ECECEC" : "#171717");
     muted = Color.parseColor(dark ? "#A6A6A6" : "#626262");
-    panel = Color.parseColor(dark ? "#303030" : "#F4F4F4");
-    line = Color.parseColor(dark ? "#424242" : "#E8E8E8");
+    panel = Color.parseColor(dark ? "#303030" : "#ECEEF1");
+    line = Color.parseColor(dark ? "#424242" : "#D9DDE2");
     ui = new DialogUi(this, bg, fg, muted, panel, line);
     getWindow().setStatusBarColor(bg);
     getWindow().setNavigationBarColor(bg);
@@ -682,7 +682,7 @@ public final class MainActivity extends Activity {
     messages.addView(wrap, wp);
     if(item.type.equals("question")) {
       QuestionHistoryView card=new QuestionHistoryView(this,fg,muted,
-          Color.parseColor(isDark()?"#1C1C1C":"#F5F5F5"),
+          Color.parseColor(isDark()?"#1C1C1C":"#FFFFFF"),
           fg,this::copy);
       questionCards.put(item.id,card);currentItems.put(item.id,item);
       LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);wrap.addView(card,cp);
@@ -716,7 +716,7 @@ public final class MainActivity extends Activity {
     if (item.type.equals("agentMessage") || item.type.equals("plan")) {
       boolean plan=item.type.equals("plan"),progress=!plan && item.phase.equals("commentary");
       LinearLayout proseCard=column();
-      proseCard.setBackground(rounded(progress?bg:Color.parseColor(isDark()?(plan?"#202020":"#161616"):(plan?"#F2F2F2":"#FAFAFA")),18));
+      proseCard.setBackground(rounded(progress?bg:Color.parseColor(isDark()?(plan?"#202020":"#161616"):(plan?"#EFF1F4":"#FFFFFF")),18));
       proseCard.setPadding(dp(progress?4:14),dp(progress?3:6),dp(progress?4:14),dp(progress?3:8));
       wrap.addView(proseCard,new LinearLayout.LayoutParams(-1,-2));
       if(!progress) {
@@ -724,7 +724,7 @@ public final class MainActivity extends Activity {
         IconView copyButton=icon("copy",plan?"复制计划":"复制回复",()->{ChatItem latest=currentItems.get(item.id);if(latest!=null)copy(latest.text);});
         heading.addView(copyButton,new LinearLayout.LayoutParams(dp(48),dp(48)));proseCard.addView(heading);
       }
-      MessageBodyView messageBody = new MessageBodyView(this,progress?muted:fg,muted,Color.parseColor(isDark()?"#2B2B2B":"#ECECEC"),this::openLink,this::copy);
+      MessageBodyView messageBody = new MessageBodyView(this,progress?muted:fg,muted,Color.parseColor(isDark()?"#2B2B2B":"#ECEEF1"),this::openLink,this::copy);
       messageBodies.put(item.id,messageBody); proseCard.addView(messageBody,new LinearLayout.LayoutParams(-1,-2));
     } else if(item.user()) {
       LinearLayout bubbleRow=row();bubbleRow.setGravity(Gravity.END|Gravity.BOTTOM);

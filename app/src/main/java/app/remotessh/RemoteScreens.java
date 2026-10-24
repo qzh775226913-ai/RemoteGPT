@@ -15,10 +15,10 @@ final class RemoteScreens {
 
   RemoteScreens(Activity activity, boolean dark) {
     this.activity = activity;
-    bg = dark ? Color.BLACK : Color.WHITE;
+    bg = dark ? Color.BLACK : Color.rgb(245,246,247);
     fg = dark ? 0xffeeeeee : 0xff171717;
-    panel = dark ? 0xff303030 : 0xfff3f3f3;
-    muted = dark ? 0xffa6a6a6 : 0xff707070;
+    panel = dark ? 0xff303030 : 0xffeceef1;
+    muted = dark ? 0xffa6a6a6 : 0xff626262;
   }
 
   int dp(float n) {

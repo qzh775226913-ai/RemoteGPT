@@ -15,8 +15,9 @@ import java.util.regex.*;
 /** Native text and copyable fenced blocks; remote content is never executed. */
 final class MessageBodyView extends LinearLayout {
   static final class Block {
-    final boolean code; final String language, text;
-    Block(boolean code, String language, String text) { this.code=code; this.language=language; this.text=text; }
+    final boolean code; final String language, text; final TableMarkup.Table table;
+    Block(boolean code, String language, String text) { this.code=code; this.language=language; this.text=text; this.table=null; }
+    Block(TableMarkup.Table table) {this.code=false;this.language="";this.text=table.raw;this.table=table;}
   }
   private final int fg, muted, panel;
   private final Consumer<String> open, copy;
@@ -76,20 +77,41 @@ final class MessageBodyView extends LinearLayout {
     return result;
   }
 
+  private static List<Block> contentBlocks(String source) {
+    List<Block> result=new ArrayList<>();
+    for(Block block:blocks(source)) {
+      if(block.code){result.add(block);continue;}
+      for(TableMarkup.Part part:TableMarkup.parts(block.text))
+        result.add(part.table==null?new Block(false,"",part.raw):new Block(part.table));
+    }
+    return result;
+  }
+
   void setSource(String value) {
     if (value.equals(source)) return;
-    source=value; List<Block> parts=blocks(value);
-    boolean math=parts.size()==1 && !parts.get(0).code && MathMarkup.containsMath(parts.get(0).text);
+    source=value; List<Block> parts=contentBlocks(value);
+    boolean math=parts.size()==1 && !parts.get(0).code && parts.get(0).table==null && MathMarkup.containsMath(parts.get(0).text);
     if(math && getChildCount()==1 && getChildAt(0) instanceof MathContentView) {
       ((MathContentView)getChildAt(0)).setSource(parts.get(0).text);return;
     }
     // Ordinary streaming prose keeps its existing selectable view.
-    if(!math && parts.size()==1 && !parts.get(0).code && getChildCount()==1 && getChildAt(0) instanceof TextView) {
+    if(!math && parts.size()==1 && !parts.get(0).code && parts.get(0).table==null && getChildCount()==1 && getChildAt(0) instanceof TextView) {
       TextView prose=(TextView)getChildAt(0);CharSequence rendered=proseText(parts.get(0).text);
       prose.setText(rendered);prose.setVisibility(rendered.length()==0?GONE:VISIBLE);return;
     }
+    Map<String,ArrayDeque<TableContentView>> existing=new HashMap<>();
+    for(int i=0;i<getChildCount();i++)if(getChildAt(i) instanceof TableContentView) {
+      TableContentView table=(TableContentView)getChildAt(i);
+      existing.computeIfAbsent(table.key(),key->new ArrayDeque<>()).add(table);
+    }
     removeAllViews(); int index=0;
     for (Block block : parts) {
+      if(block.table!=null) {
+        ArrayDeque<TableContentView> candidates=existing.get(block.table.key);
+        TableContentView table=candidates==null || candidates.isEmpty()
+            ?new TableContentView(getContext(),fg,muted,panel,open,copy):candidates.remove();
+        table.setTable(block.table);addView(table,new LayoutParams(-1,-2));continue;
+      }
       if (!block.code) {
         if(MathMarkup.containsMath(block.text)) {
           MathContentView formulas=new MathContentView(getContext(),fg,muted,panel,open,copy);

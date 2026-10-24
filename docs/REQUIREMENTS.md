@@ -1,6 +1,6 @@
 # 当前需求与行为契约
 
-适用：1.0.56 / versionCode 58。最后核对：2026-10-22。
+适用：1.0.57 / versionCode 59。最后核对：2026-10-24。
 
 本文件是当前产品行为的唯一需求清单。版本记录说明曾经发生什么，不覆盖此处。编号永久保留；修改行为时修改对应条目和验收，取消需求时写明取消原因，不把编号转用于别的需求。
 
@@ -40,6 +40,7 @@
 | 编号 | 当前行为及失败边界 | 自动化入口 |
 | --- | --- | --- |
 | R-21 | Ω 与带边框公式必须保留完整实心字形，反三角函数及合法简写分式正常排版；浅色界面正文、公式、次要文字维持清晰对比度。 远端正文显式标记的 `\(…\)`、`$…$` 行内公式及 `\[…\]`、`$$…$$` 独立公式由本地原生 TeX 排版；支持分式、上下标、上横线、根式、希腊字母、求和／积分、矩阵及常用对齐环境。分式等与正文基线及行高匹配，跟随字号缩放和明暗主题；长公式可横向滚动，独立公式长按复制原始标记和 TeX。代码块、行内代码、转义标记、链接地址、普通货币和不完整流式片段不误转为公式。传输与会话原文不变；新片段、历史恢复、换会话和窗口释放不得发布迟到排版结果。排版在有界独立 worker 中执行，保留 64 项缓存；单正文最多 512 个公式、单式最多 4096 字符／32 层花括号／256 个命令，采用显式命令与环境允许列表，不执行文件、网络、宏定义或远端代码。队列拥塞、不支持、无效或超过尺寸限制时保留可读原文。 | [MathMarkupTest](../app/src/test/java/app/remotessh/MathMarkupTest.java)、[MathRenderingTest](../app/src/test/java/app/remotessh/MathRenderingTest.java)、[MathDefectsTest](../app/src/test/java/app/remotessh/MathDefectsTest.java)、[MathReadabilityTest](../app/src/test/java/app/remotessh/MathReadabilityTest.java) |
+| R-22 | 标准 Markdown 表格使用原生行列布局与表头、网格边框，超出屏幕时整张表横向滚动，不按屏幕强行挤压列宽；列内容在有界列宽内换行，支持左／中／右对齐、单元格内既有 Markdown 和公式。复制表格及完整消息保留原始文本；流式追加保留表格、已有单元格与横向位置，相同表头的不同表格不共用位置。代码围栏、空格排版、分隔行不完整或无效的内容不误转表格；GFM 缺项补空、多余项不展示但保留原文。单正文上限 131072 字符／32 张表／1024 个单元格，单表最多 32 列／128 行（含表头），超限保留完整原文。浅色页面使用灰白底色、白色回复卡片及稍深的输入框／用户消息／表头，保留原布局与文字对比度。 | [TableMarkupTest](../app/src/test/java/app/remotessh/TableMarkupTest.java)、[TableRenderingTest](../app/src/test/java/app/remotessh/TableRenderingTest.java)、[MathReadabilityTest](../app/src/test/java/app/remotessh/MathReadabilityTest.java) |
 
 ## 当前不承诺的能力
 
