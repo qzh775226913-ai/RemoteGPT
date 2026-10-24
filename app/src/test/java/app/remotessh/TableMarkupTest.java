@@ -27,6 +27,11 @@ public class TableMarkupTest {
     for(String raw:new String[]{"A | B\n---","A | B\n--- | 待续","普通 | 文本", "标题\n---", "    | A | B |\n    |---|---|", "A\\|B\n---"})
       assertFalse(raw,TableMarkup.parts(raw).stream().anyMatch(p->p.table!=null));
   }
+  @Test public void explicitMathKeepsAbsoluteValuePipesAndTexNormCommandsIntact() {
+    TableMarkup.Table t=table("| 公式 | 说明 |\n|---|---|\n| \\(|x|\\) | 绝对值 |\n| $\\|x\\|$ | 范数 |");
+    assertEquals(2,t.columns());assertEquals("\\(|x|\\)",t.rows.get(1).get(0));
+    assertEquals("$\\|x\\|$",t.rows.get(2).get(0));assertEquals("范数",t.rows.get(2).get(1));
+  }
   @Test public void oversizedTablesRemainCompleteLiteralWithoutDroppingContent() {
     String raw="| A | B |\n|---|---|\n"+"| x | y |\n".repeat(140);
     assertFalse(TableMarkup.parts(raw).stream().anyMatch(p->p.table!=null));

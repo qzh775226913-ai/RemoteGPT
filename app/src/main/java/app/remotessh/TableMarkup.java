@@ -56,11 +56,16 @@ final class TableMarkup {
   static List<String> row(String line) {
     if(line.startsWith("    ") || line.startsWith("\t"))return null;
     line=line.trim();if(line.isEmpty())return null;
+    boolean[] math=new boolean[line.length()];int at=0;
+    for(MathMarkup.Part part:MathMarkup.parts(line)) {
+      if(part.kind!=MathMarkup.Kind.TEXT)Arrays.fill(math,at,at+part.raw.length(),true);
+      at+=part.raw.length();
+    }
     List<String> cells=new ArrayList<>();StringBuilder cell=new StringBuilder();boolean pipe=false;
     for(int i=0;i<line.length();i++) {
       char c=line.charAt(i);
-      if(c=='|' && !escaped(line,i)){cells.add(cell.toString().trim());cell.setLength(0);pipe=true;}
-      else if(c=='\\' && i+1<line.length() && line.charAt(i+1)=='|' && !escaped(line,i)){cell.append('|');i++;}
+      if(c=='|' && !math[i] && !escaped(line,i)){cells.add(cell.toString().trim());cell.setLength(0);pipe=true;}
+      else if(c=='\\' && i+1<line.length() && line.charAt(i+1)=='|' && !math[i] && !escaped(line,i)){cell.append('|');i++;}
       else cell.append(c);
     }
     cells.add(cell.toString().trim());if(!pipe)return null;
