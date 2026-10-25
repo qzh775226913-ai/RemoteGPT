@@ -47,6 +47,7 @@
 
 ## 异步和协议规则
 
+- SshTransport 打开 SFTP 通道遇到 `channel is not opened.` 时，先释放失败通道，在同一有效连接上间隔 500ms 最多重试一次；关闭／断连／取消终止重试。重试边界仅为通道建立，不重放 put／rename 等文件操作，不重建 SSH 或重启远端任务。
 - SSH／文件 I/O 在 worker 执行；结果回到主线程。检查 generation，以及必要的传输实例、配置 revision、服务器／会话身份，迟到结果无效。
 - `RemoteApp.request` 捕获发起请求的会话，完成时通过 `inConversation` 路由。独立控制器必须复用该入口，不能自行给 RPC 回调更新当前页面。
 - 浏览用 `thread/read`，接续用 `thread/resume`；恢复活动会话与只读历史有不同路径。重放是同步屏障，不能当作实时完成来排队发送。

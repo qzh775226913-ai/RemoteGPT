@@ -271,15 +271,27 @@ public final class SshTransport implements AutoCloseable {
 
   private ChannelSftp sftp() throws Exception {
     Session current = session;
-    if (closed || current == null || !current.isConnected()) throw new IOException("SSH 未连接");
-    ChannelSftp sftp = (ChannelSftp) current.openChannel("sftp");
-    try {
-      sftp.connect(15000);
-      return sftp;
-    } catch (Exception e) {
-      sftp.disconnect();
-      throw e;
+    for (int attempt = 0; attempt < 2; attempt++) {
+      if (closed || current == null || !current.isConnected()) throw new IOException("SSH 未连接，请重新连接后重试");
+      if (Thread.currentThread().isInterrupted()) throw new InterruptedIOException("SFTP 操作已取消");
+      ChannelSftp files = (ChannelSftp) current.openChannel("sftp");
+      try {
+        files.connect(15000);
+        return files;
+      } catch (Exception failure) {
+        files.disconnect();
+        // Only retry a channel-open failure, before any file operation has started.
+        // Replaying put/rename after an ambiguous transfer failure could duplicate writes.
+        if (!(failure instanceof JSchException)
+            || !"channel is not opened.".equals(failure.getMessage())) throw failure;
+        if (closed || !current.isConnected()) throw new IOException("SSH 已断开，请重新连接后重试", failure);
+        if (attempt == 1) throw new IOException(
+            "SFTP 文件通道打开失败（channel is not opened）。已重试一次；请断开并重新连接后重试。"
+                + "若仍失败，请检查服务器的 SSH 并发会话限制与 SFTP 服务。", failure);
+      }
+      Thread.sleep(500);
     }
+    throw new IOException("SFTP 文件通道不可用");
   }
 
   public RemoteDirectory listDirectories(String path) throws Exception {

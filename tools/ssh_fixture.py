@@ -96,6 +96,7 @@ class Files(paramiko.SFTPServerInterface):
 class Fixture(paramiko.ServerInterface):
     def __init__(self):
         self.ready = threading.Event()
+        self.post_exec_opens = 0
 
     def check_auth_none(self, username):
         return paramiko.AUTH_SUCCESSFUL if username == "tailnet-fixture" else paramiko.AUTH_FAILED
@@ -108,7 +109,8 @@ class Fixture(paramiko.ServerInterface):
 
     def check_auth_password(self, username, password):
         self.username = username
-        return paramiko.AUTH_SUCCESSFUL if username in ('fixture', 'fixture-no-python', 'fixture-no-sftp') and password == 'test-only' else paramiko.AUTH_FAILED
+        return paramiko.AUTH_SUCCESSFUL if username in ('fixture', 'fixture-no-python', 'fixture-no-sftp',
+            'fixture-channel-once', 'fixture-channel-denied') and password == 'test-only' else paramiko.AUTH_FAILED
 
     def check_channel_subsystem_request(self, channel, name):
         if name == 'sftp' and getattr(self, 'username', '') == 'fixture-no-sftp':
@@ -116,6 +118,11 @@ class Fixture(paramiko.ServerInterface):
         return super().check_channel_subsystem_request(channel, name)
 
     def check_channel_request(self, kind, chanid):
+        if self.ready.is_set():
+            self.post_exec_opens += 1
+            username = getattr(self, 'username', '')
+            if username == 'fixture-channel-denied' or (username == 'fixture-channel-once' and self.post_exec_opens == 1):
+                return paramiko.OPEN_FAILED_RESOURCE_SHORTAGE
         return paramiko.OPEN_SUCCEEDED if kind == "session" else paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
     def check_channel_exec_request(self, channel, command):

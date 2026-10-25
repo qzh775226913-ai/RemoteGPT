@@ -254,6 +254,38 @@ public class SshIntegrationTest {
     } finally { file.delete(); }
   }
 
+  @Test(timeout = 30000)
+  public void retriesRejectedFileChannelWithoutInterruptingConversation() throws Exception {
+    profile.user = "fixture-channel-once";
+    rpc = connect((h, f) -> true); rpc.start();
+    java.io.File file = java.io.File.createTempFile("channel-retry", ".png");
+    try {
+      byte[] bytes = new byte[] {0, 13, -1, 42};
+      java.nio.file.Files.write(file.toPath(), bytes);
+      String path = transport.uploadImage(file);
+      java.io.ByteArrayOutputStream downloaded = new java.io.ByteArrayOutputStream();
+      transport.download(path, downloaded, 100);
+      assertArrayEquals(bytes, downloaded.toByteArray());
+      assertEquals("real-ssh", rpc.request("test", Json.obj()).get(5, TimeUnit.SECONDS).getString("transport"));
+    } finally { file.delete(); }
+  }
+
+  @Test(timeout = 30000)
+  public void persistentFileChannelRejectionHasBoundedRetryAndActionableError() throws Exception {
+    profile.user = "fixture-channel-denied";
+    rpc = connect((h, f) -> true); rpc.start();
+    java.io.File file = java.io.File.createTempFile("channel-denied", ".png");
+    try {
+      try { transport.uploadImage(file); fail("Rejected channel accepted"); }
+      catch (java.io.IOException error) {
+        assertTrue(error.getMessage().contains("SFTP 文件通道打开失败"));
+        assertTrue(error.getMessage().contains("已重试一次"));
+        assertTrue(error.getCause() instanceof com.jcraft.jsch.JSchException);
+      }
+      assertEquals("real-ssh", rpc.request("test", Json.obj()).get(5, TimeUnit.SECONDS).getString("transport"));
+    } finally { file.delete(); }
+  }
+
   @Test
   public void readsAcceptedQuestionOnAuxiliaryChannelWithoutInterruptingRpc() throws Exception {
     rpc = connect((h, f) -> true); rpc.start();
