@@ -629,6 +629,13 @@ public class MainActivityTest {
   @Config(qualifiers = "w360dp-h720dp-xhdpi")
   public void fontSizeChoicePersistsAndScalesNewActivity() throws Exception {
     float originalScale = activity.getResources().getConfiguration().fontScale;
+    activity.getSharedPreferences("display", 0).edit().putFloat("fontScale", 1.3f).apply();
+    controller.recreate(); activity = controller.get();
+    assertEquals(originalScale * 1.15f, activity.getResources().getConfiguration().fontScale, .001f);
+    assertEquals(1.3f, activity.getSharedPreferences("display", 0).getFloat("fontScale", 0), .001f);
+    // A saved old "small" value keeps its size and is now named "medium".
+    activity.getSharedPreferences("display", 0).edit().putFloat("fontScale", .9f).apply();
+    controller.recreate(); activity = controller.get();
     find(content(), "打开连接和聊天记录").performClick();
     android.app.Dialog nav=org.robolectric.shadows.ShadowDialog.getLatestDialog();
     find(nav.getWindow().getDecorView(),"远程控制菜单").performClick();
@@ -638,12 +645,18 @@ public class MainActivityTest {
     assertEquals("字体大小",settings.getListView().getAdapter().getItem(2));
     settings.getListView().performItemClick(null,2,2);
     android.app.AlertDialog sizes = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-    sizes.getListView().performItemClick(null, 4, 4);
-    assertEquals(1.3f, activity.getSharedPreferences("display", 0).getFloat("fontScale", 0), .001f);
+    assertEquals(5, sizes.getListView().getAdapter().getCount());
+    String[] labels = {"跟随系统", "小", "中", "大", "更大"};
+    for (int i = 0; i < labels.length; i++) assertEquals(labels[i], sizes.getListView().getAdapter().getItem(i));
+    assertEquals("中", sizes.getListView().getAdapter().getItem(2));
+    assertEquals(2, sizes.getListView().getCheckedItemPosition());
+    assertEquals(originalScale * .9f, activity.getResources().getConfiguration().fontScale, .001f);
+    sizes.getListView().performItemClick(null, 1, 1);
+    assertEquals(.75f, activity.getSharedPreferences("display", 0).getFloat("fontScale", 0), .001f);
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     activity = controller.get();
-    assertEquals(originalScale * 1.3f, activity.getResources().getConfiguration().fontScale, .001f);
-    capture("font-large-phone");
+    assertEquals(originalScale * .75f, activity.getResources().getConfiguration().fontScale, .001f);
+    capture("font-small-phone");
   }
 
   @Test

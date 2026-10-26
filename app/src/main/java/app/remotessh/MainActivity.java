@@ -101,7 +101,7 @@ public final class MainActivity extends Activity {
     float scale = base.getSharedPreferences("display", MODE_PRIVATE).getFloat("fontScale", 0);
     if (scale > 0) {
       Configuration config = new Configuration(base.getResources().getConfiguration());
-      config.fontScale *= scale;
+      config.fontScale *= Math.min(scale, 1.15f);
       base = base.createConfigurationContext(config);
     }
     super.attachBaseContext(base);
@@ -1306,9 +1306,9 @@ public final class MainActivity extends Activity {
   }
 
   private void chooseFontSize() {
-    float[] scales = {0, .9f, 1f, 1.15f, 1.3f};
-    String[] labels = {"跟随系统", "小", "标准", "大", "更大"};
-    float current = getSharedPreferences("display", MODE_PRIVATE).getFloat("fontScale", 0);
+    float[] scales = {0, .75f, .9f, 1f, 1.15f};
+    String[] labels = {"跟随系统", "小", "中", "大", "更大"};
+    float current = Math.min(getSharedPreferences("display", MODE_PRIVATE).getFloat("fontScale", 0), 1.15f);
     int selected = 0;
     for (int i = 0; i < scales.length; i++) if (Math.abs(scales[i] - current) < .001f) selected = i;
     new AlertDialog.Builder(this).setTitle("字体大小")
