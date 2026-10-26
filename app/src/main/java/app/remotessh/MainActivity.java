@@ -495,6 +495,7 @@ public final class MainActivity extends Activity {
 
   private void render() {
     if (!renderedThread.equals(app.threadId)) {
+      if(imageDialog!=null)imageDialog.dismiss();
       renderedThread = app.threadId;
       if (input != null) { input.setText(app.draftText); input.setSelection(input.length()); }
       scroll.follow();
@@ -967,21 +968,30 @@ public final class MainActivity extends Activity {
   }
 
   private void openImagePreview(android.graphics.Bitmap preview) {
-    showImage(null,preview);
+    showImage(null,preview,Collections.emptyList());
   }
 
   private void openImage(String source) {
-    android.graphics.Bitmap preview=app.draftImagePreviews.get(source);
-    if(preview==null)for(MessageImageTile tile:mediaTiles)if(tile.source.equals(source) && tile.loaded && tile.preview.getDrawable() instanceof BitmapDrawable){preview=((BitmapDrawable)tile.preview.getDrawable()).getBitmap();break;}
-    showImage(source,preview);
+    showImage(source,imagePreview(source),Collections.emptyList());
   }
 
-  private void showImage(String source,android.graphics.Bitmap preview) {
+  private void openConversationImage(String source) {
+    showImage(source,imagePreview(source),MediaFiles.imageGallery(app.items,app.currentProject()));
+  }
+
+  private android.graphics.Bitmap imagePreview(String source) {
+    android.graphics.Bitmap preview=app.draftImagePreviews.get(source);
+    if(preview==null)for(MessageImageTile tile:mediaTiles)if(tile.source.equals(source) && tile.loaded && tile.preview.getDrawable() instanceof BitmapDrawable){preview=((BitmapDrawable)tile.preview.getDrawable()).getBitmap();break;}
+    return preview;
+  }
+
+  private void showImage(String source,android.graphics.Bitmap preview,List<String> gallery) {
     if(imageDialog!=null)imageDialog.dismiss();
-    int generation=app.connectionGeneration();String host=app.profile==null?"":app.profile.id;
-    imageDialog=new ImageDialog(this,isDark(),source,preview,
+    int generation=app.connectionGeneration();String host=app.profile==null?"":app.profile.id,thread=app.threadId;
+    imageDialog=new ImageDialog(this,isDark(),source,preview,gallery,this::imagePreview,
         (path,out,active)->app.readMedia(path,out,MediaFiles.IMAGE_LIMIT,active),
-        ()->!isDestroyed() && generation==app.connectionGeneration() && host.equals(app.profile==null?"":app.profile.id),
+        ()->!isDestroyed() && generation==app.connectionGeneration() && host.equals(app.profile==null?"":app.profile.id)
+            && (Looper.myLooper()!=Looper.getMainLooper() || thread.equals(app.threadId)),
         this::saveMedia);
   }
 
@@ -998,7 +1008,7 @@ public final class MainActivity extends Activity {
       String source=original;
       try{if(!source.startsWith("data:") && !source.startsWith("https://"))source=MediaFiles.remotePath(source,app.currentProject());}catch(Exception ignored){}
       if(index%2==0 || sources.size()==1){grid=row();row.addView(grid,new LinearLayout.LayoutParams(-1,-2));}
-      MessageImageTile tile=new MessageImageTile(this,app,ui,thumbnailWorker,item.id,source,row,sources.size()>1,()->mediaRows.get(item.id)==row,this::openImage);mediaTiles.add(tile);grid.addView(tile.tile);index++;
+      MessageImageTile tile=new MessageImageTile(this,app,ui,thumbnailWorker,item.id,source,row,sources.size()>1,()->mediaRows.get(item.id)==row,this::openConversationImage);mediaTiles.add(tile);grid.addView(tile.tile);index++;
     }
     scheduleMedia();
   }

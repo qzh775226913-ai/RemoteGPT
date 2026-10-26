@@ -14,7 +14,7 @@
 | 会话容器 | `ConversationStore` 是会话缓存和临时背景分发的唯一所有者；`ConversationState` 保存每条会话的消息、草稿、权限／速度和运行状态 |
 | 轮次／队列 | `TurnController` 管理创建／发送／引导轮次、一条待发消息及其附件、可自动发送标记；请求仍走统一回调路由 |
 | 附件 | `AttachmentController` 管理批量上传、媒体读取、连接变化取消和主线程结果提交；`MediaFiles`／`FileAttachment` 定义格式、路径与限额 |
-| 消息图片 | `MessageImageTile` 拥有可见缩略图、读取任务与有界重试；同服务器／会话的连接 generation 变化时释放旧任务并重新绑定，主线程核对作用域后才显示结果。消息区暂停更新仍刷新图片连接状态；`ThumbnailLoader`／`ThumbnailCache` 分别提供任务调度和共享有界缓存 |
+| 消息图片 | `MessageImageTile` 拥有可见缩略图、读取任务与有界重试；同服务器／会话的连接 generation 变化时释放旧任务并重新绑定，主线程核对作用域后才显示结果。消息区暂停更新仍刷新图片连接状态；`ThumbnailLoader`／`ThumbnailCache` 分别提供任务调度和共享有界缓存；`ImageDialog` 拥有本次预览的对话图片快照、当前位置、加载 generation 与原图释放；`ZoomImageView` 负责适配／缩放拖动与边缘翻页手势 |
 | 目录／会话偏好 | `DirectoryController` 管理目录操作的 worker 和迟到结果；`ConversationPreferences` 管理稳定存储键及权限／速度／问答历史快照 |
 | 传输／协议 | `SshTransport` 管理 SSH、SFTP 和辅助通道；`RpcClient` 管理 JSON-RPC framing、请求匹配和事件分发，不操作 Android View |
 | 连接诊断 | `ConnectionPreflight` 生成无凭据输出的环境探测并解析分类失败、检查公开账户状态；`ConnectionSetupUi` 拥有用户显式关闭持久模式的确认窗口。探测有超时／输出上限，关闭或连接 generation 变化使后续初始化无效 |
@@ -73,3 +73,5 @@
 `MathDrawable` 通过公开 TeX API 绘制，隔离文字与线框的 Paint 状态；`MathGlyphs` 按原字体映射绘制被 Android 隐藏的 U+00AD 原始轮廓。轮廓在公式 worker 加载并发布后只读，不改变原始消息、会话或存储格式。
 
 `TableMarkup` 只解析 MessageBodyView 已拆出的正文，不解释代码围栏。`TableContentView` 以原生 TableLayout／TableRow 保持行列布局，单个 HorizontalScrollView 滚动整张表；其 GridScroll 在首个 MOVE 前暂阻父容器抢占，超过系统触摸阈值后按主要方向锁定／释放，结束／取消／detach 清理。横向手势期间由 ConversationScrollView 暂停焦点引发的自动纵向显示位移，保留正常焦点更新，释放后恢复显示请求；复用 MessageBodyView 显示单元格内的既有 Markdown／公式。MessageBodyView／MathContentView 的不可变字号与行距参数默认仍为正文 16sp／5dp，表格传入 14sp／1dp，公式排版复用该字号；TableContentView 的 Row 在整行内容绘制后统一绘制 1 物理像素浅色横纵分隔线与外框，分隔线和交点只绘制一次，Cell 不单独绘制边框，横向滚动条隐藏而手势保留；表头与内容同字号，仅表头加粗。TableContentView 自己拥有紧凑的单元格留白与列宽度量，不影响正文或持久状态。流式更新按表头及出现顺序复用表格和单元格，滚动位置仅归当前 View 所有，不写入会话缓存，不修改原文或协议。
+
+消息图片预览由 MediaFiles.imageGallery 在主线程从当前会话消息中按既有图片顺序收集、规范化路径并去重；MainActivity 仅连接消息／草稿入口和服务器、连接 generation、会话身份校验。图片列表和页号仅归 ImageDialog，不增加 ConversationState 字段；后台 I/O 不读取临时会话选择，主线程发布／保存时核对原会话。翻页取消并移除旧排队加载，只保留当前页原图，迟到结果释放；关闭释放临时文件、原图及列表引用。缩略图是借用对象，不能回收。

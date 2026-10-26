@@ -65,7 +65,7 @@ public class ZoomImageViewTest {
     bounds=view.displayedBounds();assertTrue(bounds.left<=0 && bounds.top<=0);assertTrue(bounds.right>=1000 && bounds.bottom>=800);assertEquals(0,page.get());
     view.reset();assertFalse(view.isZoomed());assertEquals(new RectF(0,0,1000,800),view.displayedBounds());
   }
-  @Test public void doubleTapTogglesZoomAndOnlyFitImageSwipeChangesPage() throws Exception {
+  @Test public void doubleTapTogglesZoomAndInteriorDragKeepsPage() throws Exception {
     AtomicInteger page=new AtomicInteger();attach(document(image(1000,800,Color.BLUE)),page);long t=SystemClock.uptimeMillis();
     gesture(t,t,MotionEvent.ACTION_DOWN,300,300);gesture(t,t+30,MotionEvent.ACTION_UP,300,300);
     gesture(t+100,t+100,MotionEvent.ACTION_DOWN,300,300);gesture(t+100,t+130,MotionEvent.ACTION_UP,300,300);assertTrue(view.isZoomed());
@@ -79,6 +79,19 @@ public class ZoomImageViewTest {
     ImageDocument.Region region=source.region(1,-1500,-600,1000,800);assertEquals(1,region.sample);assertTrue(region.bounds.width()<source.width);
     Bitmap tile=source.decode(region);assertNotNull(tile);assertEquals(region.bounds.width(),tile.getWidth());assertEquals(Color.BLUE,tile.getPixel(100,100));assertTrue((long)tile.getWidth()*tile.getHeight()<=ImageDocument.TILE_PIXELS);tile.recycle();
     region=source.region(.1f,0,0,2000,2000);tile=source.decode(region);assertTrue((long)tile.getWidth()*tile.getHeight()<=ImageDocument.TILE_PIXELS);tile.recycle();
+  }
+  @Test public void zoomedImagePagesOnlyWhenSwipeStartsAtOutwardEdge() throws Exception {
+    AtomicInteger page=new AtomicInteger();attach(document(image(1000,800,Color.BLUE)),page);
+    view.zoom(view.fitScale()*3,500,400);long t=SystemClock.uptimeMillis();
+    gesture(t,t,MotionEvent.ACTION_DOWN,950,400);gesture(t,t+100,MotionEvent.ACTION_MOVE,0,400);gesture(t,t+150,MotionEvent.ACTION_UP,0,400);
+    assertEquals("Panning inside a zoomed image must not flip pages",0,page.get());
+    view.reset();view.zoom(view.fitScale()*3,1000,400);
+    assertEquals(1000,view.displayedBounds().right,1);
+    t+=800;gesture(t,t,MotionEvent.ACTION_DOWN,850,400);gesture(t,t+100,MotionEvent.ACTION_MOVE,150,400);gesture(t,t+150,MotionEvent.ACTION_UP,150,400);
+    assertEquals(1,page.get());
+    view.reset();view.zoom(view.fitScale()*3,0,400);
+    t+=800;gesture(t,t,MotionEvent.ACTION_DOWN,150,400);gesture(t,t+100,MotionEvent.ACTION_MOVE,850,400);gesture(t,t+150,MotionEvent.ACTION_UP,850,400);
+    assertEquals(-1,page.get());
   }
   @Test public void longNarrowImageKeepsOverviewWithinTextureSizeAndReadsOriginalDetail() throws Exception {
     ImageDocument source=document(image(8,20000,Color.GREEN));

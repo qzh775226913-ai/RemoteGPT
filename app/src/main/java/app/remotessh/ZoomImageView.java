@@ -7,7 +7,7 @@ import android.os.Looper;
 import android.view.*;
 import java.util.concurrent.ExecutorService;
 
-/** Native pinch/pan viewer. Swiping pages is allowed only while the whole image fits. */
+/** Native pinch/pan viewer. A zoomed image changes pages only on a new outward edge swipe. */
 final class ZoomImageView extends View {
   private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
   private final Rect originalBounds=new Rect();
@@ -22,6 +22,7 @@ final class ZoomImageView extends View {
   private volatile long revision;
   private float scale,fit,offsetX,offsetY,downX,downY;
   private boolean multiple,doubleTap,disposed;
+  private boolean previousEdge,nextEdge;
   private final Runnable requestDetail=this::decodeDetail;
 
   ZoomImageView(Context context,ExecutorService worker,java.util.function.IntConsumer page) {
@@ -100,12 +101,16 @@ final class ZoomImageView extends View {
     });
   }
   @Override public boolean onTouchEvent(MotionEvent event) {
-    if(event.getActionMasked()==MotionEvent.ACTION_DOWN){downX=event.getX();downY=event.getY();multiple=false;doubleTap=false;if(getParent()!=null)getParent().requestDisallowInterceptTouchEvent(true);}
+    if(event.getActionMasked()==MotionEvent.ACTION_DOWN){
+      downX=event.getX();downY=event.getY();multiple=false;doubleTap=false;
+      RectF bounds=displayedBounds();previousEdge=!isZoomed() || bounds.left>=-1;nextEdge=!isZoomed() || bounds.right<=getWidth()+1;
+      if(getParent()!=null)getParent().requestDisallowInterceptTouchEvent(true);
+    }
     if(event.getPointerCount()>1)multiple=true;
     scaling.onTouchEvent(event);gestures.onTouchEvent(event);
     if(event.getActionMasked()==MotionEvent.ACTION_UP) {
       float dx=event.getX()-downX,dy=event.getY()-downY;
-      if(!multiple && !doubleTap && !isZoomed() && Math.abs(dx)>48*getResources().getDisplayMetrics().density && Math.abs(dx)>Math.abs(dy)*1.3f)page.accept(dx<0?1:-1);
+      if(!multiple && !doubleTap && (dx<0?nextEdge:previousEdge) && Math.abs(dx)>48*getResources().getDisplayMetrics().density && Math.abs(dx)>Math.abs(dy)*1.3f)page.accept(dx<0?1:-1);
       else if(!multiple && !doubleTap && Math.hypot(dx,dy)<8*getResources().getDisplayMetrics().density)performClick();
     }
     if((event.getActionMasked()==MotionEvent.ACTION_UP || event.getActionMasked()==MotionEvent.ACTION_CANCEL) && getParent()!=null)getParent().requestDisallowInterceptTouchEvent(false);
