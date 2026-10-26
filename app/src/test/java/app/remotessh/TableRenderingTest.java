@@ -69,8 +69,11 @@ public class TableRenderingTest {
     Bitmap pixels=Bitmap.createBitmap(grid.getWidth(),grid.getHeight(),Bitmap.Config.ARGB_8888);
     try {
       Canvas canvas=new Canvas(pixels);canvas.drawColor(Color.WHITE);grid.draw(canvas);
-      assertEquals("No outer vertical rule",Color.WHITE,pixels.getPixel(0,row.getTop()+1));
-      assertEquals("No vertical rules between columns",Color.WHITE,pixels.getPixel(row.getChildAt(1).getLeft(),row.getTop()+1));
+      int horizontal=pixels.getPixel(1,row.getBottom()-1);
+      assertEquals("Outer rule matches the horizontal hairline",horizontal,pixels.getPixel(0,row.getTop()+1));
+      assertEquals("Column rule matches the horizontal hairline",horizontal,pixels.getPixel(row.getChildAt(1).getLeft(),row.getTop()+1));
+      assertEquals("Vertical rule is only one physical pixel",Color.WHITE,pixels.getPixel(1,row.getTop()+1));
+      assertEquals("Intersections do not become darker",horizontal,pixels.getPixel(row.getChildAt(1).getLeft(),row.getBottom()-1));
       assertEquals("Horizontal rule is only one physical pixel",Color.WHITE,pixels.getPixel(1,row.getBottom()-2));
       int line=Color.red(pixels.getPixel(1,row.getBottom()-1));
       assertTrue("Horizontal rule stays light",line>220 && line<255);

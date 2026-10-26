@@ -73,7 +73,14 @@ final class TableContentView extends LinearLayout {
     Row(){super(TableContentView.this.getContext());divider.setColor((fg&0xffffff)|0x14000000);}
     @Override protected void dispatchDraw(Canvas canvas) {
       super.dispatchDraw(canvas);
-      // One physical pixel per row, drawn once across all columns: no doubled seams.
+      // Each edge is painted once, including intersections, so translucency stays uniform.
+      int top=this==grid.getChildAt(0)?1:0,bottom=getHeight()-1;
+      if(top==1)canvas.drawRect(0,0,getWidth(),1,divider);
+      canvas.drawRect(0,top,1,bottom,divider);
+      for(int c=1;c<getChildCount();c++) {
+        int x=getChildAt(c).getLeft();canvas.drawRect(x,top,x+1,bottom,divider);
+      }
+      canvas.drawRect(getWidth()-1,top,getWidth(),bottom,divider);
       canvas.drawRect(0,getHeight()-1,getWidth(),getHeight(),divider);
     }
   }
