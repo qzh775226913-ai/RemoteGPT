@@ -14,7 +14,7 @@
 
 | 编号 | 当前行为及失败边界 | 自动化入口 |
 | --- | --- | --- |
-| R-01 | 保存多个 SSH 连接；密码、加密私钥、Tailscale SSH 身份认证。凭据可选择加密保存；验证失败保留编辑内容，不误保存无效端口。 | [ProfileTest](../app/src/test/java/app/remotessh/ProfileTest.java)、[SshIntegrationTest](../app/src/test/java/app/remotessh/SshIntegrationTest.java) |
+| R-01 | 保存多个 SSH 连接；密码、加密私钥、Tailscale SSH 身份认证。添加／编辑连接窗口允许系统截图，密码与私钥输入沿用原有遮挡。凭据可选择加密保存；验证失败保留编辑内容，不误保存无效端口。 | [ProfileTest](../app/src/test/java/app/remotessh/ProfileTest.java)、[SshIntegrationTest](../app/src/test/java/app/remotessh/SshIntegrationTest.java)、[MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java) |
 | R-02 | 首次连接由用户核对主机指纹；已信任主机密钥变化时拒绝连接。SSH 认证后以有界辅助通道检查非交互环境中的 Python 3.8／托管标准库（仅持久模式）、可直接识别的 Codex 程序／app-server、SFTP 和家目录；托管写入失败独立提示。自定义启动器不猜路径、不执行额外启动；握手后检查服务器公开的登录状态，不读取凭据、不调用模型。未知旧服务登录能力不伪造成功；环境通过不保证真实模型网络可用。Python 不可用时必须用户明确选择关闭持久模式后重连，不能静默降级；诊断区分认证、程序缺失和上游拒绝。 | [ConnectionPreflightTest](../app/src/test/java/app/remotessh/ConnectionPreflightTest.java)、[SshIntegrationTest](../app/src/test/java/app/remotessh/SshIntegrationTest.java)、[ConnectionFailureTest](../app/src/test/java/app/remotessh/ConnectionFailureTest.java) |
 | R-03 | stdio JSON-RPC 双向通信，支持分片、并发请求和服务器请求；未知交互明确不支持，不能自动批准。自定义命令必须兼容协议。 | [RpcClientTest](../app/src/test/java/app/remotessh/RpcClientTest.java)、[InitializationTest](../app/src/test/java/app/remotessh/InitializationTest.java) |
 | R-04 | 默认远端持久托管，SSH 断开后保留模型进程；重连恢复会话、输出和待审批，不重发旧 `turn/start`。主机／进程崩溃不保证继续执行。 | [托管测试](../tools/test_remote_session.py)、[BackgroundConnectionTest](../app/src/test/java/app/remotessh/BackgroundConnectionTest.java)、[FinalAuditTest](../app/src/test/java/app/remotessh/FinalAuditTest.java) |

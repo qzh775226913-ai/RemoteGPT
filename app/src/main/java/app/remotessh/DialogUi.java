@@ -163,7 +163,6 @@ final class DialogUi {
     Window window = dialog.getWindow();
     if (window != null) {
       window.setBackgroundDrawableResource(android.R.color.transparent);
-      window.addFlags(WindowManager.LayoutParams.FLAG_SECURE);
       window.setSoftInputMode(
           WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
               | WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
