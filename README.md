@@ -8,7 +8,7 @@
 
 **[下载稳定版 APK（1.0.57）](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.57/RemoteGPT-1.0.57-Android-universal-debug.apk)** · [首次连接指南](docs/USAGE.md) · [发布说明与校验文件](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-当前源码版本：**1.0.60 / versionCode 62**（Tailscale 安装包交付）；GitHub 稳定版仍为 1.0.57。Android 8+，包名 `app.remotessh`，APK 约 4.4 MB。
+当前源码版本：**1.0.61 / versionCode 63**（Tailscale 安装包交付）；GitHub 稳定版仍为 1.0.57。Android 8+，包名 `app.remotessh`，APK 约 4.4 MB。
 
 ## 图形化界面能做什么
 
