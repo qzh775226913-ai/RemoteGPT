@@ -3,7 +3,8 @@ package app.remotessh;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.text.TextPaint;
 import android.view.*;
 import android.widget.*;
@@ -31,7 +32,7 @@ final class TableContentView extends LinearLayout {
     button.setGravity(Gravity.CENTER);button.setMinHeight(dp(48));button.setPadding(dp(12),0,dp(12),0);
     button.setContentDescription("复制表格");PressFeedback.apply(button,(fg&0xffffff)>0x808080);
     button.setOnClickListener(v->{if(copy!=null && data!=null)copy.accept(data.raw);});toolbar.addView(button);addView(toolbar);
-    scroll=new GridScroll(context);scroll.setFillViewport(true);scroll.setHorizontalScrollBarEnabled(true);
+    scroll=new GridScroll(context);scroll.setFillViewport(true);scroll.setHorizontalScrollBarEnabled(false);
     grid=new TableLayout(context);grid.setStretchAllColumns(true);grid.setShrinkAllColumns(false);
     scroll.addView(grid,new HorizontalScrollView.LayoutParams(-2,-2));addView(scroll,new LayoutParams(-1,-2));
   }
@@ -49,12 +50,12 @@ final class TableContentView extends LinearLayout {
     for(List<String> row:next.rows)for(int c=0;c<next.columns();c++) {
       CharSequence display=Markdown.render(row.get(c),muted,panel);
       float longest=0;for(String line:display.toString().split("\n",-1))longest=Math.max(longest,paint.measureText(line));
-      widths[c]=Math.max(widths[c],Math.max(dp(56),Math.min(dp(240),(int)Math.ceil(longest)+dp(16))));
+      widths[c]=Math.max(widths[c],Math.max(dp(48),Math.min(dp(240),(int)Math.ceil(longest)+dp(12))));
     }
     while(cells.size()>next.rows.size()){cells.remove(cells.size()-1);grid.removeViewAt(grid.getChildCount()-1);}
     for(int r=0;r<next.rows.size();r++) {
       if(r==cells.size()) {
-        TableRow row=new TableRow(getContext());List<Cell> rowCells=new ArrayList<>();
+        TableRow row=new Row();List<Cell> rowCells=new ArrayList<>();
         for(int c=0;c<next.columns();c++) {
           Cell cell=new Cell(r==0,next.align.get(c));rowCells.add(cell);row.addView(cell,new TableRow.LayoutParams(widths[c],-1));
         }
@@ -67,16 +68,23 @@ final class TableContentView extends LinearLayout {
     }
     scroll.restoreX=previous;requestLayout();
   }
+  private final class Row extends TableRow {
+    private final Paint divider=new Paint();
+    Row(){super(TableContentView.this.getContext());divider.setColor((fg&0xffffff)|0x14000000);}
+    @Override protected void dispatchDraw(Canvas canvas) {
+      super.dispatchDraw(canvas);
+      // One physical pixel per row, drawn once across all columns: no doubled seams.
+      canvas.drawRect(0,getHeight()-1,getWidth(),getHeight(),divider);
+    }
+  }
   private final class Cell extends LinearLayout {
     final MessageBodyView body;
     private final boolean heading;private final int alignment;
     Cell(boolean heading,int alignment) {
       super(TableContentView.this.getContext());this.heading=heading;this.alignment=alignment;setOrientation(VERTICAL);
-      GradientDrawable background=new GradientDrawable();
-      background.setColor(heading?panel:android.graphics.Color.TRANSPARENT);
-      background.setStroke(dp(1),(fg&0xffffff)|0x28000000);setBackground(background);
-      setPadding(dp(6),dp(4),dp(6),dp(4));
-      body=new MessageBodyView(getContext(),fg,muted,panel,open,copy,TEXT_SIZE,2);addView(body,new LayoutParams(-1,-2));
+      setBackgroundColor(heading?panel:android.graphics.Color.TRANSPARENT);
+      setPadding(dp(4),dp(2),dp(4),dp(2));
+      body=new MessageBodyView(getContext(),fg,muted,panel,open,copy,TEXT_SIZE,1);addView(body,new LayoutParams(-1,-2));
     }
     @Override protected void onMeasure(int widthSpec,int heightSpec) {style(body);super.onMeasure(widthSpec,heightSpec);}
     private void style(View view) {

@@ -39,6 +39,13 @@ public class TableRenderingTest {
     }
     return null;
   }
+  private TextView firstText(View root) {
+    if(root instanceof TextView)return (TextView)root;
+    if(root instanceof ViewGroup)for(int i=0;i<((ViewGroup)root).getChildCount();i++) {
+      TextView found=firstText(((ViewGroup)root).getChildAt(i));if(found!=null)return found;
+    }
+    return null;
+  }
   private void await(BooleanSupplier ready) throws Exception {
     for(int i=0;i<1000;i++){Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();if(ready.getAsBoolean())return;Thread.sleep(10);}fail("Pending table formulas");
   }
@@ -55,6 +62,19 @@ public class TableRenderingTest {
         assertEquals(row.getHeight(),row.getChildAt(c).getHeight());
       }
     }
+    TableRow row=(TableRow)grid.getChildAt(1);
+    TextView heading=firstText(header.getChildAt(0)),content=firstText(row.getChildAt(0));
+    assertEquals("Header uses the same size as table content",content.getTextSize(),heading.getTextSize(),.01f);
+    assertTrue("Only the header is made bold",heading.getTypeface().isBold());
+    Bitmap pixels=Bitmap.createBitmap(grid.getWidth(),grid.getHeight(),Bitmap.Config.ARGB_8888);
+    try {
+      Canvas canvas=new Canvas(pixels);canvas.drawColor(Color.WHITE);grid.draw(canvas);
+      assertEquals("No outer vertical rule",Color.WHITE,pixels.getPixel(0,row.getTop()+1));
+      assertEquals("No vertical rules between columns",Color.WHITE,pixels.getPixel(row.getChildAt(1).getLeft(),row.getTop()+1));
+      assertEquals("Horizontal rule is only one physical pixel",Color.WHITE,pixels.getPixel(1,row.getBottom()-2));
+      int line=Color.red(pixels.getPixel(1,row.getBottom()-1));
+      assertTrue("Horizontal rule stays light",line>220 && line<255);
+    } finally {pixels.recycle();}
     scroll.scrollTo(grid.getWidth(),0);assertTrue(table.offset()>0);
   }
   @Test public void streamingRetainsGridCellsAndHorizontalPositionAndLatestCopy() {
