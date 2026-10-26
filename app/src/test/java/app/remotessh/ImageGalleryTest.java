@@ -136,6 +136,94 @@ public class ImageGalleryTest {
     await(()->first.overview.isRecycled() && !first.file.exists());
     viewer.page(-1);loaded("b",80);viewer.page(-1);loaded("a",80);assertEquals(4,reads.get());
   }
+  private void warm() throws Exception {
+    await(()->ReflectionHelpers.getField(viewer,"preload")==null
+        && ((java.util.Queue<?>)ReflectionHelpers.getField(viewer,"nearby")).isEmpty());
+  }
+  private void waitForRead(CountDownLatch latch) throws Exception {await(()->latch.getCount()==0);}
+  private void blockedRead(CountDownLatch release) throws Exception {
+    long end=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+    while(release.getCount()>0 && System.nanoTime()<end){try{release.await(20,TimeUnit.MILLISECONDS);}catch(InterruptedException ignored){}}
+    if(release.getCount()>0)throw new IOException("test read timed out");
+  }
+  @Test public void preloadsOnlyImmediateNeighborsAfterCurrentImageAndReusesDecodedImages() throws Exception {
+    byte[] bytes=png(80);List<String> reads=Collections.synchronizedList(new ArrayList<>());
+    CountDownLatch started=new CountDownLatch(1),release=new CountDownLatch(1);
+    viewer=new ImageDialog(activity,true,"c",null,Arrays.asList("a","b","c","d","e"),path->null,(source,out,active)->{
+      reads.add(source);if(source.equals("c")){started.countDown();blockedRead(release);}out.write(bytes);
+    },()->true,source->{});
+    try {
+      waitForRead(started);Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+      assertEquals(Collections.singletonList("c"),reads);assertNull(document());
+      release.countDown();loaded("c",80);ImageDocument current=document();warm();
+      assertEquals(Arrays.asList("c","d","b"),reads);assertSame(current,document());assertEquals("c",viewer.currentSource());
+      viewer.page(1);assertNotNull("Warm neighbor displays synchronously",document());assertEquals("d",viewer.currentSource());
+      viewer.page(-1);viewer.page(-1);assertNotNull(document());assertEquals("b",viewer.currentSource());assertEquals(3,reads.size());
+    }finally{release.countDown();}
+  }
+  @Test public void enteringInFlightNeighborAdoptsDownloadWithoutReadingTwice() throws Exception {
+    byte[] bytes=png(80);AtomicInteger bReads=new AtomicInteger();CountDownLatch started=new CountDownLatch(1),release=new CountDownLatch(1);
+    viewer=new ImageDialog(activity,true,"a",null,Arrays.asList("a","b","c","d"),path->null,(source,out,active)->{
+      if(source.equals("b")){bReads.incrementAndGet();started.countDown();blockedRead(release);}out.write(bytes);
+    },()->true,source->{});
+    try {
+      loaded("a",80);waitForRead(started);viewer.page(1);
+      assertNull(document());assertEquals(1,bReads.get());release.countDown();loaded("b",80);assertEquals(1,bReads.get());
+    }finally{release.countDown();}
+  }
+  @Test public void lateCanceledWarmupDoesNotReplaceCurrentImageOrLeaveFilesAfterClose() throws Exception {
+    byte[] bytes=png(80);CountDownLatch started=new CountDownLatch(1),release=new CountDownLatch(1),finished=new CountDownLatch(1);
+    viewer=new ImageDialog(activity,true,"a",null,Arrays.asList("a","b","c","d"),path->null,(source,out,active)->{
+      if(source.equals("b")){started.countDown();try{blockedRead(release);out.write(bytes);}finally{finished.countDown();}}
+      else out.write(bytes);
+    },()->true,source->{});
+    try {
+      loaded("a",80);waitForRead(started);viewer.page(1);viewer.page(1);loaded("c",80);
+      assertEquals(1,finished.getCount());ImageDocument current=document();release.countDown();waitForRead(finished);
+      Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));assertSame(current,document());
+      viewer.dismiss();await(()->activity.getCacheDir().listFiles((dir,name)->name.startsWith("viewer-")).length==0);
+    }finally{release.countDown();}
+  }
+  @Test public void failedWarmupIsSilentAndOpeningThatImageStillAllowsRetry() throws Exception {
+    byte[] bytes=png(80);AtomicInteger attempts=new AtomicInteger();
+    viewer=new ImageDialog(activity,true,"a",null,Arrays.asList("a","b"),path->null,(source,out,active)->{
+      if(source.equals("b") && attempts.incrementAndGet()<=2)throw new IOException("missing");out.write(bytes);
+    },()->true,source->{});
+    loaded("a",80);warm();assertEquals(1,attempts.get());assertFalse(status().getText().toString().contains("失败"));
+    viewer.page(1);await(()->status().getText().toString().contains("失败"));assertEquals(2,attempts.get());
+    status().performClick();loaded("b",80);assertEquals(3,attempts.get());
+  }
+  @Test public void warmupKeepsCurrentAndForwardNeighborWithinDecodedBudget() throws Exception {
+    Bitmap bitmap=Bitmap.createBitmap(2048,1024,Bitmap.Config.ARGB_8888);
+    ByteArrayOutputStream out=new ByteArrayOutputStream();bitmap.compress(Bitmap.CompressFormat.PNG,100,out);bitmap.recycle();byte[] bytes=out.toByteArray();
+    List<String> reads=Collections.synchronizedList(new ArrayList<>());
+    viewer=new ImageDialog(activity,true,"b",null,gallery,path->null,(source,target,active)->{reads.add(source);target.write(bytes);},()->true,source->{});
+    loaded("b",2048);ImageDocument current=document();warm();assertSame(current,document());assertFalse(current.overview.isRecycled());
+    assertEquals(Arrays.asList("b","c"),reads);viewer.page(1);assertNotNull(document());assertEquals(2,reads.size());
+  }
+  @Test public void closingDuringWarmupCancelsReadAndDeletesIncompleteFile() throws Exception {
+    byte[] bytes=png(80);CountDownLatch started=new CountDownLatch(1),release=new CountDownLatch(1);
+    AtomicReference<BooleanSupplier> loading=new AtomicReference<>();
+    viewer=new ImageDialog(activity,true,"a",null,Arrays.asList("a","b"),path->null,(source,out,active)->{
+      out.write(bytes);if(source.equals("b")){loading.set(active);started.countDown();blockedRead(release);}
+    },()->true,source->{});
+    try {
+      loaded("a",80);waitForRead(started);viewer.dismiss();Shadows.shadowOf(Looper.getMainLooper()).idle();
+      assertFalse(loading.get().getAsBoolean());release.countDown();
+      await(()->activity.getCacheDir().listFiles((dir,name)->name.startsWith("viewer-")).length==0);
+    }finally{release.countDown();}
+  }
+  @Test public void warmupRejectsFilesThatWouldEvictCurrentOrPreferredNeighbor() throws Exception {
+    byte[] bytes=png(80),padding=new byte[64*1024];List<String> reads=Collections.synchronizedList(new ArrayList<>());
+    viewer=new ImageDialog(activity,true,"b",null,gallery,path->null,(source,out,active)->{
+      reads.add(source);out.write(bytes);for(int i=0;i<240;i++){MediaFiles.check(active);out.write(padding);}
+    },()->true,source->{});
+    loaded("b",80);ImageDocument current=document();warm();
+    assertSame(current,document());assertEquals(Arrays.asList("b","c","a"),reads);
+    java.util.Map<?,?> cached=ReflectionHelpers.getField(viewer,"recent");assertEquals(2,cached.size());
+    assertTrue(cached.containsKey("b"));assertTrue(cached.containsKey("c"));
+    viewer.page(1);assertNotNull(document());assertEquals(3,reads.size());
+  }
   @Test public void galleryCanonicalizesAndDeduplicatesInConversationOrder() {
     ChatItem first=new ChatItem("one","userMessage","![A](/photos/a.png) ![B](next.png)");first.images.add("sandbox:/photos/a.png");
     ChatItem second=new ChatItem("two","agentMessage","![B](next.png)");second.images.add("https://example.test/image.png");

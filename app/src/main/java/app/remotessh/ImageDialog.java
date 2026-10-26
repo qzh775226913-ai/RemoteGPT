@@ -2,6 +2,8 @@ package app.remotessh;
 
 import android.app.*;
 import android.graphics.Bitmap;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.*;
 import java.io.*;
 import java.util.*;
@@ -26,7 +28,13 @@ final class ImageDialog {
   private Bitmap initialPreview;
   private final TextView status;
   private ImageDocument document;
-  private Future<?> pending;
+  private Future<?> pending,preload;
+  private final Handler main=new Handler(Looper.getMainLooper());
+  private final ArrayDeque<String> nearby=new ArrayDeque<>();
+  private String preloading,preferredSource;
+  private volatile long preloadGeneration;
+  private int direction=1;
+  private final Runnable preloadNext=this::advancePrefetch;
   private volatile boolean closed;
   private volatile long generation;
   private int index;
@@ -64,23 +72,35 @@ final class ImageDialog {
   void page(int delta) {
     if(!active() || delta==0 || sources.size()<2)return;
     int next=index+(delta>0?1:-1);if(next<0 || next>=sources.size())return;
-    index=next;load();
+    direction=delta>0?1:-1;index=next;load();
   }
   private void cancelLoad() {
     if(pending!=null){pending.cancel(true);if(pending instanceof Runnable)worker.remove((Runnable)pending);pending=null;}
   }
+  private void cancelPrefetch() {
+    preloadGeneration++;main.removeCallbacks(preloadNext);nearby.clear();
+    if(preload!=null){preload.cancel(true);if(preload instanceof Runnable)worker.remove((Runnable)preload);}
+    preload=null;preloading=null;
+  }
   private void load() {
     if(!active() || currentSource()==null)return;
-    long ticket=++generation;cancelLoad();failed=false;
+    String source=currentSource();boolean adopting=preload!=null && source.equals(preloading);
+    long ticket=++generation;main.removeCallbacks(preloadNext);nearby.clear();
+    if(adopting && pending==preload)pending=null;
+    cancelLoad();if(!adopting)cancelPrefetch();failed=false;
     image.clear();document=null;
-    String source=currentSource();ImageDocument cached=recent.get(source);
-    if(cached!=null){show(cached);return;}
+    ImageDocument cached=recent.get(source);
+    if(cached!=null){show(cached);prepareAdjacent();return;}
     Bitmap preview=previews.apply(source);
     if(preview==null && source.equals(initialSource))preview=initialPreview;
     if(preview!=null && !preview.isRecycled())image.setPlaceholder(preview);
     message("正在加载大图…");
+    if(adopting){pending=preload;return;}
     BooleanSupplier active=()->ticket==generation && active();
-    pending=worker.submit(()->{
+    pending=read(source,active,value->{recent.put(source,value);show(value);trimRecent();prepareAdjacent();},this::loadFailed);
+  }
+  private Future<?> read(String source,BooleanSupplier active,Consumer<ImageDocument> success,Runnable failure) {
+    return worker.submit(()->{
       File temporary=null;ImageDocument ready=null;
       try {
         MediaFiles.check(active);temporary=File.createTempFile("viewer-",".image",activity.getCacheDir());
@@ -89,12 +109,53 @@ final class ImageDialog {
         ImageDocument value=ready;ready=null;temporary=null;
         activity.runOnUiThread(()->{
           if(!active.getAsBoolean()){release(value);return;}
-          recent.put(source,value);show(value);trimRecent();
+          success.accept(value);
         });
-      }catch(Exception | OutOfMemoryError error){activity.runOnUiThread(()->{if(active.getAsBoolean()){failed=true;message("图片加载失败 · 点按重试");}});}
+      }catch(Exception | OutOfMemoryError error){activity.runOnUiThread(()->{if(active.getAsBoolean())failure.run();});}
       finally {if(ready!=null)ready.close();if(temporary!=null)temporary.delete();}
     });
   }
+  private void loadFailed(){failed=true;message("图片加载失败 · 点按重试");}
+  private void prepareAdjacent() {
+    nearby.clear();preferredSource=null;
+    for(int delta:new int[]{direction,-direction}) {
+      int next=index+delta;if(next<0 || next>=sources.size())continue;
+      String source=sources.get(next);if(preferredSource==null)preferredSource=source;
+      if(!recent.containsKey(source))nearby.add(source);
+    }
+    main.removeCallbacks(preloadNext);
+    if(!nearby.isEmpty())main.postDelayed(preloadNext,150);
+  }
+  private boolean fitsPrefetch(String source,ImageDocument value) {
+    if(document==null)return false;
+    int count=1;long bitmaps=document.overview.getAllocationByteCount(),files=document.fileBytes;
+    ImageDocument preferred=source.equals(preferredSource)?null:recent.get(preferredSource);
+    if(preferred!=null && preferred!=document){count++;bitmaps+=preferred.overview.getAllocationByteCount();files+=preferred.fileBytes;}
+    if(value!=null){count++;bitmaps+=value.overview.getAllocationByteCount();files+=value.fileBytes;}
+    return value==null?count<CACHE_ENTRIES && bitmaps<CACHE_BITMAP_BYTES && files<CACHE_FILE_BYTES
+        :count<=CACHE_ENTRIES && bitmaps<=CACHE_BITMAP_BYTES && files<=CACHE_FILE_BYTES;
+  }
+  private void advancePrefetch() {
+    if(!active() || document==null || preload!=null)return;
+    while(!nearby.isEmpty()) {
+      String source=nearby.peek();
+      if(recent.containsKey(source) || !fitsPrefetch(source,null)){nearby.remove();continue;}
+      // Keep one lane free for foreground reads and zoom details; no queued warm-up flood.
+      if(worker.getActiveCount()!=0 || !worker.getQueue().isEmpty()) {main.postDelayed(preloadNext,80);return;}
+      nearby.remove();preloading=source;long ticket=++preloadGeneration;
+      BooleanSupplier active=()->ticket==preloadGeneration && active();
+      preload=read(source,active,value->{
+        clearPreload();
+        if(source.equals(currentSource()) && document==null){recent.put(source,value);show(value);trimRecent();prepareAdjacent();}
+        else {if(fitsPrefetch(source,value)){recent.put(source,value);trimRecent();}else release(value);advancePrefetch();}
+      },()->{
+        clearPreload();
+        if(source.equals(currentSource()) && document==null)loadFailed();else advancePrefetch();
+      });
+      return;
+    }
+  }
+  private void clearPreload(){if(pending==preload)pending=null;preload=null;preloading=null;}
   private void show(ImageDocument value) {
     document=value;image.setDocument(value);
     message("双指缩放 · 双击放大／复位"+(sources.size()>1?" · 左右滑动翻图":""));
@@ -114,7 +175,7 @@ final class ImageDialog {
   private void release(ImageDocument value){if(value==null)return;try{worker.execute(value::close);}catch(RejectedExecutionException ignored){value.close();}}
   void dismiss(){dialog.dismiss();}
   private void dispose(){
-    if(closed)return;closed=true;generation++;cancelLoad();image.dispose();
+    if(closed)return;closed=true;generation++;cancelLoad();cancelPrefetch();image.dispose();
     for(ImageDocument value:recent.values())release(value);recent.clear();document=null;
     sources.clear();initialSource=null;initialPreview=null;status.setOnClickListener(null);worker.shutdown();
   }
