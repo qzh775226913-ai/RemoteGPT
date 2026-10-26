@@ -25,7 +25,7 @@ public class TableGestureTest {
     content.addView(new View(activity.get()),new LinearLayout.LayoutParams(-1,500));
     MessageBodyView body=new MessageBodyView(activity.get(),0xff171717,0xff626262,0xffeceef1,v->{},v->{});
     String source=wide?TableRenderingTest.WIDE:"| A | B |\n|---|---|\n| 1 | 2 |";
-    for(int i=0;i<18;i++)source+=wide?"\n| 参数 | 1200 | 较长的参数说明与适用范围 | 正常 |":"\n| 1 | 2 |";
+    for(int i=0;i<30;i++)source+=wide?"\n| 参数 | 1200 | 较长的参数说明与适用范围 | 正常 |":"\n| 1 | 2 |";
     body.setSource(source);content.addView(body,new LinearLayout.LayoutParams(-1,-2));
     content.addView(new View(activity.get()),new LinearLayout.LayoutParams(-1,1000));
     outer.addView(content);activity.get().setContentView(outer);

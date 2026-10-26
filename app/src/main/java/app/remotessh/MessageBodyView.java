@@ -20,12 +20,18 @@ final class MessageBodyView extends LinearLayout {
     Block(TableMarkup.Table table) {this.code=false;this.language="";this.text=table.raw;this.table=table;}
   }
   private final int fg, muted, panel;
+  private final int textSize, lineSpacing;
   private final Consumer<String> open, copy;
   private String source;
 
   MessageBodyView(Context context, int fg, int muted, int panel, Consumer<String> open, Consumer<String> copy) {
+    this(context, fg, muted, panel, open, copy, 16, 5);
+  }
+  MessageBodyView(Context context, int fg, int muted, int panel, Consumer<String> open, Consumer<String> copy,
+      int textSize, int lineSpacing) {
     super(context); setOrientation(VERTICAL);
     this.fg=fg; this.muted=muted; this.panel=panel; this.open=open; this.copy=copy;
+    this.textSize=textSize; this.lineSpacing=lineSpacing;
   }
   private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
   private TextView text(String value, int size, int color) {
@@ -114,10 +120,10 @@ final class MessageBodyView extends LinearLayout {
       }
       if (!block.code) {
         if(MathMarkup.containsMath(block.text)) {
-          MathContentView formulas=new MathContentView(getContext(),fg,muted,panel,open,copy);
+          MathContentView formulas=new MathContentView(getContext(),fg,muted,panel,open,copy,textSize,lineSpacing);
           formulas.setSource(block.text);addView(formulas,new LayoutParams(-1,-2));continue;
         }
-        TextView prose=text("", 16, fg); prose.setLineSpacing(dp(5),1);
+        TextView prose=text("", textSize, fg); prose.setLineSpacing(dp(lineSpacing),1);
         prose.setIncludeFontPadding(false);
         CharSequence rendered=proseText(block.text);prose.setText(rendered);
         prose.setVisibility(rendered.length()==0?GONE:VISIBLE);

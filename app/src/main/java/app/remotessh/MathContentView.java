@@ -17,6 +17,7 @@ import ru.noties.jlatexmath.JLatexMathAndroid;
 @SuppressLint("ViewConstructor")
 final class MathContentView extends LinearLayout {
   private final int fg,muted,panel;
+  private final int textSize,lineSpacing;
   private final Consumer<String> open,copy;
   private String source;
   private List<MathMarkup.Part> parts=Collections.emptyList();
@@ -27,8 +28,13 @@ final class MathContentView extends LinearLayout {
   private int layoutWidth;
 
   MathContentView(Context context,int fg,int muted,int panel,Consumer<String> open,Consumer<String> copy) {
+    this(context,fg,muted,panel,open,copy,16,5);
+  }
+  MathContentView(Context context,int fg,int muted,int panel,Consumer<String> open,Consumer<String> copy,
+      int textSize,int lineSpacing) {
     super(context);setOrientation(VERTICAL);
     this.fg=fg;this.muted=muted;this.panel=panel;this.open=open;this.copy=copy;
+    this.textSize=textSize;this.lineSpacing=lineSpacing;
     JLatexMathAndroid.init(context);MathGlyphs.init(context.getApplicationContext().getAssets());
   }
   private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
@@ -55,8 +61,8 @@ final class MathContentView extends LinearLayout {
   private void schedule() {
     MathRenderer.cancel(pending);long ticket=++generation;
     if(detached)return;
-    float textSize=16*1.2f*getResources().getDisplayMetrics().scaledDensity;
-    pending=MathRenderer.submit(parts,textSize,fg,result->{
+    float formulaSize=textSize*1.2f*getResources().getDisplayMetrics().scaledDensity;
+    pending=MathRenderer.submit(parts,formulaSize,fg,result->{
       if(ticket!=generation || detached)return;
       formulas=result;complete=true;pending=null;show();
     });
@@ -125,8 +131,8 @@ final class MathContentView extends LinearLayout {
     while(start<end && prose.charAt(start)=='\n')start++;
     while(end>start && prose.charAt(end-1)=='\n')end--;
     if(start==end)return;
-    TextView text=new TextView(getContext());text.setTextSize(16);text.setTextColor(fg);
-    text.setLineSpacing(dp(5),1);text.setIncludeFontPadding(false);
+    TextView text=new TextView(getContext());text.setTextSize(textSize);text.setTextColor(fg);
+    text.setLineSpacing(dp(lineSpacing),1);text.setIncludeFontPadding(false);
     text.setText(MessageBodyView.paragraphText(prose.subSequence(start,end),dp(4)));
     text.setTextIsSelectable(true);text.setMovementMethod(LinkMovementMethod.getInstance());
     addView(text,new LayoutParams(-1,-2));

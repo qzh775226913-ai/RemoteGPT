@@ -29,6 +29,16 @@ public class TableRenderingTest {
     int count=0;if(root instanceof TextView && ((TextView)root).getText() instanceof Spanned){Spanned text=(Spanned)((TextView)root).getText();count+=text.getSpans(0,text.length(),kind).length;}
     if(root instanceof ViewGroup)for(int i=0;i<((ViewGroup)root).getChildCount();i++)count+=spans(((ViewGroup)root).getChildAt(i),kind);return count;
   }
+  private TextView formulaText(View root) {
+    if(root instanceof TextView && ((TextView)root).getText() instanceof Spanned) {
+      Spanned text=(Spanned)((TextView)root).getText();
+      if(text.getSpans(0,text.length(),MathSpan.class).length>0)return (TextView)root;
+    }
+    if(root instanceof ViewGroup)for(int i=0;i<((ViewGroup)root).getChildCount();i++) {
+      TextView found=formulaText(((ViewGroup)root).getChildAt(i));if(found!=null)return found;
+    }
+    return null;
+  }
   private void await(BooleanSupplier ready) throws Exception {
     for(int i=0;i<1000;i++){Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();if(ready.getAsBoolean())return;Thread.sleep(10);}fail("Pending table formulas");
   }
@@ -65,8 +75,14 @@ public class TableRenderingTest {
     assertSame(first,body.getChildAt(0));assertSame(second,body.getChildAt(2));assertEquals(x,first.offset());assertEquals(y,second.offset());
   }
   @Test public void tableMathLinksAndFencedLiteralTablesCoexist() throws Exception {
-    MessageBodyView body=body();body.setSource("说明\n\n| 变量 | 参考 |\n|---|---|\n| \\(\\Omega r\\) | [文档](https://example.com) |\n\n```text\n"+WIDE+"\n```\n结束");
-    assertTrue(body.getChildAt(1) instanceof TableContentView);await(()->spans(body,MathSpan.class)==1);
+    MessageBodyView body=body();body.setSource("说明 \\(\\Omega r\\)\n\n| 变量 | 参考 |\n|---|---|\n| \\(\\Omega r\\) | [文档](https://example.com) |\n\n```text\n"+WIDE+"\n```\n结束");
+    assertTrue(body.getChildAt(1) instanceof TableContentView);await(()->spans(body,MathSpan.class)==2);
+    TextView prose=formulaText(body.getChildAt(0)),cell=formulaText(body.getChildAt(1));
+    assertTrue("Table text must remain smaller than surrounding prose",cell.getTextSize()<prose.getTextSize());
+    Spanned outside=(Spanned)prose.getText(),inside=(Spanned)cell.getText();
+    assertTrue("The same formula needs a distinct smaller table layout",
+        inside.getSpans(0,inside.length(),MathSpan.class)[0].formula.width
+            <outside.getSpans(0,outside.length(),MathSpan.class)[0].formula.width);
     assertEquals(1,spans(body,ClickableSpan.class));assertNotNull(find(body,"复制内容块 1"));
     assertEquals(1,java.util.stream.IntStream.range(0,body.getChildCount()).filter(i->body.getChildAt(i) instanceof TableContentView).count());
   }

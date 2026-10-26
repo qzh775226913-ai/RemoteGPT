@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 /** One native grid, scrolled as a unit. Existing cells survive streaming updates. */
 @SuppressLint("ViewConstructor")
 final class TableContentView extends LinearLayout {
+  private static final int TEXT_SIZE=14;
   private final int fg,muted,panel;
   private final Consumer<String> open,copy;
   private final GridScroll scroll;
@@ -44,11 +45,11 @@ final class TableContentView extends LinearLayout {
     int previous=scroll.getScrollX();boolean append=data!=null && next.raw.startsWith(data.raw);
     if(widths==null || widths.length!=next.columns() || !append)widths=new int[next.columns()];
     data=next;
-    TextPaint paint=new TextPaint();paint.setTextSize(16*getResources().getDisplayMetrics().scaledDensity);
+    TextPaint paint=new TextPaint();paint.setTextSize(TEXT_SIZE*getResources().getDisplayMetrics().scaledDensity);
     for(List<String> row:next.rows)for(int c=0;c<next.columns();c++) {
       CharSequence display=Markdown.render(row.get(c),muted,panel);
       float longest=0;for(String line:display.toString().split("\n",-1))longest=Math.max(longest,paint.measureText(line));
-      widths[c]=Math.max(widths[c],Math.max(dp(80),Math.min(dp(280),(int)Math.ceil(longest)+dp(28))));
+      widths[c]=Math.max(widths[c],Math.max(dp(56),Math.min(dp(240),(int)Math.ceil(longest)+dp(16))));
     }
     while(cells.size()>next.rows.size()){cells.remove(cells.size()-1);grid.removeViewAt(grid.getChildCount()-1);}
     for(int r=0;r<next.rows.size();r++) {
@@ -74,8 +75,8 @@ final class TableContentView extends LinearLayout {
       GradientDrawable background=new GradientDrawable();
       background.setColor(heading?panel:android.graphics.Color.TRANSPARENT);
       background.setStroke(dp(1),(fg&0xffffff)|0x28000000);setBackground(background);
-      setPadding(dp(12),dp(10),dp(12),dp(10));
-      body=new MessageBodyView(getContext(),fg,muted,panel,open,copy);addView(body,new LayoutParams(-1,-2));
+      setPadding(dp(6),dp(4),dp(6),dp(4));
+      body=new MessageBodyView(getContext(),fg,muted,panel,open,copy,TEXT_SIZE,2);addView(body,new LayoutParams(-1,-2));
     }
     @Override protected void onMeasure(int widthSpec,int heightSpec) {style(body);super.onMeasure(widthSpec,heightSpec);}
     private void style(View view) {
