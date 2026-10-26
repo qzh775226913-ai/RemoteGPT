@@ -494,6 +494,7 @@ public final class MainActivity extends Activity {
   }
 
   private void render() {
+    if(imageDialog!=null && !imageDialog.isCurrent())imageDialog.dismiss();
     if (!renderedThread.equals(app.threadId)) {
       if(imageDialog!=null)imageDialog.dismiss();
       renderedThread = app.threadId;
@@ -981,7 +982,11 @@ public final class MainActivity extends Activity {
 
   private android.graphics.Bitmap imagePreview(String source) {
     android.graphics.Bitmap preview=app.draftImagePreviews.get(source);
-    if(preview==null)for(MessageImageTile tile:mediaTiles)if(tile.source.equals(source) && tile.loaded && tile.preview.getDrawable() instanceof BitmapDrawable){preview=((BitmapDrawable)tile.preview.getDrawable()).getBitmap();break;}
+    if(preview==null)for(MessageImageTile tile:mediaTiles)if(tile.source.equals(source)) {
+      preview=tile.cachedPreview();
+      if(preview==null && tile.loaded && tile.preview.getDrawable() instanceof BitmapDrawable)preview=((BitmapDrawable)tile.preview.getDrawable()).getBitmap();
+      if(preview!=null)break;
+    }
     return preview;
   }
 

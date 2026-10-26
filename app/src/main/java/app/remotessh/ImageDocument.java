@@ -9,6 +9,7 @@ final class ImageDocument implements AutoCloseable {
   static final long OVERVIEW_PIXELS=2L*1024*1024, TILE_PIXELS=4L*1024*1024;
   static final int MAX_BITMAP_SIDE=4096;
   final File file;
+  final long fileBytes;
   final Bitmap overview;
   final int width,height,displayWidth,displayHeight,overviewSample;
   final Matrix orientation=new Matrix(),inverseOrientation=new Matrix();
@@ -16,7 +17,7 @@ final class ImageDocument implements AutoCloseable {
   private boolean closed;
 
   ImageDocument(File file) throws IOException {
-    this.file=file;
+    this.file=file;fileBytes=file.length();
     BitmapFactory.Options info=new BitmapFactory.Options();info.inJustDecodeBounds=true;
     BitmapFactory.decodeFile(file.getPath(),info);
     if(info.outWidth<=0 || info.outHeight<=0)throw new IOException("无法解码图片");

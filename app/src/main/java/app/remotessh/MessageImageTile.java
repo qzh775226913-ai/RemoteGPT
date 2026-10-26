@@ -69,6 +69,11 @@ final class MessageImageTile {
         && thread.equals(app.threadId) && cacheHost.equals(contextKey()) && owner.getAsBoolean() && tile.getParent()!=null;
   }
   boolean valid() {return sameContext() && generation==app.connectionGeneration();}
+  Bitmap cachedPreview() {
+    if(!sameContext())return null;
+    try{return app.thumbnails.images.get(ThumbnailCache.key(cacheHost,source));}
+    catch(Exception ignored){return null;}
+  }
 
   void refreshConnection() {
     if(generation!=app.connectionGeneration() && sameContext()) {

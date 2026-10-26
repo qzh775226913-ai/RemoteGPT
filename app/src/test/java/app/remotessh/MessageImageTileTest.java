@@ -79,6 +79,12 @@ public class MessageImageTileTest {
     tile.release();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofSeconds(10));
     assertEquals(1,reads.get());assertFalse(tile.loaded);assertFalse(tile.visible);
   }
+  @Test public void offscreenPreviewReusesThumbnailWithoutReadingAndRejectsAnotherHost() throws Exception {
+    AtomicInteger reads=new AtomicInteger();read((source,out,active)->{reads.incrementAndGet();out.write(png);});
+    tile.load();await(()->tile.loaded);Bitmap cached=tile.cachedPreview();assertNotNull(cached);
+    tile.release();assertFalse(tile.loaded);assertSame(cached,tile.cachedPreview());assertEquals(1,reads.get());
+    app.profile.host="another-host";assertNull(tile.cachedPreview());assertFalse(cached.isRecycled());
+  }
 
   @Test public void reconnectRejectsLateImageAndLoadsUsingTheNewConnection() throws Exception {
     CountDownLatch started=new CountDownLatch(1),release=new CountDownLatch(1);AtomicInteger reads=new AtomicInteger();
