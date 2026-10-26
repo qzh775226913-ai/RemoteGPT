@@ -88,7 +88,48 @@ final class TableContentView extends LinearLayout {
   }
   private static final class GridScroll extends HorizontalScrollView {
     int restoreX=-1;
-    GridScroll(Context context){super(context);}
+    private float downX,downY;
+    private int direction; // 0: undecided, 1: horizontal, 2: vertical
+    private final int touchSlop;
+    private ConversationScrollView gestureParent;
+    GridScroll(Context context){super(context);touchSlop=ViewConfiguration.get(context).getScaledTouchSlop();}
+    @Override public boolean dispatchTouchEvent(MotionEvent event) {
+      int action=event.getActionMasked();
+      if(action==MotionEvent.ACTION_DOWN) {
+        releaseGesture();
+        downX=event.getX();downY=event.getY();direction=0;
+        // Keep the parent from intercepting the first diagonal MOVE before we can
+        // choose its dominant direction. A vertical gesture is released below.
+        if(getParent()!=null && (canScrollHorizontally(-1)||canScrollHorizontally(1)))
+          getParent().requestDisallowInterceptTouchEvent(true);
+      } else if(action==MotionEvent.ACTION_MOVE && direction==0) {
+        float dx=Math.abs(event.getX()-downX),dy=Math.abs(event.getY()-downY);
+        if(Math.max(dx,dy)>touchSlop) {
+          direction=dx>dy?1:2;
+          if(getParent()!=null)getParent().requestDisallowInterceptTouchEvent(direction==1);
+          if(direction==1)for(ViewParent parent=getParent();parent!=null;parent=parent.getParent()) {
+            if(parent instanceof ConversationScrollView) {
+              gestureParent=(ConversationScrollView)parent;gestureParent.holdHorizontalGesture(this);break;
+            }
+          }
+        }
+      }
+      try {return super.dispatchTouchEvent(event);}
+      finally {
+        if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_CANCEL) {
+          direction=0;
+          releaseGesture();
+          if(getParent()!=null)getParent().requestDisallowInterceptTouchEvent(false);
+        }
+      }
+    }
+    @Override public boolean onInterceptTouchEvent(MotionEvent event) {
+      return direction!=2 && super.onInterceptTouchEvent(event);
+    }
+    private void releaseGesture() {
+      if(gestureParent!=null){gestureParent.releaseHorizontalGesture(this);gestureParent=null;}
+    }
+    @Override protected void onDetachedFromWindow(){releaseGesture();super.onDetachedFromWindow();}
     @Override protected void onLayout(boolean changed,int l,int t,int r,int b) {
       super.onLayout(changed,l,t,r,b);if(restoreX>=0){scrollTo(restoreX,0);restoreX=-1;}
     }
