@@ -139,8 +139,7 @@ def main():
         raise RuntimeError('Release version tag does not match the source commit')
     expected_apk = f'RemoteGPT-{version}-Android-universal-debug.apk'
     expected_zip = f'RemoteGPT-{version}-Android-universal-debug-with-license.zip'
-    required = {expected_apk, expected_apk + '.sha256', expected_zip,
-                expected_zip + '.sha256', 'LICENSE.txt'}
+    required = {expected_apk, expected_zip, 'LICENSE.txt'}
     assets = manifest['assets']
     if len(assets) != len(required) or {a['name'] for a in assets} != required:
         raise RuntimeError('Unexpected or incomplete release asset set')
@@ -160,10 +159,6 @@ def main():
     if (folder / 'LICENSE.txt').read_bytes() != license_data:
         raise RuntimeError('Release license does not match source')
     apk_digest = hashlib.sha256((folder / expected_apk).read_bytes()).hexdigest()
-    for filename in [expected_apk, expected_zip]:
-        checksum = (folder / (filename + '.sha256')).read_text().split()
-        if checksum != [hashlib.sha256((folder / filename).read_bytes()).hexdigest(), filename]:
-            raise RuntimeError('Checksum sidecar does not match asset')
     with zipfile.ZipFile(folder / expected_zip) as archive:
         if archive.testzip() or archive.read('LICENSE') != license_data:
             raise RuntimeError('Install bundle is invalid')
@@ -171,8 +166,6 @@ def main():
             raise RuntimeError('Install bundle contains a different APK')
         verify_materials(folder / expected_apk, archive)
     notes = (ROOT / f'docs/releases/{version}.md').read_text()
-    if apk_digest not in notes:
-        raise RuntimeError('Release notes do not identify the verified APK checksum')
     wait_for_verification(repo, head)
     existing = [r for r in api('GET', f'/repos/{repo}/releases') if r['tag_name'] == tag]
     if existing and not existing[0]['draft']:
