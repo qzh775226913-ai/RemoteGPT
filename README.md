@@ -64,7 +64,7 @@ python3 -m venv .venv
 
 [使用说明](docs/USAGE.md) · [需求](docs/REQUIREMENTS.md) · [架构](docs/ARCHITECTURE.md) · [维护规则](docs/MAINTENANCE.md) · [回退说明](docs/ROLLBACK.md) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-采用 [项目自定义许可](LICENSE)。正常使用免费；商业再利用及修改版发布的授权条件以 LICENSE 为准。Codex 服务费用另计。
+采用 [源码可用许可 1.1](LICENSE)：免费使用、协作及符合条件的修改版分发；商业再利用另需授权。[贡献规则](CONTRIBUTING.md)。Codex 服务费用另计。
 
 ## 公式与表格显示
 

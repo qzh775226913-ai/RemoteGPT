@@ -52,7 +52,7 @@ Native Android Views, Java 17, JSch SSH/SFTP, stdio JSON-RPC, and a Python stand
 
 [Chinese documentation](README.md) · [Issue tracker](https://github.com/qzh775226913-ai/RemoteGPT/issues) · [License](LICENSE)
 
-Normal use is free under the custom project license. Commercial reuse and distribution of modified versions are subject to the license terms. Codex service charges are separate.
+[Source-available license 1.1](LICENSE): free use, collaboration and compliant free redistribution of modifications; commercial reuse requires separate permission. [Contributing](CONTRIBUTING.md). Codex service charges are separate.
 
 ## Formula and table rendering
 
