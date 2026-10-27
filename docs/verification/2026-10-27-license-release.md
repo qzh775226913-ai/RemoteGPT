@@ -28,7 +28,11 @@
 
 ## GitHub 发布
 
-使用现有显式发布流程，等待同一源码提交完整 Verify 成功，再校验、上传及公开全部五项附件。
-公开版本：[v1.0.64](https://github.com/qzh775226913-ai/RemoteGPT/releases/tag/v1.0.64)。实际发布与下载结果另记交付核对。
+源码提交 `1a7dda0`；[完整 CI](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/40434210917) 与 [发布任务](https://github.com/qzh775226913-ai/RemoteGPT/actions/runs/40434210899) 均成功。
+初始 main／版本标签两次 CI 在依赖解析阶段遇到阿里云 Maven HTTP 502，未执行 Android 测试；同一源码的发布触发 CI 完整通过，未放宽门禁。
+
+[v1.0.64](https://github.com/qzh775226913-ai/RemoteGPT/releases/tag/v1.0.64) 已公开并设为 latest，五项附件的服务端大小与摘要和本地一致。
+从 GitHub 完整下载 APK／ZIP，SHA-256 与上述值一致；重新检查随包材料通过。
+临时诊断只读取合成验证日志，未读取生产凭据或调用模型；诊断／发布触发标签在交付后清理，临时制品中转按服务期限自动失效。
 
 工程检查不构成法律效力认定。真机覆盖安装、OEM 通知、实际网络性能及真实模型未验收。
