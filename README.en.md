@@ -10,7 +10,7 @@ Native Android GUI for remote Codex: projects, conversations, approvals, questio
 Codex execution and account login stay on the host. Transport uses SSH without an extra model HTTP port.
 Independent client, unaffiliated with OpenAI. English documentation does not imply an English-localized UI.
 
-**[Download APK · 1.0.65](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.65/RemoteGPT-1.0.65-Android-universal-debug.apk)** · [Get started](docs/USAGE.en.md) · [Changelog (Chinese)](CHANGELOG.md) · [Protocol coverage](docs/CODEX_DISPLAY_COVERAGE.md) · [Issues](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[Download APK · 1.0.65](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.65/RemoteGPT-1.0.65-Android-universal-debug.apk)** · [Get started](docs/USAGE.en.md) · [Changelog (Chinese)](CHANGELOG.md) · [Issues](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
 Source and public stable release: **1.0.65 / versionCode 67**. Android 8+, package `app.remotessh`, approximately 4.4 MB.
 Changes from the historical Tailscale-only versions 1.0.58–1.0.63 are included.
