@@ -14,13 +14,13 @@
 ```text
 [ ] 我有权提交这些贡献，并已标明第三方材料及许可。
 [ ] 我保留版权，并授予 qzh775226913-ai 对我的贡献永久、全球、非独占、
-    免版税、不可撤销的复制、修改、分发和再许可权，包括商业许可；
+    不可撤销的复制、修改、分发和再许可权，包括商业许可；
     仅限我有权授权的材料，不覆盖第三方材料或他人权利。
 ```
 
 Contributors retain copyright. Contributions use the project license. Before merging,
 the maintainer requires explicit confirmation of the rights and additional grant above:
-a perpetual, worldwide, non-exclusive, royalty-free, irrevocable right to reproduce,
+a perpetual, worldwide, non-exclusive, irrevocable right to reproduce,
 modify, distribute and sublicense the contribution, including commercially, only to
 the extent the contributor can authorize it. Third-party rights remain separate.
 Submitting a PR alone does not transfer copyright or establish the additional grant.
