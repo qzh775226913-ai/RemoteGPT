@@ -1,56 +1,55 @@
-# RemoteGPT — Android GUI for Codex over SSH
+# RemoteGPT
 
 [English](README.en.md) · 简体中文
 
-在 Android 手机上通过 **图形化界面**操作远端 Codex：点选项目与历史会话、阅读对话、处理权限审批、回答结构化问题，以及上传和预览附件。适合已经使用 Codex CLI、希望离开电脑后继续查看和操作远端任务的用户。
+[![Verify](https://github.com/qzh775226913-ai/RemoteGPT/actions/workflows/verify.yml/badge.svg)](https://github.com/qzh775226913-ai/RemoteGPT/actions/workflows/verify.yml)
+[![Release](https://img.shields.io/github/v/release/qzh775226913-ai/RemoteGPT)](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest)
+![Android 8+](https://img.shields.io/badge/Android-8%2B-green)
 
-服务器继续负责 Codex 运行与账户登录；手机负责触摸交互、状态展示和文件传输。项目为独立客户端，与 OpenAI 无隶属关系。
+通过原生 Android 界面操作远端 Codex：项目与历史会话、审批与问题表单、图片及文件传输。
+Codex 运行和登录保留在服务器，通信走 SSH，无需额外开放模型 HTTP 端口。独立客户端，与 OpenAI 无隶属关系。
 
-**[下载稳定版 APK（1.0.57）](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.57/RemoteGPT-1.0.57-Android-universal-debug.apk)** · [首次连接指南](docs/USAGE.md) · [发布说明与校验文件](https://github.com/qzh775226913-ai/RemoteGPT/releases/latest) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[下载 APK · 1.0.64](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.64/RemoteGPT-1.0.64-Android-universal-debug.apk)** · [首次连接](docs/USAGE.md) · [更新记录](CHANGELOG.md) · [反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-当前源码版本：**1.0.63 / versionCode 65**（Tailscale 安装包交付）；GitHub 稳定版仍为 1.0.57。Android 8+，包名 `app.remotessh`，APK 约 4.4 MB。
+当前源码与公开稳定版：**1.0.64 / versionCode 66**。Android 8+，包名 `app.remotessh`，APK 约 4.4 MB。
+1.0.58–1.0.63 为历史 Tailscale 交付版本，其改动已汇入本版。
 
-## 图形化界面能做什么
+## 界面
 
-| 操作 | 手机界面 |
-| --- | --- |
-| 打开项目与会话 | 浏览远端目录、点选历史会话，为不同会话保留独立草稿和附件 |
-| 查看任务与回复 | 在对话中阅读输出、查看运行状态，执行中可补充输入或排队下一条消息 |
-| 处理审批与提问 | 通过审批按钮和问题表单回复远端请求 |
-| 调整模型与权限 | 使用选择面板设置模型、推理强度、运行速度和权限；模型信息连接期间每 30 秒从远端同步 |
-| 传输图片与文件 | 使用系统选择器上传附件，直接预览与保存图片、下载普通文件 |
+<img src="docs/screenshots/table-conversation.png" alt="合成测试：对话、公式与原生表格" width="250"> <img src="docs/screenshots/device-multi-task.jpg" alt="用户提供的实机多任务通知示例" width="250">
 
-这些常用操作可以通过列表、按钮和表单完成，减少在手机小屏幕中输入命令、滚动终端和切换上下文的步骤。首次配置仍需具备 SSH 和远端 Codex 环境。
+左：当前源码的合成测试截图。右：用户提供的实机多任务通知；版本及机型未独立核验，显示形式受 Android、权限和厂商系统影响。
 
-## 第一次使用
+## 功能
 
-1. **确认远端可用**：连接用户已配置可用的 Codex CLI，服务器提供 SSH/SFTP；默认持久模式还需要 Python 3.8+。
-2. **安装 APK 并添加连接**：填写手机可达的 SSH 主机、端口、用户名和认证信息，核对主机指纹。
-3. **点选项目与会话**：浏览项目目录，新建对话或接续历史，手动发送第一条消息。
+- 项目与历史浏览；多会话独立草稿、附件、审批及状态。
+- 执行中补充输入或排队；结构化提问与权限审批。
+- 从远端同步模型、推理强度及速度；会话权限选择。
+- 文件上传下载；图片缩放、连续翻页、有限缓存及相邻预加载。
+- 本地公式与原生 Markdown 表格；宽内容横向滚动，复制保留原文。
+- 默认持久模式保留断线后的远端任务，重连恢复输出和待审批。
 
-具体字段、环境检查和常见错误见 [首次连接指南](docs/USAGE.md)。远端无需为本应用额外开放模型服务 HTTP 端口；通信走 SSH。
+## 使用
 
-## 任务通知示例
+1. 远端 Unix 主机提供 SSH/SFTP，连接用户已配置支持 `app-server` 的 Codex CLI；默认持久模式需 Python 3.8+。
+2. 安装 APK，填写可达的 SSH 地址及认证信息，核对主机指纹。
+3. 点选项目，新建或接续会话，手动发送消息。
 
-<img src="docs/screenshots/live-status.jpg" alt="特定设备在状态区域展示 RemoteGPT 任务执行状态" width="420">
+[连接字段与排错](docs/USAGE.md) · [环境与验收边界](docs/ACCEPTANCE.md)
 
-此图展示特定设备的状态区域。通知、气泡和后台表现取决于 Android 版本、权限与厂商系统；其他设备可能采用不同展示形式。
+## 下载说明
 
-## 环境与支持范围
+- `.apk`：直接安装，沿用现有项目签名的 debug 构建。
+- `with-license.zip`：同一 APK、许可声明、公式库对应源码。
+- `.sha256`：制品校验文件；`LICENSE.txt`：本版项目许可。
 
-| 位置 | 要求 |
-| --- | --- |
-| 手机 | Android 8 或以上，可访问服务器的 SSH 地址 |
-| 服务器 | Unix 环境、SSH/SFTP；连接用户已安装并配置支持 `app-server` 的 Codex CLI |
-| 持久模式 | Python 3.8+，标准库包含 sqlite3、fcntl、Unix socket 支持，家目录可写 |
-
-默认持久模式在 SSH 断开后保留远端任务，并支持重连后的输出和待审批恢复；主机或托管进程退出会影响恢复。模型、账户权限和服务费用由远端配置决定。设备及真实服务测试边界见 [验收标准](docs/ACCEPTANCE.md)。
+同包名且同签名的安装包可用于覆盖升级；目标手机安装结果需实测。主机／托管进程退出后的任务续跑不作保证。
+模型及账户费用由远端配置决定；图片预加载速度取决于网络、图片和缓存预算。
 
 ## 构建与验证
 
-技术栈：Java 17、Android 原生 View、JSch SSH/SFTP、stdio JSON-RPC；远端托管使用 Python 标准库。
-
-开发环境：JDK 17、Android SDK 36、Build Tools 35.0.0、Python 3.12。配置 `JAVA_HOME` 和 `ANDROID_HOME` 后执行：
+Java 17、原生 Android View、JSch SSH/SFTP、stdio JSON-RPC、Python 标准库托管。
+开发环境需 JDK 17、Android SDK 36／Build Tools 35.0.0、Python 3.12。
 
 ```sh
 python3 -m venv .venv
@@ -58,16 +57,11 @@ python3 -m venv .venv
 .venv/bin/python tools/verify.py
 ```
 
-完整入口运行 Python 与 Android 测试、结构和图标检查、APK 构建及 Lint。SSH 测试使用独立回环夹具。详细配置见 [开发手册](docs/DEVELOPMENT.md)，版本结果见 [1.0.54 验证](docs/verification/2026-10-16-1.0.54.md)。
+完整入口检查 Python／Android 测试、结构、生成资产、APK 与 Lint，使用合成回环 SSH 夹具。
+[开发手册](docs/DEVELOPMENT.md) · [本版验证](docs/verification/2026-10-27-license-release.md)
 
-## 文档与许可
+## 许可与贡献
 
-[使用说明](docs/USAGE.md) · [需求](docs/REQUIREMENTS.md) · [架构](docs/ARCHITECTURE.md) · [维护规则](docs/MAINTENANCE.md) · [回退说明](docs/ROLLBACK.md) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+[源码可用许可 1.1](LICENSE)，不属于 OSI 开源许可：免费使用、公开协作及符合条件的免费修改版分发；商业再利用、收费功能访问及闭源交付另需授权。普通工作与独立开发成果不收费、不分成。
 
-采用 [源码可用许可 1.1](LICENSE)：免费使用、协作及符合条件的修改版分发；商业再利用另需授权。[贡献规则](CONTRIBUTING.md)。Codex 服务费用另计。
-
-## 公式与表格显示
-
-新增本地原生公式排版：支持显式标记的行内／独立 TeX、分式、上下标、希腊字母和矩阵，长公式可横向滚动。复制保留原文；不完整或不支持的公式显示原始文本。当前 GitHub 稳定版 APK 为 1.0.57。[第三方组件说明](docs/THIRD_PARTY.md)。
-
-1.0.57 增加可横向滚动的原生表格，并调整浅色区域层次。
+[贡献规则](CONTRIBUTING.md) · [第三方许可](docs/THIRD_PARTY.md) · [需求](docs/REQUIREMENTS.md) · [架构](docs/ARCHITECTURE.md) · [回退](docs/ROLLBACK.md)
