@@ -9,9 +9,9 @@
 通过原生 Android 界面操作远端 Codex：项目与历史会话、审批与问题表单、图片及文件传输。
 Codex 运行和登录保留在服务器，通信走 SSH，无需额外开放模型 HTTP 端口。独立客户端，与 OpenAI 无隶属关系。
 
-**[下载 APK · 1.0.64](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.64/RemoteGPT-1.0.64-Android-universal-debug.apk)** · [首次连接](docs/USAGE.md) · [更新记录](CHANGELOG.md) · [反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[下载 APK · 1.0.65](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.65/RemoteGPT-1.0.65-Android-universal-debug.apk)** · [首次连接](docs/USAGE.md) · [更新记录](CHANGELOG.md) · [协议覆盖](docs/CODEX_DISPLAY_COVERAGE.md) · [反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-当前源码与公开稳定版：**1.0.64 / versionCode 66**。Android 8+，包名 `app.remotessh`，APK 约 4.4 MB。
+当前源码与公开稳定版：**1.0.65 / versionCode 67**。Android 8+，包名 `app.remotessh`，APK 约 4.4 MB。
 1.0.58–1.0.63 为历史 Tailscale 交付版本，其改动已汇入本版。
 
 ## 界面
@@ -58,7 +58,7 @@ python3 -m venv .venv
 ```
 
 完整入口检查 Python／Android 测试、结构、生成资产、APK 与 Lint，使用合成回环 SSH 夹具。
-[开发手册](docs/DEVELOPMENT.md) · [本版验证](docs/verification/2026-10-27-license-release.md)
+[开发手册](docs/DEVELOPMENT.md) · [本版验证](docs/verification/2026-10-27-1.0.65.md)
 
 ## 许可与贡献
 
