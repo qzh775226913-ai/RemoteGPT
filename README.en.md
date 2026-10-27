@@ -31,6 +31,6 @@ Left: synthetic formula and table example. Right: device notification example; a
 
 ## License
 
-[Source-available license](LICENSE): free use and public collaboration; compliant modifications may be redistributed free of charge. Commercial reuse requires separate permission. Independent client, unaffiliated with OpenAI. English documentation does not imply an English-localized interface.
+[Source-available license](LICENSE): use, modification and public collaboration are permitted. Non-commercial redistribution must retain attribution and license notices. Commercial reuse requires written permission. Independent client, unaffiliated with OpenAI. English documentation does not imply an English-localized interface.
 
 [Contributing](CONTRIBUTING.md) · [Third-party licenses](docs/THIRD_PARTY.md)
