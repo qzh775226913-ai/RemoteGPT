@@ -61,7 +61,7 @@ SDK 初始化显式安装 `platform-tools`，再安装指定 platform／build-to
 
 [显式发布流程](../.github/workflows/publish-release.yml) 只由维护者推送 `publish-release-*` 临时注释标签触发，不在普通 push 或 PR 中发布。注释为 JSON，包含发布标签、源码提交和 5 个制品（APK、安装 ZIP、各自 SHA-256 文件、LICENSE.txt）的公开 HTTPS URL 与摘要；这些临时输入不写入源码文件。
 
-发布器校验源码版本／正式标签、制品摘要、ZIP 内 APK 与许可的一致性，并等待该源码提交完整 Verify 成功。随后创建 Release 草稿、上传全部附件并核对摘要，最后公开为最新版；不覆盖已有公开 Release。短期上传服务与临时触发标签完成后清理，正式版本标签与 GitHub 制品保留。
+发布器校验源码版本／正式标签、制品摘要、ZIP 内 APK 与许可的一致性，逐项比对 APK／ZIP 的项目与第三方许可、字体声明和公式库对应源码摘要，并等待该源码提交完整 Verify 成功。随后创建 Release 草稿、上传全部附件并核对摘要，最后公开为最新版；不覆盖已有公开 Release。短期上传服务与临时触发标签完成后清理，正式版本标签与 GitHub 制品保留。
 
 这里只重分发已验证的原签名 APK，不在 GitHub 上重建或上传签名私钥。更改应用或重新交付新 APK 仍按版本递增、完整验证与签名检查执行。通用维护入口不会更新生产 SSH 或调用模型。
 

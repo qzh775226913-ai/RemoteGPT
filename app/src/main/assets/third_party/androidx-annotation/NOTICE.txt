@@ -1,0 +1,5 @@
+AndroidX Annotation 1.1.0
+Copyright The Android Open Source Project
+Licensed under the Apache License, Version 2.0; see LICENSE.txt.
+Project: https://android.googlesource.com/platform/frameworks/support/+/androidx-annotation-release/annotation/
+Transitive dependency of JLaTeXMath Android 0.2.0.

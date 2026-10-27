@@ -18,6 +18,45 @@ import urllib.request
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+FORMULA_SOURCES = {
+    'third-party/jlatexmath-android-0.2.0-upstream-source.zip':
+        'b0068f3bbf3ae42951b8df49751f851884f1b0a7bf85e377c214c64dcac8ce83',
+    'third-party/jlatexmath-android-0.2.0-sources.jar':
+        'e3bccfd6fcc38b0fc85307278e5c9024fd6710311fa172790d2629467670b7cc',
+}
+
+
+def verify_materials(apk_path, bundle, root=ROOT):
+    """Reject stale notices or missing corresponding source before publishing."""
+    assets = root / 'app/src/main/assets'
+    notices = [assets / 'LICENSE.txt', assets / 'CONTRIBUTING.md']
+    notices += sorted(p for p in (assets / 'third_party').rglob('*') if p.is_file())
+    with zipfile.ZipFile(apk_path) as apk:
+        for path in notices:
+            relative = path.relative_to(assets).as_posix()
+            expected = path.read_bytes()
+            if apk.read('assets/' + relative) != expected:
+                raise RuntimeError('APK notice differs: ' + relative)
+            if bundle.read('app/src/main/assets/' + relative) != expected:
+                raise RuntimeError('Bundle notice differs: ' + relative)
+        fonts = [n for n in apk.namelist()
+                 if n.startswith('assets/org/scilab/forge/jlatexmath/fonts/licences/')
+                 and not n.endswith('/')]
+        if not fonts:
+            raise RuntimeError('Font license notices are missing')
+        for name in fonts:
+            if bundle.read(name) != apk.read(name):
+                raise RuntimeError('Font license differs: ' + name)
+    for name, digest in FORMULA_SOURCES.items():
+        if hashlib.sha256(bundle.read(name)).hexdigest() != digest:
+            raise RuntimeError('Corresponding formula source differs: ' + name)
+    for name in ['LICENSE', 'CONTRIBUTING.md', 'docs/THIRD_PARTY.md']:
+        if bundle.read(name) != (root / name).read_bytes():
+            raise RuntimeError('Distribution document differs: ' + name)
+    if (assets / 'LICENSE.txt').read_bytes() != (root / 'LICENSE').read_bytes():
+        raise RuntimeError('Bundled project license is stale')
+    if (assets / 'CONTRIBUTING.md').read_bytes() != (root / 'CONTRIBUTING.md').read_bytes():
+        raise RuntimeError('Bundled contribution terms are stale')
 
 
 def git(*args):
@@ -130,6 +169,7 @@ def main():
             raise RuntimeError('Install bundle is invalid')
         if hashlib.sha256(archive.read(expected_apk)).hexdigest() != apk_digest:
             raise RuntimeError('Install bundle contains a different APK')
+        verify_materials(folder / expected_apk, archive)
     notes = (ROOT / f'docs/releases/{version}.md').read_text()
     if apk_digest not in notes:
         raise RuntimeError('Release notes do not identify the verified APK checksum')

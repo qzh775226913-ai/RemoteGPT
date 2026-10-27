@@ -7,6 +7,7 @@
 | --- | --- | --- |
 | [JSch](https://github.com/mwiede/jsch/tree/jsch-2.28.0) | 2.28.0 | [BSD 风格](../app/src/main/assets/third_party/jsch/LICENSE.txt)；内含 [JZlib](../app/src/main/assets/third_party/jsch/LICENSE.JZlib.txt)、[jBCrypt](../app/src/main/assets/third_party/jsch/LICENSE.jBCrypt.txt) 声明 |
 | [Bouncy Castle bcprov-jdk18on](https://github.com/bcgit/bc-java/tree/r1rv80) | 1.80 | [Bouncy Castle 许可（MIT 风格）](../app/src/main/assets/third_party/bouncycastle/LICENSE.txt)，文本取自该版 JAR 的 LICENSE 类 |
+| [AndroidX Annotation](https://developer.android.com/jetpack/androidx/releases/annotation) | 1.1.0 | 公式库的传递依赖；[Apache-2.0](../app/src/main/assets/third_party/androidx-annotation/LICENSE.txt)、[声明](../app/src/main/assets/third_party/androidx-annotation/NOTICE.txt) |
 | [JLaTeXMath Android](https://github.com/noties/jlatexmath-android) | 0.2.0 | [GPL-2.0-or-later 与独立模块链接例外](../app/src/main/assets/third_party/jlatexmath-android/LICENSE)、[GPL 正文](../app/src/main/assets/third_party/jlatexmath-android/COPYING)、[声明](../app/src/main/assets/third_party/jlatexmath-android/NOTICE.txt) |
 
 公式库未经修改，通过公开 TeX API 与独立 Canvas 适配器连接；链接例外允许独立模块采用其他许可，
