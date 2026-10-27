@@ -123,7 +123,8 @@ final class MediaFiles {
 
   static List<String> images(ChatItem item) {
     List<String> result = new ArrayList<>(item.images);
-    Matcher matcher = IMAGE.matcher(item.text);
+    if (!item.prose()) return result;
+    Matcher matcher = IMAGE.matcher(MarkdownImages.prose(item.text));
     while (matcher.find() && result.size() < 12) if (!result.contains(matcher.group(2))) result.add(matcher.group(2));
     return result;
   }

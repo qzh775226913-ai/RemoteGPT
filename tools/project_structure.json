@@ -79,6 +79,7 @@
     ],
     "media": [
       "FileAttachment",
+      "MarkdownImages",
       "ImageDocument",
       "MediaFiles",
       "ThumbnailCache",
