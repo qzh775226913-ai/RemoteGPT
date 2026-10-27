@@ -1,6 +1,6 @@
 # First connection guide
 
-For RemoteGPT 1.0.55. [中文说明](USAGE.md) · [Download APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.55/RemoteGPT-1.0.55-Android-universal-debug.apk)
+For RemoteGPT 1.0.65. [中文说明](USAGE.md) · [Download APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.65/RemoteGPT-1.0.65-Android-universal-debug.apk)
 
 RemoteGPT provides an Android graphical interface for Codex running on a host you can access over SSH. Configure the Codex account and model service on that host first. The app does not perform remote Codex account login for you.
 
@@ -24,9 +24,16 @@ These commands check the environment; they do not test a model request. Confirm 
 
 The app starts App Server automatically. Persistent mode writes its supervisor and conversation data to `~/.remote-gpt`; the SSH user's home directory must be writable. You do not need to open an additional model-service HTTP port.
 
+Remote-system compatibility:
+
+- **Linux:** the primary and recommended remote environment.
+- **macOS:** compatible when SSH/SFTP, POSIX `sh`, the Codex requirements above, and a writable home directory are available; persistent mode also requires the Python environment. Automated testing has not covered a real macOS host yet.
+- **Native Windows:** not currently supported because the app relies on POSIX shell behavior, permissions, `fcntl` and Unix sockets. WSL or a Linux VM can be used if it exposes SSH/SFTP separately and meets every requirement.
+- **NAS appliances and containers:** may work when they meet every requirement and provide a persistent, writable home directory, but are not individually validated.
+
 ## 2. Install and add a connection
 
-Download the APK from the project release page and install it on Android 8 or newer. If Android prompts you, allow installation from the browser or file manager used for this installation; you can revoke that permission afterward. Checksums are attached to the release.
+Download the APK from the project release page and install it on Android 8 or newer. If Android prompts you, allow installation from the browser or file manager used for this installation; you can revoke that permission afterward.
 
 Open the remote-control menu and select “添加连接” (Add connection).
 
@@ -54,7 +61,7 @@ Verify the SSH host key fingerprint through a trusted channel before accepting i
 3. Type a message and tap Send. Browsing or resuming history alone does not send a message.
 4. Read the remote response. If Codex requests approval or asks a structured question, respond using the buttons or form.
 
-A real remote response is the completion check. An SSH connection or successful environment diagnostic alone does not prove the model service works. Sending a message can incur charges under the remote account's service configuration.
+A real remote response is the completion check. An SSH connection or successful environment diagnostic alone does not prove the model service works.
 
 Use the model panel to choose the remote model, reasoning effort and speed. Model metadata refreshes every 30 seconds while connected. Send a message to apply selection changes to the next turn. Permissions also take effect with the next message.
 
@@ -79,14 +86,14 @@ Persistent recovery depends on the remote supervisor remaining alive. Device not
 
 Open an [issue](https://github.com/qzh775226913-ai/RemoteGPT/issues) with the app version, Android version, remote Codex version, reproduction steps and exact error text. Redact host addresses, usernames, private paths and conversation content from screenshots. Never include passwords, private keys, tokens or account configuration files.
 
-Use and redistribution are governed by the [project license](../LICENSE). Codex service charges are separate.
+Use and redistribution are governed by the [project license](../LICENSE).
 
-## 6. Formula rendering in the 1.0.56 development build
+## 6. Formula rendering
 
 Explicit inline `\(…\)` and `$…$`, and display `\[…\]` and `$$…$$` TeX in remote prose are typeset locally with native fonts. Common fractions, scripts, Greek symbols, roots and matrices are supported. Long expressions scroll horizontally; long-press a display formula to copy its original TeX. Full-message copy retains the original source.
 
 Code, escaped markers and ordinary currency stay literal. Incomplete, unsupported, excessive or failed expressions remain readable source. No macro definitions, file access, remote resource loading or code execution is enabled. Whether the model emits formula markers depends on its actual response; this feature does not change the model or remote configuration.
 
-## 7. Tables and light surfaces in 1.0.57
+## 7. Tables and light surfaces
 
 Standard Markdown tables use a native grid. Wide tables scroll horizontally as one unit; longer cells wrap within bounded column widths. Copy preserves the original table text. Appended rows retain the horizontal reading position. Code blocks, space-aligned prose and unsupported or oversized tables remain literal. Light mode separates the soft gray-white page, white replies and slightly darker input and table-header surfaces.

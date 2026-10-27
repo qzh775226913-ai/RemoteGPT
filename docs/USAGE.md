@@ -1,10 +1,10 @@
 # 使用说明
 
-适用版本：1.0.55。手机通过 SSH 操作远端 Codex，账户与模型服务在服务器上配置。
+适用版本：1.0.65。手机通过 SSH 操作远端 Codex，账户与模型服务在服务器上配置。
 
-[English guide](USAGE.en.md) · [下载 APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.55/RemoteGPT-1.0.55-Android-universal-debug.apk)
+[English guide](USAGE.en.md) · [下载 APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.65/RemoteGPT-1.0.65-Android-universal-debug.apk)
 
-软件使用与再分发条件见 [项目许可](../LICENSE)。Codex 服务费用另计。
+软件使用与再分发条件见 [项目许可](../LICENSE)。
 
 ## 首次连接路线
 
@@ -38,7 +38,14 @@ python3 -c 'import sys, sqlite3, fcntl, socket; assert sys.version_info >= (3, 8
 
 这些是环境检查，不会验证模型请求能否成功。确认远端 Codex 能正常使用后再配置手机。交互终端与非交互 SSH 的 PATH 可能不同；应用的连接诊断按后者检查。
 
-应用会自动启动 App Server；无需手动常驻运行。持久模式会自动在 `~/.remote-gpt` 写入托管脚本和会话数据。Linux 或 macOS 远端须满足上述 Unix 环境要求；当前自动化未覆盖真实 macOS 主机。
+应用会自动启动 App Server；无需手动常驻运行。持久模式会自动在 `~/.remote-gpt` 写入托管脚本和会话数据。
+
+远端系统的适用范围：
+
+- **Linux**：主要支持和推荐的远端环境。
+- **macOS**：具备 SSH/SFTP、POSIX `sh`、上述 Codex 环境并允许写入家目录时可用；开启持久模式时还需满足 Python 要求。当前自动化尚未覆盖真实 macOS 主机。
+- **原生 Windows**：目前不支持。应用依赖 POSIX shell、权限语义、`fcntl` 和 Unix socket；可改用单独开放 SSH/SFTP 且满足全部要求的 WSL 或 Linux 虚拟机。
+- **NAS 或容器**：满足全部要求并提供持久、可写的家目录时可能可用，但项目未逐一验证这些平台。
 
 ## 2. 配置手机
 
@@ -94,7 +101,7 @@ python3 -c 'import sys, sqlite3, fcntl, socket; assert sys.version_info >= (3, 8
 
 在 [Issues](https://github.com/qzh775226913-ai/RemoteGPT/issues) 选择问题模板，注明应用版本、Android 版本、远端 Codex 版本、复现步骤和完整错误文字。截图前遮盖主机地址、用户名、项目路径和对话中的私人内容；不要附上密码、私钥、令牌或账户配置文件。
 
-## 6. 1.0.56 开发版公式显示
+## 6. 公式显示
 
 当远端正文返回显式 LaTeX 标记时，应用在本地排版：
 
@@ -107,6 +114,6 @@ python3 -c 'import sys, sqlite3, fcntl, socket; assert sys.version_info >= (3, 8
 
 代码块、行内代码和普通货币文本不转为公式。未闭合、不支持或超过限制的公式保留原文；不会执行宏定义、文件读取、网络加载或远端代码。本功能不保证模型一定返回公式标记，不修改模型或服务器配置。
 
-## 7. 1.0.57 表格与浅色界面
+## 7. 表格与浅色界面
 
 标准 Markdown 表格显示为原生行列，表头与各行保持列对齐，宽表可整张左右滑动；较长单元格在合理列宽内换行。点击表格上方“复制”保留表格原文，完整消息复制行为不变。流式追加行时保留横向阅读位置。代码块、空格排版及超限／无效表格保留原样。浅色页面使用灰白底、白色回复与稍深的输入区和表头区分区域。
