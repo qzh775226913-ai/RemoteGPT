@@ -12,7 +12,7 @@ import org.robolectric.android.controller.ActivityController;
 
 /** Dispatch through the vertical parent so interception and selectable cells participate. */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk=35,qualifiers="w411dp-h891dp-mdpi")
+@Config(sdk=35,qualifiers="zh-rCN-w411dp-h891dp-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class TableGestureTest {
   private ActivityController<Activity> activity;

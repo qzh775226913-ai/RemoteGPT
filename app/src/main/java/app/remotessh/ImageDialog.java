@@ -55,10 +55,10 @@ final class ImageDialog {
     image=new ZoomImageView(activity,worker,this::page);
     int height=Math.min(ui.dp(420),Math.max(ui.dp(100),activity.getResources().getDisplayMetrics().heightPixels-ui.dp(210)));
     root.addView(image,new LinearLayout.LayoutParams(-1,height));
-    status=ui.text("双指缩放 · 双击放大／复位",13);root.addView(status);
-    AlertDialog.Builder builder=new AlertDialog.Builder(activity).setView(root).setNegativeButton("关闭",null);
-    if(source!=null)builder.setPositiveButton("保存图片",(d,w)->{
-      if(active())save.accept(currentSource());else Toast.makeText(activity,"连接或对话已变化，请重新打开图片后保存",Toast.LENGTH_SHORT).show();
+    status=ui.text(UiText.get(R.string.ui_pinch_to_zoom_double_tap_to_zoom_reset),13);root.addView(status);
+    AlertDialog.Builder builder=new AlertDialog.Builder(activity).setView(root).setNegativeButton(UiText.get(R.string.ui_close),null);
+    if(source!=null)builder.setPositiveButton(UiText.get(R.string.ui_save_image),(d,w)->{
+      if(active())save.accept(currentSource());else Toast.makeText(activity,UiText.get(R.string.ui_the_connection_or_conversation_has_changed_reopen_the_image_befor),Toast.LENGTH_SHORT).show();
     });
     dialog=builder.create();dialog.setOnDismissListener(d->dispose());dialog.show();
     status.setOnClickListener(v->{if(failed)load();});
@@ -94,7 +94,7 @@ final class ImageDialog {
     Bitmap preview=previews.apply(source);
     if(preview==null && source.equals(initialSource))preview=initialPreview;
     if(preview!=null && !preview.isRecycled())image.setPlaceholder(preview);
-    message("正在加载大图…");
+    message(UiText.get(R.string.ui_loading_full_image));
     if(adopting){pending=preload;return;}
     BooleanSupplier active=()->ticket==generation && active();
     pending=read(source,active,value->{recent.put(source,value);show(value);trimRecent();prepareAdjacent();},this::loadFailed);
@@ -115,7 +115,7 @@ final class ImageDialog {
       finally {if(ready!=null)ready.close();if(temporary!=null)temporary.delete();}
     });
   }
-  private void loadFailed(){failed=true;message("图片加载失败 · 点按重试");}
+  private void loadFailed(){failed=true;message(UiText.get(R.string.ui_image_failed_to_load_tap_to_retry));}
   private void prepareAdjacent() {
     nearby.clear();preferredSource=null;
     for(int delta:new int[]{direction,-direction}) {
@@ -158,7 +158,7 @@ final class ImageDialog {
   private void clearPreload(){if(pending==preload)pending=null;preload=null;preloading=null;}
   private void show(ImageDocument value) {
     document=value;image.setDocument(value);
-    message("双指缩放 · 双击放大／复位"+(sources.size()>1?" · 左右滑动翻图":""));
+    message(UiText.get(R.string.ui_pinch_to_zoom_double_tap_to_zoom_reset)+(sources.size()>1?UiText.get(R.string.ui_swipe_to_browse_images):""));
   }
   private boolean overBudget() {
     long bitmaps=0,files=0;

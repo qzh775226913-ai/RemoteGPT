@@ -20,7 +20,7 @@ final class FilePicker {
       if(intent.resolveActivity(activity.getPackageManager())==null)continue;
       try {
         activity.startActivityForResult(Intent.ACTION_GET_CONTENT.equals(intent.getAction())
-            ? Intent.createChooser(intent,"选择文件管理器"):intent,REQUEST);
+            ? Intent.createChooser(intent,UiText.get(R.string.ui_choose_file_manager)):intent,REQUEST);
         return true;
       } catch(ActivityNotFoundException | SecurityException unavailable) { }
     }

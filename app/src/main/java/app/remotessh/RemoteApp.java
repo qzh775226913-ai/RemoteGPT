@@ -389,9 +389,17 @@ public final class RemoteApp extends Application {
   PermissionMode displayedPermission() {return permissionMode==PermissionMode.INHERIT ? effectivePermissionMode:permissionMode;}
 
 
-  @Override
-  public void onCreate() {
+  AppLanguage language;
+
+  @Override public void onConfigurationChanged(android.content.res.Configuration config) {
+    super.onConfigurationChanged(config);
+    AppLanguage.refresh(this);
+    if (language != null) language.notifyPresentation();
+  }
+
+  @Override public void onCreate() {
     super.onCreate();
+    language = new AppLanguage(this);
     java.security.Security.removeProvider("BC");
     java.security.Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
     android.content.pm.ShortcutManager shortcuts = getSystemService(android.content.pm.ShortcutManager.class);

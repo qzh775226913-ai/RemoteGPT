@@ -39,7 +39,7 @@ public class BubbleTest {
     assertTrue(app.stateListeners.isEmpty());
   }
 
-  @Test @Config(qualifiers="w360dp-h144dp-xhdpi")
+  @Test @Config(qualifiers="zh-rCN-w360dp-h144dp-xhdpi")
   public void compactBubbleShowsFourNewestVisualLinesAndUpdatesStreamingText() throws Exception {
     RemoteApp app=(RemoteApp)RuntimeEnvironment.getApplication();
     app.connected=true; app.busy=true; app.threadId="thread"; app.turnId="turn";

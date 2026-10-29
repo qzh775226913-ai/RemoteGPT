@@ -15,7 +15,7 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.*;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 35, qualifiers = "w411dp-h891dp-xhdpi",shadows=RegionDecoderShadow.class)
+@Config(sdk = 35, qualifiers="zh-rCN-w411dp-h891dp-xhdpi",shadows=RegionDecoderShadow.class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class MainActivityTest {
   private ActivityController<MainActivity> controller;
@@ -401,7 +401,7 @@ public class MainActivityTest {
     assertNotNull(find(shell, "此模型未提供可选强度"));
     app.modelSettings = new ModelSettings(); app.modelSettings.configKnown = true;
     app.modelSettings.model = "gpt-6.1-sol"; app.changed();
-    assertNotNull(find(shell, "默认 · Medium"));
+    assertNotNull(find(shell, "默认 · 中等"));
     find(shell, "完成").performClick();
     assertEquals("", app.model); assertEquals("", app.reasoningEffort);
   }
@@ -431,7 +431,7 @@ public class MainActivityTest {
     find(shell, "完成").performClick(); assertEquals("", app.serviceTier);
   }
 
-  @Test @Config(qualifiers="w360dp-h640dp-xhdpi")
+  @Test @Config(qualifiers="zh-rCN-w360dp-h640dp-xhdpi")
   public void speedPickerScrollsOnSmallPhoneAndHonorsRemoteFeatureGate() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
     app.model = "gated"; app.modelSettings.fastEnabled = false;
@@ -450,7 +450,7 @@ public class MainActivityTest {
     assertTrue(visible.bottom <= activity.getResources().getDisplayMetrics().heightPixels);
   }
 
-  @Test @Config(qualifiers="w360dp-h640dp-night-xhdpi")
+  @Test @Config(qualifiers="zh-rCN-w360dp-h640dp-night-xhdpi")
   public void modelListTouchScrollReachesLastModelWithoutMovingSettings() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication(); app.connected = true; app.profile = new Profile();
     app.model = "model-0"; app.modelsStatus = "已同步远端模型";
@@ -539,13 +539,13 @@ public class MainActivityTest {
     assertEquals(2, slider.getMax());
     assertEquals(1, slider.getProgress());
     slider.setProgress(2);
-    assertNotNull(find(shell, "High"));
+    assertNotNull(find(shell, "高"));
     captureView(shell, "model-effort-picker");
     assertEquals(R.style.SheetAnimation, dialog.getWindow().getAttributes().windowAnimations);
     find(shell, "完成").performClick();
     assertEquals("model-a", app.model); assertEquals("high", app.reasoningEffort);
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
-    assertEquals("Model A · High", ((TextView) model).getText().toString());
+    assertEquals("Model A · 高", ((TextView) model).getText().toString());
     assertNotNull(model.getBackground());
     assertTrue(model.getForeground() instanceof android.graphics.drawable.RippleDrawable);
     permission.performClick();
@@ -558,19 +558,19 @@ public class MainActivityTest {
   }
 
   @Test
-  @Config(qualifiers = "w320dp-h720dp-xhdpi")
+  @Config(qualifiers="zh-rCN-w320dp-h720dp-xhdpi")
   public void compactComposerKeepsFullModelAndImagePreviews() throws Exception {
     verifyComposer("composer-narrow");
   }
 
   @Test
-  @Config(qualifiers = "w360dp-h800dp-night-xhdpi")
+  @Config(qualifiers="zh-rCN-w360dp-h800dp-night-xhdpi")
   public void darkComposerKeepsFullModelAndImagePreviews() throws Exception {
     verifyComposer("composer-dark");
   }
 
   @Test
-  @Config(qualifiers = "w1280dp-h800dp-mdpi")
+  @Config(qualifiers="zh-rCN-w1280dp-h800dp-mdpi")
   public void tabletComposerKeepsFullModelAndImagePreviews() throws Exception {
     verifyComposer("composer-tablet");
   }
@@ -626,7 +626,7 @@ public class MainActivityTest {
   }
 
   @Test
-  @Config(qualifiers = "w360dp-h720dp-xhdpi")
+  @Config(qualifiers="zh-rCN-w360dp-h720dp-xhdpi")
   public void fontSizeChoicePersistsAndScalesNewActivity() throws Exception {
     float originalScale = activity.getResources().getConfiguration().fontScale;
     activity.getSharedPreferences("display", 0).edit().putFloat("fontScale", 1.3f).apply();
@@ -782,7 +782,7 @@ public class MainActivityTest {
   }
 
   @Test
-  @Config(qualifiers = "w360dp-h720dp-night-xhdpi")
+  @Config(qualifiers="zh-rCN-w360dp-h720dp-night-xhdpi")
   public void connectionEditorKeepsActionsVisibleAboveKeyboard() throws Exception {
     find(content(), "连接电脑").performClick();
     android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog();
@@ -822,7 +822,7 @@ public class MainActivityTest {
   }
 
   @Test
-  @Config(qualifiers = "w320dp-h720dp-night-xhdpi")
+  @Config(qualifiers="zh-rCN-w320dp-h720dp-night-xhdpi")
   public void projectBrowserAndDirectoryPickerRender() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication();
     Profile profile = new Profile();
@@ -967,14 +967,14 @@ public class MainActivityTest {
   }
 
   @Test
-  @Config(qualifiers = "w1024dp-h768dp-xhdpi")
+  @Config(qualifiers="zh-rCN-w1024dp-h768dp-xhdpi")
   public void tabletLayoutRenders() throws Exception {
     assertNotNull(find(content(), "最近的对话"));
     capture("tablet-home");
   }
 
   @Test
-  @Config(qualifiers = "w411dp-h891dp-night-xhdpi")
+  @Config(qualifiers="zh-rCN-w411dp-h891dp-night-xhdpi")
   public void darkLayoutRenders() throws Exception {
     capture("phone-dark");
   }
@@ -1181,13 +1181,13 @@ public class MainActivityTest {
     assertGap("second","interaction-call:spacing-q",8);assertGap("interaction-call:spacing-q","third",8);
   }
   @Test public void conversationSpacingIsBalancedAcrossCardsParagraphsAndHistory() throws Exception {verifyConversationSpacing("conversation-spacing-light");}
-  @Test @Config(qualifiers="w411dp-h891dp-night-xhdpi")
+  @Test @Config(qualifiers="zh-rCN-w411dp-h891dp-night-xhdpi")
   public void conversationSpacingIsBalancedInDarkTheme() throws Exception {verifyConversationSpacing("conversation-spacing-dark");}
-  @Test @Config(qualifiers="w360dp-h720dp-night-xhdpi")
+  @Test @Config(qualifiers="zh-rCN-w360dp-h720dp-night-xhdpi")
   public void conversationSpacingOnSmallPhoneWithLargeText() throws Exception {
     activity.getSharedPreferences("display",0).edit().putFloat("fontScale",1.3f).apply();controller.recreate();activity=controller.get();verifyConversationSpacing("conversation-spacing-large-text");
   }
-  @Test @Config(qualifiers="w1280dp-h800dp-mdpi")
+  @Test @Config(qualifiers="zh-rCN-w1280dp-h800dp-mdpi")
   public void conversationSpacingIsBalancedOnTablet() throws Exception {verifyConversationSpacing("conversation-spacing-tablet");}
 
   @Test public void recoveryButtonsAnimateUntilHistoryAndReplayAreReady() throws Exception {
@@ -1220,7 +1220,7 @@ public class MainActivityTest {
     app.connecting=false;app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));assertNull(reconnect.getCompoundDrawables()[0]);
   }
 
-  @Test @Config(qualifiers="w411dp-h891dp-night-xhdpi")
+  @Test @Config(qualifiers="zh-rCN-w411dp-h891dp-night-xhdpi")
   public void typedQuestionHistoryAlsoRendersInDarkTheme() throws Exception {conversationShowsTypedQuestionHistoryAndCopyActions();}
 
   @Test public void unchangedImageLoadsAgainAfterConnectionGenerationChanges() throws Exception {

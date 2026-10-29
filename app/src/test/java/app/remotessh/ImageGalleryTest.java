@@ -19,7 +19,7 @@ import org.robolectric.annotation.*;
 import org.robolectric.util.ReflectionHelpers;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk=35,qualifiers="w411dp-h891dp-xhdpi",shadows=RegionDecoderShadow.class)
+@Config(sdk=35,qualifiers="zh-rCN-w411dp-h891dp-xhdpi",shadows=RegionDecoderShadow.class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class ImageGalleryTest {
   private ActivityController<MainActivity> controller;

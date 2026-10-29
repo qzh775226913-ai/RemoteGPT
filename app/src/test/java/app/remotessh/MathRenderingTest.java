@@ -16,7 +16,7 @@ import org.robolectric.annotation.*;
 import ru.noties.jlatexmath.JLatexMathAndroid;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk=35,qualifiers="w411dp-h891dp-xhdpi")
+@Config(sdk=35,qualifiers="zh-rCN-w411dp-h891dp-xhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class MathRenderingTest {
   private static final String EQUATION="\\boxed{\\frac{x_N}{\\bar{c}}\\approx\\frac{x_{ac,w}}{\\bar{c}}+\\eta_t\\frac{a_t}{a_w}V_H\\left(1-\\frac{d\\epsilon}{d\\alpha}\\right)}";

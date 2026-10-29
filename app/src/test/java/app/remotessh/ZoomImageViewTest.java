@@ -20,7 +20,7 @@ import org.robolectric.annotation.*;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.util.ReflectionHelpers;
 
-@RunWith(RobolectricTestRunner.class) @Config(sdk=35,qualifiers="w411dp-h891dp-xhdpi",shadows=RegionDecoderShadow.class)
+@RunWith(RobolectricTestRunner.class) @Config(sdk=35,qualifiers="zh-rCN-w411dp-h891dp-xhdpi",shadows=RegionDecoderShadow.class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class ZoomImageViewTest {
   private ActivityController<MainActivity> controller;

@@ -62,25 +62,25 @@ final class PermissionPicker {
     for (PermissionMode mode : PermissionMode.values()) {
       boolean selected = mode == app.permissionMode && !app.forcedApprovals.active();
       LinearLayout option = option(choices, icon(mode), color(mode),
-          mode == PermissionMode.INHERIT ? "沿用当前对话" : mode.label, ui.fg, selected);
-      option.setContentDescription("权限选项：" + mode.label);
+          mode == PermissionMode.INHERIT ? UiText.get(R.string.ui_use_current_conversation) : UiPresentation.permission(mode), ui.fg, selected);
+      option.setContentDescription(UiText.get(R.string.ui_permission_option_1_s, UiPresentation.permission(mode)));
       ui.clickable(option, () -> {
         if (app.profile == profile && app.threadId.equals(thread) && generation == app.connectionGeneration()) app.choosePermission(mode);
         dismiss();
       });
     }
     if (forcedAtOpen) {
-      LinearLayout force = option(choices, "bolt", red(), "强制允许", red(), true);
-      force.setContentDescription("权限选项：强制允许");
+      LinearLayout force = option(choices, "bolt", red(), UiText.get(R.string.ui_force_allow), red(), true);
+      force.setContentDescription(UiText.get(R.string.ui_permission_option_1_s, UiText.get(R.string.ui_force_allow)));
       ui.clickable(force, () -> {
         if (app.profile == profile && app.threadId.equals(thread) && generation == app.connectionGeneration()) app.forcedApprovals.disable();
         dismiss();
       });
     }
-    TextView note = ui.text("发送消息以更新权限", 12, ui.muted);
+    TextView note = ui.text(UiText.get(R.string.ui_send_a_message_to_update_permissions), 12, ui.muted);
     note.setPadding(ui.dp(16), ui.dp(12), ui.dp(8), 0);
     choices.addView(note);
-    dialog = ui.sheet("权限", choices, wide);
+    dialog = ui.sheet(UiText.get(R.string.ui_permissions_342), choices, wide);
     Runnable ownedListener = () -> {
       if (app.profile != profile || !app.threadId.equals(thread) || generation != app.connectionGeneration()
           || forcedAtOpen != app.forcedApprovals.active() || selectedAtOpen != app.permissionMode) dismiss();
@@ -100,7 +100,9 @@ final class PermissionPicker {
     option.addView(new IconView(activity, icon, iconColor), new LinearLayout.LayoutParams(ui.dp(44), ui.dp(52)));
     TextView label = ui.text(name, 15, textColor);
     label.setGravity(Gravity.CENTER_VERTICAL);
-    option.addView(label, new LinearLayout.LayoutParams(0, ui.dp(52), 1));
+    label.setMinHeight(ui.dp(52));
+    label.setPadding(0, ui.dp(8), 0, ui.dp(8));
+    option.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
     if (selected) option.addView(new IconView(activity, "check", textColor), new LinearLayout.LayoutParams(ui.dp(28), ui.dp(28)));
     choices.addView(option);
     return option;
@@ -112,12 +114,12 @@ final class PermissionPicker {
     Profile profile = app.profile;
     int generation = app.connectionGeneration();
     String thread = Json.object(request, "params").optString("threadId", app.threadId);
-    warning = new AlertDialog.Builder(activity).setTitle("全部允许(强制)").setMessage(WARNING)
-        .setNegativeButton("取消", null)
-        .setPositiveButton("继续", (ignored, which) -> {
+    warning = new AlertDialog.Builder(activity).setTitle(UiText.get(R.string.ui_allow_all_forced)).setMessage(UiText.get(R.string.ui_the_client_will_automatically_allow_all_approval_requests_until_t))
+        .setNegativeButton(UiText.get(R.string.ui_cancel), null)
+        .setPositiveButton(UiText.get(R.string.ui_continue), (ignored, which) -> {
           if (app.profile != profile || generation != app.connectionGeneration() || !app.connected) return;
           if (!app.forcedApprovals.canOffer(request)) return;
-          if (!app.forcedApprovals.enable(thread)) ui.toast("对话正在恢复或仅查看历史，未启用强制允许");
+          if (!app.forcedApprovals.enable(thread)) ui.toast(UiText.get(R.string.ui_the_conversation_is_recovering_or_read_only_force_allow_was_not_e));
         }).create();
     warning.show();
     ((AlertDialog) warning).getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(red());

@@ -39,14 +39,14 @@ final class ServiceTierOptions {
     return "";
   }
   static String label(String id, JSONObject model) {
-    if (id.isEmpty()) return "远端默认";
-    if (id.equals(STANDARD)) return "普通";
+    if (id.isEmpty()) return UiText.get(R.string.ui_remote_default);
+    if (id.equals(STANDARD)) return UiText.get(R.string.ui_standard);
     String supported = supportedId(model, id);
     for (JSONObject tier : tiers(model)) if (tier.optString("id").equals(supported)) {
       String name = tier.isNull("name") ? "" : tier.optString("name").trim();
       if (!name.isEmpty()) return name;
     }
-    if (isFast(id)) return "快速";
+    if (isFast(id)) return UiText.get(R.string.ui_fast);
     return id;
   }
   static String description(String id, JSONObject model) {

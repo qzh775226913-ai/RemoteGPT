@@ -12,7 +12,7 @@ import org.robolectric.*;
 import org.robolectric.annotation.*;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk=35, qualifiers="mdpi")
+@Config(sdk=35, qualifiers="zh-rCN-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class CopyFeedbackTest {
   private final Context context=RuntimeEnvironment.getApplication();
@@ -21,7 +21,7 @@ public class CopyFeedbackTest {
   @Test public void lightAndDarkCopyFeedbackIsCircularAndAligned() throws Exception {
     checkGeometry();
   }
-  @Test @Config(sdk=26, qualifiers="xhdpi") public void android8HighDensityUsesSameGeometry() throws Exception {
+  @Test @Config(sdk=26, qualifiers="zh-rCN-xhdpi") public void android8HighDensityUsesSameGeometry() throws Exception {
     checkGeometry();
   }
 

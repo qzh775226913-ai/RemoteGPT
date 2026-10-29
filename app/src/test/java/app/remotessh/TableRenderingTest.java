@@ -12,7 +12,7 @@ import org.junit.runner.RunWith;
 import org.robolectric.*;
 import org.robolectric.annotation.*;
 
-@RunWith(RobolectricTestRunner.class) @Config(sdk=35,qualifiers="w411dp-h891dp-xhdpi")
+@RunWith(RobolectricTestRunner.class) @Config(sdk=35,qualifiers="zh-rCN-w411dp-h891dp-xhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class TableRenderingTest {
   static final String WIDE="| 参数名称 | 建议数值 | 参数说明与适用范围 | 备注 |\n|:---|---:|:---:|---|\n| 桨叶数量 | 3 | 该列包含较长的中文说明，仍需保持整列宽度一致，不能挤到相邻列。 | 正常 |\n| 转速 | 1200 | 稳态条件 | 待确认 |";
@@ -121,7 +121,7 @@ public class TableRenderingTest {
     assertEquals(scroll.getWidth(),scroll.getChildAt(0).getWidth());scroll.scrollTo(1000,0);assertEquals(0,table.offset());
   }
   @Test public void lightConversationSurfacesAndTableScreenshot() throws Exception {conversation("light");}
-  @Test @Config(qualifiers="w411dp-h891dp-night-xhdpi") public void darkConversationTableScreenshot() throws Exception {conversation("dark");}
+  @Test @Config(qualifiers="zh-rCN-w411dp-h891dp-night-xhdpi") public void darkConversationTableScreenshot() throws Exception {conversation("dark");}
   private void conversation(String theme) throws Exception {
     org.robolectric.android.controller.ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup();
     try {

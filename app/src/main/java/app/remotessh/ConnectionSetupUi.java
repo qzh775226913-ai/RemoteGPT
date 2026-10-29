@@ -13,10 +13,10 @@ final class ConnectionSetupUi {
   static void continueWithoutPersistence(Activity activity, RemoteApp app) {
     Profile source = app.profile;
     if (source == null || app.connected || app.connecting) return;
-    new AlertDialog.Builder(activity).setTitle("关闭持久会话后重连")
-        .setMessage("关闭后会直接启动 Codex。断线后任务继续运行不保证，远端版本检查／更新和部分问答历史恢复仍需要 Python。不会自动安装任何软件。继续吗？")
-        .setNegativeButton("取消", null)
-        .setPositiveButton("关闭并重连", (dialog, which) -> {
+    new AlertDialog.Builder(activity).setTitle(UiText.get(R.string.ui_disable_persistence_and_reconnect))
+        .setMessage(UiText.get(R.string.ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect))
+        .setNegativeButton(UiText.get(R.string.ui_cancel), null)
+        .setPositiveButton(UiText.get(R.string.ui_disable_and_reconnect), (dialog, which) -> {
           if (app.profile != source || app.connected || app.connecting) return;
           Profile updated = Profile.from(source.json());
           updated.password = source.password; updated.privateKey = source.privateKey; updated.passphrase = source.passphrase;

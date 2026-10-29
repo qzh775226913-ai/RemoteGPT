@@ -26,7 +26,7 @@ final class ZoomImageView extends View {
   private final Runnable requestDetail=this::decodeDetail;
 
   ZoomImageView(Context context,ExecutorService worker,java.util.function.IntConsumer page) {
-    super(context);this.worker=worker;this.page=page;setContentDescription("原图预览");
+    super(context);this.worker=worker;this.page=page;setContentDescription(UiText.get(R.string.ui_full_image_preview));
     scaling=new ScaleGestureDetector(context,new ScaleGestureDetector.SimpleOnScaleGestureListener(){
       @Override public boolean onScaleBegin(ScaleGestureDetector detector){multiple=true;return true;}
       @Override public boolean onScale(ScaleGestureDetector detector){zoom(scale*detector.getScaleFactor(),detector.getFocusX(),detector.getFocusY());return true;}

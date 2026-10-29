@@ -18,7 +18,7 @@ import org.robolectric.annotation.*;
 import org.robolectric.shadows.ShadowDialog;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 35, qualifiers = "w411dp-h891dp-xhdpi")
+@Config(sdk = 35, qualifiers="zh-rCN-w411dp-h891dp-xhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class ForcedApprovalUiTest {
   private ActivityController<MainActivity> controller;
@@ -166,7 +166,7 @@ public class ForcedApprovalUiTest {
     assertFalse(warning.isShowing()); assertEquals(before, app.stateListeners.size());
   }
 
-  @Test @Config(sdk = 35, qualifiers = "w320dp-h640dp-xhdpi")
+  @Test @Config(sdk = 35, qualifiers="zh-rCN-w320dp-h640dp-xhdpi")
   public void narrowScreenKeepsAllApprovalButtonsReadable() throws Exception {
     AlertDialog approval = approval();
     capture(approval.getWindow().getDecorView(), "force-approval-narrow");
@@ -177,7 +177,7 @@ public class ForcedApprovalUiTest {
     }
   }
 
-  @Test @Config(sdk = 35, qualifiers = "w411dp-h891dp-night-xhdpi")
+  @Test @Config(sdk = 35, qualifiers="zh-rCN-w411dp-h891dp-night-xhdpi")
   public void darkThemeUsesRedBoltAndPreservesQuestions() throws Exception {
     AlertDialog warning = warning(approval());
     warning.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); idle();

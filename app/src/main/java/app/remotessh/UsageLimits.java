@@ -51,8 +51,8 @@ public final class UsageLimits {
     JSONObject bucket = buckets.get("codex");
     if (bucket == null && !buckets.isEmpty()) bucket = buckets.values().iterator().next();
     String windows = bucket == null ? "" : windows(bucket, false);
-    if (windows.isEmpty()) return loading ? "正在读取剩余用量…" : status;
-    return "剩余用量 · " + windows + (loading ? " · 刷新中" : "");
+    if (windows.isEmpty()) return loading ? UiText.get(R.string.ui_loading_remaining_usage) : UiPresentation.usageStatus(status);
+    return UiText.get(R.string.ui_remaining_usage_1_s, windows) + (loading ? UiText.get(R.string.ui_refreshing) : "");
   }
 
   public String details() {
@@ -62,10 +62,10 @@ public final class UsageLimits {
       if (result.length() > 0) result.append("\n\n");
       result.append(b.isNull("limitName") ? entry.getKey() : b.optString("limitName", entry.getKey()));
       String value = windows(b, true);
-      result.append("\n").append(value.isEmpty() ? "远端未提供额度窗口" : value);
+      result.append("\n").append(value.isEmpty() ? UiText.get(R.string.ui_no_usage_window_was_provided) : value);
     }
     if (!status.equals("远端未提供用量数据") || result.length() == 0)
-      result.append(result.length() == 0 ? "" : "\n\n").append(status);
+      result.append(result.length() == 0 ? "" : "\n\n").append(UiPresentation.usageStatus(status));
     return result.toString();
   }
 
@@ -77,12 +77,12 @@ public final class UsageLimits {
       double used = w.optDouble("usedPercent", Double.NaN);
       if (!Double.isFinite(used)) continue;
       long minutes = w.optLong("windowDurationMins", 0);
-      String label = minutes <= 0 ? (key.equals("primary") ? "主额度" : "次额度")
-          : minutes % 1440 == 0 ? (minutes / 1440) + "天"
-          : minutes % 60 == 0 ? (minutes / 60) + "小时" : minutes + "分钟";
-      String value = label + " " + Math.round(Math.max(0, Math.min(100, 100 - used))) + "%";
+      String label = minutes <= 0 ? (key.equals("primary") ? UiText.get(R.string.ui_primary_quota) : UiText.get(R.string.ui_secondary_quota))
+          : minutes % 1440 == 0 ? UiText.quantity(R.plurals.ui_days, (int) Math.min(Integer.MAX_VALUE, minutes / 1440))
+          : minutes % 60 == 0 ? UiText.quantity(R.plurals.ui_hours, (int) Math.min(Integer.MAX_VALUE, minutes / 60)) : UiText.quantity(R.plurals.ui_minutes, (int) Math.min(Integer.MAX_VALUE, minutes));
+      String value = UiText.get(R.string.ui_1_s_2_s, label, java.text.NumberFormat.getPercentInstance(UiText.locale()).format(Math.round(Math.max(0, Math.min(100, 100 - used))) / 100.0));
       long resets = w.optLong("resetsAt", 0);
-      if (detail && resets > 0) value += " · 重置 " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(new Date(resets * 1000));
+      if (detail && resets > 0) value = UiText.get(R.string.ui_1_s_resets_2_s, value, DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, UiText.locale()).format(new Date(resets * 1000)));
       values.add(value);
     }
     return String.join(detail ? "\n" : " · ", values);

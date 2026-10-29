@@ -13,7 +13,7 @@ import org.robolectric.annotation.*;
 
 /** Content-layout preview built from the actual notification payload; not an OEM screenshot. */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 35, qualifiers = "w411dp-h1200dp-xhdpi")
+@Config(sdk = 35, qualifiers="zh-rCN-w411dp-h1200dp-xhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class LiveStatusPreviewTest {
   private void label(RemoteApp app, LinearLayout root, String title, int size) {

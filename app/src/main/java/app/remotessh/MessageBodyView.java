@@ -135,14 +135,14 @@ final class MessageBodyView extends LinearLayout {
       box.setBackground(background); box.setPadding(dp(12),dp(4),dp(12),dp(12));
       LayoutParams bp=new LayoutParams(-1,-2); addView(box,bp);
       LinearLayout header=new LinearLayout(getContext()); header.setGravity(android.view.Gravity.CENTER_VERTICAL);
-      TextView label=text(block.language.isEmpty() ? "文本" : block.language,12,muted);
+      TextView label=text(block.language.isEmpty() ? UiText.get(R.string.ui_text) : block.language,12,muted);
       header.addView(label,new LayoutParams(0,-2,1));
-      TextView button=text("复制",13,fg); button.setGravity(android.view.Gravity.CENTER); button.setMinHeight(dp(48));
-      button.setPadding(dp(12),0,dp(12),0); button.setContentDescription("复制内容块 " + (++index));
+      TextView button=text(UiText.get(R.string.ui_copy),13,fg); button.setGravity(android.view.Gravity.CENTER); button.setMinHeight(dp(48));
+      button.setPadding(dp(12),0,dp(12),0); button.setContentDescription(UiText.get(R.string.ui_copy_content_block) + (++index));
       button.setEnabled(!block.text.isEmpty()); PressFeedback.apply(button,(fg & 0xffffff)>0x808080);
       button.setOnClickListener(v -> copy.accept(block.text)); header.addView(button); box.addView(header);
       TextView code=text(block.text,14,fg); code.setTypeface(Typeface.MONOSPACE); code.setTextIsSelectable(true);
-      code.setHorizontallyScrolling(true); code.setContentDescription("可复制内容块 " + index);
+      code.setHorizontallyScrolling(true); code.setContentDescription(UiText.get(R.string.ui_copyable_content_block) + index);
       HorizontalScrollView horizontal=new HorizontalScrollView(getContext()); horizontal.setFillViewport(true);
       horizontal.addView(code,new HorizontalScrollView.LayoutParams(-2,-2)); box.addView(horizontal,new LayoutParams(-1,-2));
     }

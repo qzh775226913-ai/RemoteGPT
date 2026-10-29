@@ -26,11 +26,11 @@ final class TableContentView extends LinearLayout {
   TableContentView(Context context,int fg,int muted,int panel,Consumer<String> open,Consumer<String> copy) {
     super(context);setOrientation(VERTICAL);this.fg=fg;this.muted=muted;this.panel=panel;this.open=open;this.copy=copy;
     LinearLayout toolbar=new LinearLayout(context);toolbar.setGravity(Gravity.CENTER_VERTICAL);
-    TextView label=new TextView(context);label.setText("表格");label.setTextSize(12);label.setTextColor(muted);
+    TextView label=new TextView(context);label.setText(UiText.get(R.string.ui_table));label.setTextSize(12);label.setTextColor(muted);
     toolbar.addView(label,new LayoutParams(0,-2,1));
-    TextView button=new TextView(context);button.setText("复制");button.setTextSize(13);button.setTextColor(fg);
+    TextView button=new TextView(context);button.setText(UiText.get(R.string.ui_copy));button.setTextSize(13);button.setTextColor(fg);
     button.setGravity(Gravity.CENTER);button.setMinHeight(dp(48));button.setPadding(dp(12),0,dp(12),0);
-    button.setContentDescription("复制表格");PressFeedback.apply(button,(fg&0xffffff)>0x808080);
+    button.setContentDescription(UiText.get(R.string.ui_copy_table));PressFeedback.apply(button,(fg&0xffffff)>0x808080);
     button.setOnClickListener(v->{if(copy!=null && data!=null)copy.accept(data.raw);});toolbar.addView(button);addView(toolbar);
     scroll=new GridScroll(context);scroll.setFillViewport(true);scroll.setHorizontalScrollBarEnabled(false);
     grid=new TableLayout(context);grid.setStretchAllColumns(true);grid.setShrinkAllColumns(false);

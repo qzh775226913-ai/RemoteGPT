@@ -28,10 +28,10 @@ final class QuestionForm extends LinearLayout {
   QuestionForm(Context context, JSONObject params, int fg, int muted, int panel) {
     super(context);setOrientation(VERTICAL);setPadding(dp(20),dp(8),dp(20),dp(16));
     TextView hint=label(params.has("callId")
-        ? "远端的异步问题已保留。点击发送后，答案会作为对话消息回传。"
+        ? UiText.get(R.string.ui_the_remote_asynchronous_question_has_been_saved_tap_send_to_retur)
         : params.optBoolean("isBlocking",true)
-        ? "等待你的回答后继续；选择选项或输入内容，再点发送。"
-        : "这是远端的非阻塞提问：等待回答期间，它可以继续独立工作。",muted);
+        ? UiText.get(R.string.ui_choose_an_option_or_enter_an_answer_then_tap_send_to_continue)
+        : UiText.get(R.string.ui_this_is_a_non_blocking_remote_question_the_task_can_continue_inde),muted);
     addView(hint);JSONArray questions=params.optJSONArray("questions");
     if (questions==null) return;
     for (int i=0;i<questions.length();i++) {
@@ -39,7 +39,7 @@ final class QuestionForm extends LinearLayout {
       Answer answer=new Answer();answer.id=q.optString("id");answer.secret=q.optBoolean("isSecret");answers.add(answer);
       TextView title=label(q.optString("question"),fg);title.setPadding(0,dp(20),0,dp(10));addView(title);
       answer.text=new EditText(context);answer.text.setTextSize(15);answer.text.setTextColor(fg);answer.text.setHintTextColor(muted);
-      answer.text.setHint("输入回答");answer.text.setContentDescription(q.optString("question"));
+      answer.text.setHint(UiText.get(R.string.ui_enter_your_answer));answer.text.setContentDescription(q.optString("question"));
       answer.text.setPadding(dp(14),dp(12),dp(14),dp(12));answer.text.setMinHeight(dp(48));answer.text.setBackground(background(panel));
       answer.text.setInputType(InputType.TYPE_CLASS_TEXT | (answer.secret ? InputType.TYPE_TEXT_VARIATION_PASSWORD : InputType.TYPE_TEXT_FLAG_MULTI_LINE));
       answer.text.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
@@ -57,7 +57,7 @@ final class QuestionForm extends LinearLayout {
           answer.labels.put(button.getId(),name);
         }
         if(q.optBoolean("isOther")) {
-          RadioButton other=new RadioButton(context);other.setId(View.generateViewId());other.setText("自己填写");other.setTextColor(fg);other.setMinHeight(dp(48));
+          RadioButton other=new RadioButton(context);other.setId(View.generateViewId());other.setText(UiText.get(R.string.ui_write_your_own_answer));other.setTextColor(fg);other.setMinHeight(dp(48));
           AppIcons.selection(other,fg,muted,true);
           answer.other=other.getId();answer.choices.addView(other);
         }

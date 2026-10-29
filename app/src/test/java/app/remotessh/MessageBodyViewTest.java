@@ -11,7 +11,7 @@ import org.robolectric.annotation.Config;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=35)
 public class MessageBodyViewTest {
   @Test @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
-  @Config(qualifiers="w411dp-h891dp-xhdpi")
+  @Config(qualifiers="zh-rCN-w411dp-h891dp-xhdpi")
   public void paragraphBreaksAreShortAndStableDuringStreaming() {
     MessageBodyView body=new MessageBodyView(RuntimeEnvironment.getApplication(),0xff000000,0xff444444,0xffeeeeee,v->{},v->{});
     String source="\n\n第一段。\n\n\n  \n第二段。\n\n第三段。\n\n";body.setSource(source);

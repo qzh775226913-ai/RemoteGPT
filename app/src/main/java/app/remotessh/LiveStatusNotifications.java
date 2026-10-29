@@ -83,7 +83,7 @@ public final class LiveStatusNotifications {
     active = false;
     completionTitle = app.threadTitle.replaceAll("\\s+", " ").trim();
     completionDetails = finalReply(app);
-    if (completionDetails.isEmpty()) completionDetails = "任务已完成";
+    // Empty completion payload is localized only when rendered.
     dismissed = false;
     lastSignature = "";
   }
@@ -109,18 +109,18 @@ public final class LiveStatusNotifications {
   }
 
   static String stage(RemoteApp app) {
-    if (app.replaying) return "同步中";
-    if (!app.approvals.isEmpty()) return isApproval(app.approvals.get(0)) ? "待审批" : "待回答";
-    if (app.state.startsWith("正在停止")) return "停止中";
+    if (app.replaying) return UiText.get(R.string.ui_synchronizing);
+    if (!app.approvals.isEmpty()) return isApproval(app.approvals.get(0)) ? UiText.get(R.string.ui_awaiting_approval_367) : UiText.get(R.string.ui_awaiting_answer_368);
+    if (app.state.startsWith("正在停止")) return UiText.get(R.string.ui_stopping_369);
     ChatItem item = latest(app);
     if (item != null) {
-      if (item.type.equals("reasoning")) return "思考中";
-      if (item.type.equals("commandExecution") || item.type.equals("mcpToolCall")) return "执行中";
-      if (item.type.equals("fileChange")) return "修改中";
-      if (item.type.equals("agentMessage")) return "回复中";
-      if (item.type.equals("webSearch")) return "搜索中";
+      if (item.type.equals("reasoning")) return UiText.get(R.string.ui_thinking);
+      if (item.type.equals("commandExecution") || item.type.equals("mcpToolCall")) return UiText.get(R.string.ui_executing);
+      if (item.type.equals("fileChange")) return UiText.get(R.string.ui_editing);
+      if (item.type.equals("agentMessage")) return UiText.get(R.string.ui_responding);
+      if (item.type.equals("webSearch")) return UiText.get(R.string.ui_searching);
     }
-    return "运行中";
+    return UiText.get(R.string.ui_running);
   }
 
   static String title(RemoteApp app) {
@@ -135,7 +135,7 @@ public final class LiveStatusNotifications {
   }
 
   static String details(RemoteApp app) {
-    if (app.replaying) return "正在恢复断线期间的消息";
+    if (app.replaying) return UiText.get(R.string.ui_restoring_messages_received_while_disconnected);
     if (!app.approvals.isEmpty()) {
       JSONObject request = app.approvals.get(0);
       JSONObject p = Json.object(request, "params");
@@ -149,20 +149,20 @@ public final class LiveStatusNotifications {
             text.append(q.optString("question", q.optString("header")));
           }
         }
-        return text.length() == 0 ? "需要补充信息，请填写后继续。" : shorten(text.toString(), 900);
+        return text.length() == 0 ? UiText.get(R.string.ui_additional_information_is_required_answer_to_continue) : shorten(text.toString(), 900);
       }
-      String command = shorten(p.optString("command", p.optString("grantRoot", "文件修改")), 500);
+      String command = shorten(p.optString("command", p.optString("grantRoot", UiText.get(R.string.ui_file_changes))), 500);
       String reason = shorten(p.optString("reason"), 250);
       String cwd = shorten(p.optString("cwd"), 140);
       return (reason.isEmpty() ? "" : reason + "\n\n") + command
-          + (cwd.isEmpty() ? "" : "\n目录：" + cwd);
+          + (cwd.isEmpty() ? "" : UiText.get(R.string.ui_directory) + cwd);
 
     }
     ChatItem item = latest(app);
-    if (item == null) return "已收到消息，等待远端最新进展…";
-    if (item.type.equals("reasoning")) return excerpt(item.detail.isEmpty() ? "远端正在思考…" : item.detail, 600, 8);
+    if (item == null) return UiText.get(R.string.ui_message_received_waiting_for_the_next_remote_update);
+    if (item.type.equals("reasoning")) return excerpt(item.detail.isEmpty() ? UiText.get(R.string.ui_the_remote_task_is_thinking) : item.detail, 600, 8);
     if (item.prose()) return excerpt(item.text, 600, 8);
-    return shorten(item.text, 180) + (item.detail.isEmpty() ? "" : "\n\n" + excerpt(item.detail, 480, 6));
+    return shorten(UiPresentation.itemTitle(item), 180) + (item.detail.isEmpty() ? "" : "\n\n" + excerpt(item.detail, 480, 6));
   }
 
   // Bound both characters and lines so terminal output uses the expanded area
@@ -207,7 +207,7 @@ public final class LiveStatusNotifications {
     NotificationManager manager = app.getSystemService(NotificationManager.class);
     boolean enabled = app.getSharedPreferences("background", Context.MODE_PRIVATE).getBoolean("liveStatus", true);
     if ((!active && !completed) || !enabled) { clear(); return; }
-    manager.createNotificationChannel(new NotificationChannel(CHANNEL, "流体云 · 任务与审批", NotificationManager.IMPORTANCE_DEFAULT));
+    manager.createNotificationChannel(new NotificationChannel(CHANNEL, UiText.get(R.string.ui_live_updates_tasks_and_approvals), NotificationManager.IMPORTANCE_DEFAULT));
     JSONObject request = completed || app.approvals.isEmpty() || app.replaying ? null : app.approvals.get(0);
     String token = request == null ? "" : app.notificationApprovalToken(request);
     boolean newRequest = request != null && !alerted.contains(token);
@@ -215,14 +215,14 @@ public final class LiveStatusNotifications {
     if (dismissed) { clear(); return; }
     String channel = request == null ? CHANNEL : ATTENTION_CHANNEL;
     manager.createNotificationChannel(new NotificationChannel(ATTENTION_CHANNEL,
-        "流体云 · 审批与询问提醒", NotificationManager.IMPORTANCE_HIGH));
+        UiText.get(R.string.ui_live_updates_approval_and_question_alerts), NotificationManager.IMPORTANCE_HIGH));
     boolean answering = request != null && app.isAnswering(request);
-    String stage = completed ? "已完成" : answering ? "提交中" : stage(app);
-    String details = completed ? completionDetails : preview(app);
+    String stage = completed ? UiText.get(R.string.ui_completed) : answering ? UiText.get(R.string.ui_submitting) : stage(app);
+    String details = completed ? (completionDetails.isEmpty() ? UiText.get(R.string.ui_task_completed) : completionDetails) : preview(app);
     String shownTitle = completed
-        ? (completionTitle.isEmpty() ? "已完成" : "已完成 · " + shorten(completionTitle, 6))
+        ? (completionTitle.isEmpty() ? UiText.get(R.string.ui_completed) : UiText.get(R.string.ui_completed_385) + shorten(completionTitle, 6))
         : title(app);
-    String signature = runToken + stage + details + token + shownTitle + answering + completed;
+    String signature = UiText.locale().toLanguageTag() + runToken + stage + details + token + shownTitle + answering + completed;
     if (signature.equals(lastSignature)) return;
     lastSignature = signature;
     Intent open = app.conversationIntent(MainActivity.class, app.threadId)
@@ -239,14 +239,14 @@ public final class LiveStatusNotifications {
         .setContentIntent(content).setDeleteIntent(action(runToken, "hide")).addExtras(extras);
     if (Build.VERSION.SDK_INT >= 36) builder.setShortCriticalText(stage);
     if (request != null && !answering && isApproval(request)) {
-      Notification.Action.Builder allow = new Notification.Action.Builder(null, "允许一次", action(token, "accept"));
-      Notification.Action.Builder decline = new Notification.Action.Builder(null, "拒绝", action(token, "decline"));
+      Notification.Action.Builder allow = new Notification.Action.Builder(null, UiText.get(R.string.ui_allow_once), action(token, "accept"));
+      Notification.Action.Builder decline = new Notification.Action.Builder(null, UiText.get(R.string.ui_deny), action(token, "decline"));
       if (Build.VERSION.SDK_INT >= 31) { allow.setAuthenticationRequired(true); decline.setAuthenticationRequired(true); }
       builder.addAction(allow.build()).addAction(decline.build());
     } else if (request != null && !answering) {
-      builder.addAction(new Notification.Action.Builder(null, "填写信息", content).build());
+      builder.addAction(new Notification.Action.Builder(null, UiText.get(R.string.ui_answer_question), content).build());
     } else if (completed) {
-      builder.addAction(new Notification.Action.Builder(null, "知道了", action(runToken, "acknowledge")).build());
+      builder.addAction(new Notification.Action.Builder(null, UiText.get(R.string.ui_got_it), action(runToken, "acknowledge")).build());
     }
     // A channel change requires reposting; ordinary deltas only update the same card.
     if (!postedChannel.isEmpty() && !postedChannel.equals(channel)) manager.cancel(notificationId);

@@ -57,41 +57,41 @@ final class ProfileEditor {
     form.setPadding(ui.dp(16), 0, ui.dp(16), ui.dp(16));
     ScrollView sc = new ScrollView(activity);
     sc.addView(form);
-    EditText name = ui.field(form, "连接名称", draft.name, "我的电脑", false),
-        host = ui.field(form, "主机", draft.host, "192.168.1.10", false),
-        port = ui.field(form, "端口", String.valueOf(draft.port), "22", false);
+    EditText name = ui.field(form, UiText.get(R.string.ui_connection_name), draft.name, UiText.get(R.string.ui_my_computer), false),
+        host = ui.field(form, UiText.get(R.string.ui_host), draft.host, "192.168.1.10", false),
+        port = ui.field(form, UiText.get(R.string.ui_port), String.valueOf(draft.port), "22", false);
     port.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-    EditText user = ui.field(form, "用户名", draft.user, "用户名", false);
+    EditText user = ui.field(form, UiText.get(R.string.ui_username), draft.user, UiText.get(R.string.ui_username), false);
     RadioGroup auth = new RadioGroup(activity);
     auth.setOrientation(LinearLayout.VERTICAL);
     auth.setPadding(0, ui.dp(12), 0, ui.dp(4));
     RadioButton passwordAuth = new RadioButton(activity);
     AppIcons.selection(passwordAuth,ui.fg,ui.muted,true);
     passwordAuth.setId(R.id.auth_password);
-    passwordAuth.setText("密码登录");
+    passwordAuth.setText(UiText.get(R.string.ui_password_authentication));
     passwordAuth.setTextColor(ui.fg);
     RadioButton keyAuth = new RadioButton(activity);
     AppIcons.selection(keyAuth,ui.fg,ui.muted,true);
     keyAuth.setId(R.id.auth_key);
-    keyAuth.setText("私钥登录");
+    keyAuth.setText(UiText.get(R.string.ui_private_key_authentication));
     keyAuth.setTextColor(ui.fg);
     auth.addView(passwordAuth);
     auth.addView(keyAuth);
     RadioButton tailscaleAuth = new RadioButton(activity);
     AppIcons.selection(tailscaleAuth,ui.fg,ui.muted,true);
     tailscaleAuth.setId(R.id.auth_tailscale);
-    tailscaleAuth.setText("Tailscale SSH（免密码）");
+    tailscaleAuth.setText(UiText.get(R.string.ui_tailscale_ssh_passwordless));
     tailscaleAuth.setTextColor(ui.fg);
     auth.addView(tailscaleAuth);
     form.addView(auth);
-    TextView networkHelp = ui.text("Tailscale：先在手机 Tailscale App 中连接同一网络，主机填 100.x 地址或完整 MagicDNS 名称。普通 SSH 仍选密码/私钥；仅启用 Tailscale SSH 的主机选免密码。", 13, ui.muted);
+    TextView networkHelp = ui.text(UiText.get(R.string.ui_tailscale_connect_your_phone_to_the_same_network_in_the_tailscale), 13, ui.muted);
     form.addView(networkHelp);
     LinearLayout passwordSection = ui.column();
     form.addView(passwordSection);
-    EditText password = ui.field(passwordSection, "密码", draft.password, "SSH 登录密码", true);
+    EditText password = ui.field(passwordSection, UiText.get(R.string.ui_password), draft.password, UiText.get(R.string.ui_ssh_login_password), true);
     LinearLayout keySection = ui.column();
     form.addView(keySection);
-    EditText key = ui.field(keySection, "私钥", draft.privateKey, "粘贴 PEM / OpenSSH 私钥", true);
+    EditText key = ui.field(keySection, UiText.get(R.string.ui_private_key), draft.privateKey, UiText.get(R.string.ui_paste_pem_openssh_private_key), true);
     key.setInputType(
         android.text.InputType.TYPE_CLASS_TEXT
             | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -101,7 +101,7 @@ final class ProfileEditor {
     keyEditor = key;
     keySection.addView(
         ui.action(
-            "从文件导入私钥",
+            UiText.get(R.string.ui_import_private_key_from_file),
             () -> {
               Intent i =
                   new Intent(Intent.ACTION_OPEN_DOCUMENT)
@@ -109,14 +109,14 @@ final class ProfileEditor {
                       .addCategory(Intent.CATEGORY_OPENABLE);
               activity.startActivityForResult(i, REQUEST_KEY);
             }));
-    EditText passphrase = ui.field(keySection, "私钥口令", draft.passphrase, "可选", true);
+    EditText passphrase = ui.field(keySection, UiText.get(R.string.ui_key_passphrase), draft.passphrase, UiText.get(R.string.ui_optional), true);
     auth.setOnCheckedChangeListener(
         (group, checked) -> {
           passwordSection.setVisibility(checked == R.id.auth_password ? View.VISIBLE : View.GONE);
           keySection.setVisibility(checked == R.id.auth_key ? View.VISIBLE : View.GONE);
         });
     auth.check(draft.tailscaleSsh ? R.id.auth_tailscale : draft.privateKey.isEmpty() ? R.id.auth_password : R.id.auth_key);
-    TextView advanced = ui.action("项目与启动设置 ⌄", () -> {});
+    TextView advanced = ui.action(UiText.get(R.string.ui_project_and_startup_settings), () -> {});
     advanced.setText(AppIcons.label(activity, advanced.getText(), null, "chevronDown", ui.fg, ui.dp(18)));
     LinearLayout.LayoutParams advancedLayout = new LinearLayout.LayoutParams(-1, -2);
     advancedLayout.topMargin = ui.dp(12);
@@ -128,20 +128,20 @@ final class ProfileEditor {
         advanced,
         () ->
             extra.setVisibility(extra.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
-    EditText cwd = ui.field(extra, "远端项目目录", draft.cwd, "/home/me/project（可选）", false),
-        command = ui.field(extra, "远端启动命令", draft.command, "codex app-server", false);
+    EditText cwd = ui.field(extra, UiText.get(R.string.ui_remote_project_directory), draft.cwd, UiText.get(R.string.ui_home_me_project_optional), false),
+        command = ui.field(extra, UiText.get(R.string.ui_remote_startup_command), draft.command, "codex app-server", false);
     CheckBox persistent = new CheckBox(activity);
     AppIcons.selection(persistent,ui.fg,ui.muted,false);
-    persistent.setText("远端持久会话（需 Python 3，断线后继续运行）");
+    persistent.setText(UiText.get(R.string.ui_persistent_remote_sessions_requires_python_3_continue_after_disco));
     persistent.setTextColor(ui.fg);
     persistent.setChecked(draft.persistent);
     extra.addView(persistent);
-    TextView note = ui.text("持久模式会在远端 ~/.remote-gpt 下安装会话托管程序。启动命令需提供 Codex App Server 兼容的标准输入 / 输出协议。远端需预先完成安装和登录。", 12, ui.muted);
+    TextView note = ui.text(UiText.get(R.string.ui_persistent_mode_installs_a_session_manager_in_remote_gpt_on_the_h), 12, ui.muted);
     note.setPadding(ui.dp(4), ui.dp(10), ui.dp(4), ui.dp(10));
     extra.addView(note);
     CheckBox remember = new CheckBox(activity);
     AppIcons.selection(remember,ui.fg,ui.muted,false);
-    remember.setText("在此设备加密保存凭据");
+    remember.setText(UiText.get(R.string.ui_save_encrypted_credentials_on_this_device));
     remember.setTextColor(ui.fg);
     remember.setTextSize(13);
     remember.setChecked(draft.remember);
@@ -149,7 +149,7 @@ final class ProfileEditor {
     TextView validation = ui.text("", 13, Color.rgb(181, 63, 49));
     LinearLayout footer = ui.column();
     footer.addView(validation);
-    Dialog dialog = ui.profileWindow(fresh ? "添加 SSH 连接" : "编辑 SSH 连接", sc, footer, wide);
+    Dialog dialog = ui.profileWindow(fresh ? UiText.get(R.string.ui_add_ssh_connection_211) : UiText.get(R.string.ui_edit_ssh_connection), sc, footer, wide);
     this.dialog = dialog;
     dialog.setOnDismissListener(d -> keyEditor = null);
     java.util.function.Consumer<Boolean> persist =
@@ -168,10 +168,11 @@ final class ProfileEditor {
             draft.command = command.getText().toString().trim();
             draft.persistent = persistent.isChecked();
             draft.remember = remember.isChecked();
-            draft.validate();
+            try { draft.validate(); }
+            catch (IllegalArgumentException invalid) { validation.setText(UiPresentation.profileValidation(invalid)); return; }
             if (shouldConnect && !draft.tailscaleSsh
                 && (useKey ? draft.privateKey.trim().isEmpty() : draft.password.isEmpty()))
-              throw new IllegalArgumentException(useKey ? "请先导入或粘贴私钥" : "请输入 SSH 登录密码");
+              throw new IllegalArgumentException(useKey ? UiText.get(R.string.ui_import_or_paste_a_private_key_first) : UiText.get(R.string.ui_enter_the_ssh_login_password));
             if (!app.storeProfile(draft)) {
               validation.setText(app.error);
               return;
@@ -180,17 +181,17 @@ final class ProfileEditor {
             if (shouldConnect) actions.connect(draft);
             else {
               app.changed();
-              ui.toast("连接已保存");
+              ui.toast(UiText.get(R.string.ui_connection_saved));
             }
           } catch (Exception ex) {
-            validation.setText(ex instanceof NumberFormatException ? "请输入有效端口" : ex.getMessage());
+            validation.setText(ex instanceof NumberFormatException ? UiText.get(R.string.ui_enter_a_valid_port) : ex.getMessage());
           }
         };
     LinearLayout buttons = ui.row();
     footer.addView(buttons);
-    TextView save = ui.action("保存", () -> persist.accept(false));
+    TextView save = ui.action(UiText.get(R.string.ui_save), () -> persist.accept(false));
     buttons.addView(save, new LinearLayout.LayoutParams(0, -2, 1));
-    TextView connect = ui.action("保存并连接", () -> persist.accept(true));
+    TextView connect = ui.action(UiText.get(R.string.ui_save_and_connect), () -> persist.accept(true));
     connect.setTextColor(ui.bg);
     connect.setBackground(ui.rounded(ui.fg, 24));
     LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(0, -2, 1);
@@ -199,23 +200,23 @@ final class ProfileEditor {
     if (!fresh) {
       form.addView(
           ui.action(
-              "查看已信任的主机指纹",
+              UiText.get(R.string.ui_view_trusted_host_fingerprint),
               () -> {
                 String target = original.host + ":" + original.port;
                 String pin = app.vault.getPin(target);
                 new AlertDialog.Builder(activity)
-                    .setTitle("主机指纹")
-                    .setMessage(target + "\n\n" + (pin == null ? "尚未信任此主机" : pin))
-                    .setPositiveButton("关闭", null)
+                    .setTitle(UiText.get(R.string.ui_host_fingerprint_220))
+                    .setMessage(target + "\n\n" + (pin == null ? UiText.get(R.string.ui_this_host_is_not_trusted_yet) : pin))
+                    .setPositiveButton(UiText.get(R.string.ui_close), null)
                     .setNeutralButton(
-                        pin == null ? null : "重置主机信任",
+                        pin == null ? null : UiText.get(R.string.ui_reset_host_trust),
                         (d, w) ->
                             new AlertDialog.Builder(activity)
-                                .setTitle("重置此主机的信任？")
-                                .setMessage("仅在确认服务器更换了 SSH 主机密钥时重置。下次连接必须重新核对指纹。")
-                                .setNegativeButton("取消", null)
+                                .setTitle(UiText.get(R.string.ui_reset_trust_for_this_host))
+                                .setMessage(UiText.get(R.string.ui_reset_only_after_confirming_the_server_s_ssh_host_key_has_changed))
+                                .setNegativeButton(UiText.get(R.string.ui_cancel), null)
                                 .setPositiveButton(
-                                    "重置",
+                                    UiText.get(R.string.ui_reset),
                                     (confirm, which) -> {
                                       if (app.profile != null
                                           && (app.profile.host + ":" + app.profile.port)
@@ -224,7 +225,7 @@ final class ProfileEditor {
                                         app.vault.pins.remove(target);
                                         app.save();
                                       }
-                                      ui.toast("下次连接将重新核对指纹");
+                                      ui.toast(UiText.get(R.string.ui_the_fingerprint_will_be_checked_on_the_next_connection));
                                     })
                                 .show())
                     .show();
@@ -233,14 +234,14 @@ final class ProfileEditor {
       removeLayout.topMargin = ui.dp(12);
       form.addView(
           ui.action(
-              "移除此连接",
+              UiText.get(R.string.ui_remove_this_connection),
               () ->
                   new AlertDialog.Builder(activity)
-                      .setTitle("移除连接？")
-                      .setMessage("仅删除此设备保存的连接和凭据，远端文件不受影响。")
-                      .setNegativeButton("取消", null)
+                      .setTitle(UiText.get(R.string.ui_remove_connection))
+                      .setMessage(UiText.get(R.string.ui_only_the_connection_and_credentials_saved_on_this_device_are_remo))
+                      .setNegativeButton(UiText.get(R.string.ui_cancel), null)
                       .setPositiveButton(
-                          "移除",
+                          UiText.get(R.string.ui_remove),
                           (d, w) -> {
                             if (app.profile != null && app.profile.id.equals(original.id))
                               app.disconnect();

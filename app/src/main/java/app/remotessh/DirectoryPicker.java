@@ -21,14 +21,14 @@ final class DirectoryPicker {
     this.ui = new RemoteScreens(activity, dark);
     this.selected = selected;
     LinearLayout root = ui.column();
-    root.setContentDescription("远端目录选择器");
+    root.setContentDescription(UiText.get(R.string.ui_remote_directory_picker));
     dialog = ui.window(root);
     LinearLayout header = ui.row();
     header.setPadding(ui.dp(16), ui.dp(12), ui.dp(16), ui.dp(12));
     header.addView(
-        ui.icon("back", "返回", dialog::dismiss),
+        ui.icon("back", UiText.get(R.string.ui_back), dialog::dismiss),
         new LinearLayout.LayoutParams(ui.dp(48), ui.dp(48)));
-    ui.heading(header, "选择项目路径");
+    ui.heading(header, UiText.get(R.string.ui_choose_project_path));
     root.addView(header);
     pathLabel = ui.text("", 14);
     pathLabel.setPadding(ui.dp(20), ui.dp(12), ui.dp(20), ui.dp(12));
@@ -36,14 +36,14 @@ final class DirectoryPicker {
     root.addView(pathLabel);
     LinearLayout toolbar = ui.row();
     toolbar.setPadding(ui.dp(16), 0, ui.dp(16), ui.dp(12));
-    up = button("上一级", false, () -> load(RemoteDirectory.parent(directory.path)));
+    up = button(UiText.get(R.string.ui_parent_directory), false, () -> load(RemoteDirectory.parent(directory.path)));
     LinearLayout.LayoutParams upParams = new LinearLayout.LayoutParams(0, -2, 1);
     upParams.setMarginEnd(ui.dp(12));
     toolbar.addView(up, upParams);
     toolbar.addView(
-        button("输入路径", false, this::enterPath), new LinearLayout.LayoutParams(0, -2, 1));
+        button(UiText.get(R.string.ui_enter_path), false, this::enterPath), new LinearLayout.LayoutParams(0, -2, 1));
     root.addView(toolbar);
-    status = ui.text("正在读取目录…", 14);
+    status = ui.text(UiText.get(R.string.ui_loading_directory), 14);
     status.setPadding(ui.dp(20), ui.dp(8), ui.dp(20), ui.dp(8));
     root.addView(status);
     ScrollView scroll = new ScrollView(activity);
@@ -52,13 +52,13 @@ final class DirectoryPicker {
     root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
     LinearLayout footer = ui.row();
     footer.setPadding(ui.dp(20), ui.dp(12), ui.dp(20), ui.dp(20));
-    create = button("新建项目", false, this::newProject);
+    create = button(UiText.get(R.string.ui_create_project), false, this::newProject);
     LinearLayout.LayoutParams createParams = new LinearLayout.LayoutParams(0, -2, 1);
     createParams.setMarginEnd(ui.dp(12));
     footer.addView(create, createParams);
     choose =
         button(
-            "使用此文件夹",
+            UiText.get(R.string.ui_use_this_folder),
             true,
             () -> {
               if (directory != null) {
@@ -91,7 +91,7 @@ final class DirectoryPicker {
   private void loading() {
     list.removeAllViews();
     clearStatusAction();
-    status.setText("正在读取目录…");
+    status.setText(UiText.get(R.string.ui_loading_directory));
     status.setVisibility(View.VISIBLE);
     choose.setEnabled(false);
     choose.setAlpha(.4f);
@@ -110,17 +110,17 @@ final class DirectoryPicker {
         },
         error -> {
           if (token != request || !dialog.isShowing()) return;
-          status.setText("无法读取此路径，点按查看原因");
+          status.setText(UiText.get(R.string.ui_cannot_read_this_path_tap_for_details));
           ui.clickable(
               status,
               () ->
                   new AlertDialog.Builder(ui.activity)
-                      .setTitle("浏览目录失败")
+                      .setTitle(UiText.get(R.string.ui_cannot_browse_directory))
                       .setMessage(error)
-                      .setPositiveButton("关闭", null)
+                      .setPositiveButton(UiText.get(R.string.ui_close), null)
                       .show());
-          list.addView(ui.button("返回主目录", false, () -> load("")));
-          list.addView(ui.button("重试", false, () -> load(path)));
+          list.addView(ui.button(UiText.get(R.string.ui_go_to_home_directory), false, () -> load("")));
+          list.addView(ui.button(UiText.get(R.string.ui_retry), false, () -> load(path)));
         });
   }
 
@@ -131,8 +131,8 @@ final class DirectoryPicker {
     clearStatusAction();
     status.setText(
         result.truncated
-            ? "仅显示前 1000 个目录，可输入完整路径直达"
-            : result.directories.isEmpty() ? "此文件夹中没有子目录" : "");
+            ? UiText.get(R.string.ui_only_the_first_1_000_directories_are_shown_enter_a_full_path_to_g)
+            : result.directories.isEmpty() ? UiText.get(R.string.ui_this_folder_has_no_subdirectories) : "");
     status.setVisibility(status.getText().length() == 0 ? View.GONE : View.VISIBLE);
     choose.setEnabled(true);
     choose.setAlpha(1);
@@ -162,12 +162,12 @@ final class DirectoryPicker {
     EditText input = new EditText(ui.activity);
     input.setSingleLine(true);
     input.setText(directory == null ? "/" : directory.path);
-    input.setContentDescription("远端绝对路径");
+    input.setContentDescription(UiText.get(R.string.ui_absolute_remote_path));
     new AlertDialog.Builder(ui.activity)
-        .setTitle("输入远端路径")
+        .setTitle(UiText.get(R.string.ui_enter_remote_path))
         .setView(input)
-        .setNegativeButton("取消", null)
-        .setPositiveButton("打开", (d, w) -> load(input.getText().toString().trim()))
+        .setNegativeButton(UiText.get(R.string.ui_cancel), null)
+        .setPositiveButton(UiText.get(R.string.ui_open), (d, w) -> load(input.getText().toString().trim()))
         .show();
   }
 
@@ -175,16 +175,16 @@ final class DirectoryPicker {
     if (directory == null) return;
     EditText name = new EditText(ui.activity);
     name.setSingleLine(true);
-    name.setHint("项目名称");
-    name.setContentDescription("新项目名称");
+    name.setHint(UiText.get(R.string.ui_project_name));
+    name.setContentDescription(UiText.get(R.string.ui_new_project_name));
     String parent = directory.path;
     AlertDialog prompt =
         new AlertDialog.Builder(ui.activity)
-            .setTitle("新建项目")
-            .setMessage("在以下目录新建文件夹：\n" + parent)
+            .setTitle(UiText.get(R.string.ui_create_project))
+            .setMessage(UiText.get(R.string.ui_create_a_folder_in) + parent)
             .setView(name)
-            .setNegativeButton("取消", null)
-            .setPositiveButton("创建", null)
+            .setNegativeButton(UiText.get(R.string.ui_cancel), null)
+            .setPositiveButton(UiText.get(R.string.ui_create), null)
             .create();
     prompt.setOnShowListener(
         d ->
@@ -196,7 +196,7 @@ final class DirectoryPicker {
                       try {
                         RemoteDirectory.child(parent, value);
                       } catch (Exception e) {
-                        name.setError(e.getMessage());
+                        name.setError(e instanceof IllegalArgumentException ? UiText.get(R.string.ui_invalid_project_name) : e.getMessage());
                         return;
                       }
                       prompt.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);

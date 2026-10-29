@@ -18,7 +18,7 @@ final class ModelOptions {
     return values;
   }
   static String displayName(JSONArray models, String id) {
-    if (id.isEmpty()) return "默认模型";
+    if (id.isEmpty()) return UiText.get(R.string.ui_default_model);
     for (int i = 0; i < models.length(); i++) {
       JSONObject model = models.optJSONObject(i);
       if (model != null && id(model).equals(id) && !model.isNull("displayName")
@@ -28,15 +28,15 @@ final class ModelOptions {
   }
   static String label(String effort) {
     switch (effort) {
-      case "": return "默认";
-      case "none": return "None";
-      case "minimal": return "Minimal";
-      case "low": return "Low";
-      case "medium": return "Medium";
-      case "high": return "High";
-      case "xhigh": return "Extra High";
-      case "max": return "Max";
-      case "ultra": return "Ultra";
+      case "": return UiText.get(R.string.ui_default);
+      case "none": return UiText.get(R.string.ui_none);
+      case "minimal": return UiText.get(R.string.ui_minimal);
+      case "low": return UiText.get(R.string.ui_low);
+      case "medium": return UiText.get(R.string.ui_medium_414);
+      case "high": return UiText.get(R.string.ui_high);
+      case "xhigh": return UiText.get(R.string.ui_extra_high);
+      case "max": return UiText.get(R.string.ui_maximum);
+      case "ultra": return UiText.get(R.string.ui_ultra);
       default: return effort;
     }
   }

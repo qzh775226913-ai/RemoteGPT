@@ -38,7 +38,7 @@ public final class ConnectionService extends Service {
         nm.cancel(id); bubbleSignatures.remove(thread); releaseShortcut(thread); return;
       }
       String summary = LiveStatusNotifications.preview(app);
-      String signature = summary + app.threadTitle + LiveStatusNotifications.stage(app);
+      String signature = UiText.locale().toLanguageTag() + summary + app.threadTitle + LiveStatusNotifications.stage(app);
       if (signature.equals(bubbleSignatures.get(thread))) return;
       bubbleSignatures.put(thread, signature);
       postBubble(nm, id, summary);
@@ -56,24 +56,25 @@ public final class ConnectionService extends Service {
   };
 
   static String summary(RemoteApp app) {
-    if (!app.connected) return app.state;
-    if (app.recoveryInProgress()) return app.recoveryStatus();
+    if (!app.connected) return UiPresentation.status(app.state);
+    if (app.recoveryInProgress()) return UiPresentation.status(app.recoveryStatus());
     if (!app.approvals.isEmpty()) {
       String detail = LiveStatusNotifications.details(app);
       detail = detail.replaceAll("\\s+", " ");
       if (detail.length() > 180) detail = detail.substring(0, 180) + "…";
-      return (LiveStatusNotifications.isApproval(app.approvals.get(0)) ? "等待审批 · " : "等待回答 · ") + detail;
+      return (LiveStatusNotifications.isApproval(app.approvals.get(0)) ? UiText.get(R.string.ui_awaiting_approval) : UiText.get(R.string.ui_awaiting_answer)) + detail;
     }
-    return app.currentThreadRunning() ? "远端正在运行" : "已连接 · 等待消息";
+    return app.currentThreadRunning() ? UiText.get(R.string.ui_remote_task_is_running) : UiText.get(R.string.ui_connected_waiting_for_a_message);
   }
 
   private void updateNotification() {
     refreshPending = false;
     if (app == null) return;
+    renameChannels();
     app.liveStatus.update();
     updateBubbles();
     String summary = summary(app);
-    String signature = summary + "|" + app.threadId + "|" + app.threadTitle;
+    String signature = UiText.locale().toLanguageTag() + summary + "|" + app.threadId + "|" + app.threadTitle;
     if (signature.equals(lastSummary)) return;
     lastSummary = signature;
     NotificationManager nm = getSystemService(NotificationManager.class);
@@ -86,8 +87,18 @@ public final class ConnectionService extends Service {
         .setVisibility(Notification.VISIBILITY_PRIVATE);
     PendingIntent stop = PendingIntent.getService(this, 1,
         new Intent(this, ConnectionService.class).setAction("disconnect"), PendingIntent.FLAG_IMMUTABLE);
-    status.addAction(new Notification.Action.Builder(null, "断开连接", stop).build());
+    status.addAction(new Notification.Action.Builder(null, UiText.get(R.string.ui_disconnect), stop).build());
     nm.notify(1, status.build());
+  }
+
+  private void renameChannels() {
+    NotificationManager manager = getSystemService(NotificationManager.class);
+    String[] ids = {"ssh", "conversation"};
+    String[] names = {UiText.get(R.string.ui_ssh_connection), UiText.get(R.string.ui_task_status_and_approval_bubbles)};
+    for (int i = 0; i < ids.length; i++) {
+      NotificationChannel channel = manager.getNotificationChannel(ids[i]);
+      if (channel != null) { channel.setName(names[i]); manager.createNotificationChannel(channel); }
+    }
   }
 
   private void postBubble(NotificationManager nm, int id, String summary) {
@@ -116,7 +127,7 @@ public final class ConnectionService extends Service {
       conversation.setShortcutId(shortcutId);
       PendingIntent bubbleIntent = PendingIntent.getActivity(this, id, bubble,
           PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
-      conversation.setStyle(new Notification.MessagingStyle(new Person.Builder().setName("你").build())
+      conversation.setStyle(new Notification.MessagingStyle(new Person.Builder().setName(UiText.get(R.string.ui_you)).build())
               .setConversationTitle(title).addMessage(summary, System.currentTimeMillis(), remote))
           .setBubbleMetadata(new Notification.BubbleMetadata.Builder(bubbleIntent, icon).setDesiredHeight(app.approvals.isEmpty() ? 144 : 208).build());
     }
@@ -156,8 +167,8 @@ public final class ConnectionService extends Service {
     renew.run();
     NotificationManager nm = getSystemService(NotificationManager.class);
     nm.createNotificationChannel(
-        new NotificationChannel("ssh", "SSH 连接", NotificationManager.IMPORTANCE_LOW));
-    NotificationChannel conversations = new NotificationChannel("conversation", "运行状态与审批气泡", NotificationManager.IMPORTANCE_DEFAULT);
+        new NotificationChannel("ssh", UiText.get(R.string.ui_ssh_connection), NotificationManager.IMPORTANCE_LOW));
+    NotificationChannel conversations = new NotificationChannel("conversation", UiText.get(R.string.ui_task_status_and_approval_bubbles), NotificationManager.IMPORTANCE_DEFAULT);
     if (android.os.Build.VERSION.SDK_INT >= 29) conversations.setAllowBubbles(true);
     nm.createNotificationChannel(conversations);
     PendingIntent open =
@@ -178,10 +189,10 @@ public final class ConnectionService extends Service {
         new Notification.Builder(this, "ssh")
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(getString(R.string.app_name) + " · SSH")
-            .setContentText("远端连接正在运行")
+            .setContentText(UiText.get(R.string.ui_remote_connection_is_active))
             .setContentIntent(open)
             .setOngoing(true)
-            .addAction(new Notification.Action.Builder(null, "断开", stop).build())
+            .addAction(new Notification.Action.Builder(null, UiText.get(R.string.ui_disconnect_365), stop).build())
             .build());
     updateNotification();
   }

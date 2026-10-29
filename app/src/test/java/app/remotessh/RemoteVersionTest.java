@@ -3,6 +3,8 @@ package app.remotessh;
 import static org.junit.Assert.*;
 import org.junit.Test;
 
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner.class)
+@org.robolectric.annotation.Config(sdk=35, qualifiers="zh-rCN")
 public class RemoteVersionTest {
   @Test public void handshakeReadsServerBuildNotAndroidClientVersion() {
     assertEquals("0.156.1", RemoteVersion.fromHandshake(Json.obj("userAgent",

@@ -149,7 +149,7 @@ final class MathContentView extends LinearLayout {
     private final MathRenderer.Formula formula;
     FormulaView(MathRenderer.Formula formula,String raw,String tex) {
       super(MathContentView.this.getContext());this.formula=formula;
-      setContentDescription("公式："+tex);
+      setContentDescription(UiText.get(R.string.ui_formula)+tex);
       setOnLongClickListener(v->{if(copy!=null)copy.accept(raw);return true;});
     }
     @Override protected void onMeasure(int widthSpec,int heightSpec) {

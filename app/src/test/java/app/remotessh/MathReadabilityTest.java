@@ -12,11 +12,11 @@ import org.robolectric.*;
 import org.robolectric.annotation.*;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk=35,qualifiers="w411dp-h891dp-xhdpi")
+@Config(sdk=35,qualifiers="zh-rCN-w411dp-h891dp-xhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class MathReadabilityTest {
   @Test public void lightConversationScreenshot() throws Exception {capture("light");}
-  @Test @Config(qualifiers="w411dp-h891dp-night-xhdpi") public void darkConversationScreenshot() throws Exception {capture("dark");}
+  @Test @Config(qualifiers="zh-rCN-w411dp-h891dp-night-xhdpi") public void darkConversationScreenshot() throws Exception {capture("dark");}
   @Test public void lightSecondaryAndConnectionTextHaveReadableContrast() throws Exception {
     org.robolectric.android.controller.ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup();
     try {

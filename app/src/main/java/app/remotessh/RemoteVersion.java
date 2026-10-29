@@ -51,13 +51,13 @@ final class RemoteVersion {
   boolean canUpdate() { return updateAvailable() && !manager.isEmpty() && !path.isEmpty() && !checking && !updating; }
   boolean needsRestart() { return newer(installed, running); }
   String label() {
-    String value = "Codex " + (running.isEmpty() ? "运行版本未知" : running);
-    if (updating) return value + " · 正在更新至 " + latest;
-    if (checking) return value + " · 正在检查更新";
-    if (updateAvailable()) return value + " · 待更新（现版本 " + (installed.isEmpty() ? running : installed) + " → 最新版 " + latest + "）" + (error.isEmpty() ? "" : " · 操作失败");
-    if (needsRestart()) return value + " · 待重启（已安装 " + installed + "）";
-    if (!error.isEmpty()) return value + " · 检查失败，点击重试";
-    if (!latest.isEmpty()) return value + (newer(installed, latest) ? " · 最新稳定版 " : " · 已是最新版 ") + latest;
-    return value + " · 点击检查更新";
+    String value = "Codex " + (running.isEmpty() ? UiText.get(R.string.ui_running_version_unknown) : running);
+    if (updating) return UiText.get(R.string.ui_1_s_updating_to_2_s, value, latest);
+    if (checking) return value + UiText.get(R.string.ui_checking_for_updates);
+    if (updateAvailable()) return UiText.get(R.string.ui_1_s_update_available_current_2_s_latest_3_s, value, installed.isEmpty() ? running : installed, latest) + (error.isEmpty() ? "" : UiText.get(R.string.ui_operation_failed));
+    if (needsRestart()) return UiText.get(R.string.ui_1_s_restart_required_installed_2_s, value, installed);
+    if (!error.isEmpty()) return value + UiText.get(R.string.ui_check_failed_tap_to_retry);
+    if (!latest.isEmpty()) return value + (newer(installed, latest) ? UiText.get(R.string.ui_latest_stable_version_402) : UiText.get(R.string.ui_up_to_date)) + latest;
+    return value + UiText.get(R.string.ui_tap_to_check_for_updates);
   }
 }

@@ -41,7 +41,7 @@ final class ImagePicker {
       if (intent.resolveActivity(activity.getPackageManager()) == null) continue;
       boolean chooseApp = Intent.ACTION_PICK.equals(intent.getAction()) || Intent.ACTION_GET_CONTENT.equals(intent.getAction());
       try {
-        activity.startActivityForResult(chooseApp ? Intent.createChooser(intent, "选择相册或图片 App") : intent, REQUEST);
+        activity.startActivityForResult(chooseApp ? Intent.createChooser(intent, UiText.get(R.string.ui_choose_gallery_or_image_app)) : intent, REQUEST);
         return true;
       } catch (ActivityNotFoundException | SecurityException unavailable) {
         // Installed apps can be disabled or removed between resolving and opening.

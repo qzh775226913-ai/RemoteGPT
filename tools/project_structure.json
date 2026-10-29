@@ -97,6 +97,12 @@
       "AppIcons",
       "IconView",
       "PressFeedback"
+    ],
+    "localization": [
+      "AppLanguage",
+      "UiText",
+      "LanguagePicker",
+      "UiPresentation"
     ]
   }
 }

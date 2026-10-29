@@ -52,8 +52,8 @@ final class MessageImageTile {
     tp.setMargins(0,ui.dp(6),ui.dp(multiple?6:0),ui.dp(6));tile.setLayoutParams(tp);
     FrameLayout area=new FrameLayout(activity);tile.addView(area,new LinearLayout.LayoutParams(-1,ui.dp(multiple?160:240)));
     preview=new ImageView(activity);preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
-    preview.setContentDescription("消息图片，点击查看大图");area.addView(preview,new FrameLayout.LayoutParams(-1,-1));
-    label=ui.text("图片 · 滚动到此处加载",12,ui.muted);label.setMinHeight(ui.dp(48));label.setSingleLine(true);
+    preview.setContentDescription(UiText.get(R.string.ui_message_image_tap_to_view_full_size));area.addView(preview,new FrameLayout.LayoutParams(-1,-1));
+    label=ui.text(UiText.get(R.string.ui_image_scroll_here_to_load),12,ui.muted);label.setMinHeight(ui.dp(48));label.setSingleLine(true);
     label.setEllipsize(TextUtils.TruncateAt.END);label.setGravity(Gravity.CENTER);
     area.addView(label,new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER));
     preview.setOnClickListener(v->openImage.accept(source));
@@ -84,7 +84,7 @@ final class MessageImageTile {
   void load() {
     if(loading || loaded || !visible || !valid() || attempts>=MAX_ATTEMPTS || SystemClock.uptimeMillis()<retryAt)return;
     if(!app.connected && !source.startsWith("data:") && !source.startsWith("https://"))return;
-    app.main.removeCallbacks(retry);retryAt=0;loading=true;attempts++;label.setText("正在加载图片…");label.setTooltipText(null);
+    app.main.removeCallbacks(retry);retryAt=0;loading=true;attempts++;label.setText(UiText.get(R.string.ui_loading_image));label.setTooltipText(null);
     final long version=++loadVersion;final int connection=generation;
     job=worker.submit(running->{
       BooleanSupplier active=()->running.getAsBoolean() && visible && version==loadVersion && connection==app.connectionGeneration();
@@ -107,7 +107,7 @@ final class MessageImageTile {
         app.main.post(()->{
           if(version!=loadVersion)return;loading=false;job=null;
           if(!valid() || !visible)return;
-          label.setText("图片加载失败 · 点按重试");label.setTooltipText(ConnectionFailure.reason(error));
+          label.setText(UiText.get(R.string.ui_image_failed_to_load_tap_to_retry));label.setTooltipText(ConnectionFailure.reason(error));
           // Viewport refreshes must not bypass backoff or create an unbounded retry loop.
           if(attempts<MAX_ATTEMPTS) {
             long delay=attempts==1?500:1500;retryAt=SystemClock.uptimeMillis()+delay;
@@ -122,6 +122,6 @@ final class MessageImageTile {
     visible=false;loadVersion++;app.main.removeCallbacks(retry);retryAt=0;attempts=0;
     if(job!=null){job.discard();job=null;}loading=false;
     if(loaded){preview.setImageDrawable(null);loaded=false;}
-    label.setText("图片 · 滚动到此处加载");label.setTooltipText(null);label.setVisibility(View.VISIBLE);
+    label.setText(UiText.get(R.string.ui_image_scroll_here_to_load));label.setTooltipText(null);label.setVisibility(View.VISIBLE);
   }
 }

@@ -118,7 +118,7 @@ final class DialogUi {
     h.setPadding(dp(16), dp(14), dp(8), dp(14));
     top.addView(h, new LinearLayout.LayoutParams(0, -2, 1));
     top.addView(
-        icon("close", "关闭", dialog::dismiss), new LinearLayout.LayoutParams(dp(48), dp(48)));
+        icon("close", UiText.get(R.string.ui_close), dialog::dismiss), new LinearLayout.LayoutParams(dp(48), dp(48)));
     shell.addView(top);
     shell.addView(content, new LinearLayout.LayoutParams(-1, -2));
     dialog.setContentView(shell);
@@ -150,11 +150,11 @@ final class DialogUi {
     header.addView(title, new LinearLayout.LayoutParams(0, dp(48), 1));
     title.setGravity(Gravity.CENTER_VERTICAL);
     header.addView(
-        icon("close", "关闭连接设置", dialog::dismiss), new LinearLayout.LayoutParams(dp(48), dp(48)));
+        icon("close", UiText.get(R.string.ui_close_connection_settings), dialog::dismiss), new LinearLayout.LayoutParams(dp(48), dp(48)));
     shell.addView(header, new LinearLayout.LayoutParams(-1, -2));
     form.setFillViewport(true);
     form.setClipToPadding(false);
-    form.setContentDescription("SSH 连接表单");
+    form.setContentDescription(UiText.get(R.string.ui_ssh_connection_form));
     shell.addView(form, new LinearLayout.LayoutParams(-1, 0, 1));
     footer.setPadding(dp(20), dp(10), dp(20), dp(16));
     shell.addView(footer, new LinearLayout.LayoutParams(-1, -2));

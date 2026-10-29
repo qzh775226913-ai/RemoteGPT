@@ -15,7 +15,7 @@ final class LiveProgressTextView extends TextView {
     setIncludeFontPadding(false);
     setLineSpacing(6 * getResources().getDisplayMetrics().density, 1);
     setTextIsSelectable(true);
-    setContentDescription("最新运行内容");
+    setContentDescription(UiText.get(R.string.ui_latest_activity));
   }
   void setProgress(String value) { progress = value; fitProgress(); }
   private void fitProgress() {

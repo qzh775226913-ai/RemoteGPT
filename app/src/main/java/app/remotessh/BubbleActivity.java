@@ -14,6 +14,9 @@ public final class BubbleActivity extends Activity {
   private String shown = "";
   private int foreground;
   private final Runnable update = this::render;
+  @Override protected void attachBaseContext(android.content.Context base) {
+    super.attachBaseContext(AppLanguage.wrap(base));
+  }
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
     app = (RemoteApp) getApplication();
@@ -49,14 +52,14 @@ public final class BubbleActivity extends Activity {
   }
   private void render() {
     if (!app.connected || (getIntent().hasExtra("profileId") && !app.ownsIntent(getIntent()))) {
-      body.removeAllViews(); text("连接已断开，请打开应用重新连接。", 16); return;
+      body.removeAllViews(); text(UiText.get(R.string.ui_disconnected_open_the_app_to_reconnect), 16); return;
     }
     app.inConversation(target, this::renderConversation);
   }
   private void renderConversation() {
     JSONObject req = app.approvals.isEmpty() ? null : app.approvals.get(0);
-    String progress = LiveStatusNotifications.running(app) ? LiveStatusNotifications.preview(app) : "任务已结束";
-    String key = app.connected + "|" + progress + "|" + app.threadTitle + "|" + req + "|" + app.error + "|" + app.replaying;
+    String progress = LiveStatusNotifications.running(app) ? LiveStatusNotifications.preview(app) : UiText.get(R.string.ui_task_ended);
+    String key = UiText.locale().toLanguageTag() + app.connected + "|" + progress + "|" + app.threadTitle + "|" + req + "|" + app.error + "|" + app.replaying;
     if (key.equals(shown)) return;
     shown = key; body.removeAllViews();
     LinearLayout header = new LinearLayout(this);
@@ -65,13 +68,13 @@ public final class BubbleActivity extends Activity {
     title.setText(app.threadTitle.isEmpty() ? "RemoteGPT" : app.threadTitle.replaceAll("\\s+", " "));
     title.setTextSize(18); title.setTextColor(foreground);
     title.setSingleLine(true); title.setEllipsize(android.text.TextUtils.TruncateAt.END);
-    title.setContentDescription("气泡标题");
+    title.setContentDescription(UiText.get(R.string.ui_bubble_title));
     header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-    TextView open = new TextView(this); open.setText("打开 ›"); open.setTextSize(12); open.setTextColor(foreground);
+    TextView open = new TextView(this); open.setText(UiText.get(R.string.ui_open_354)); open.setTextSize(12); open.setTextColor(foreground);
     open.setText(AppIcons.label(this,open.getText().toString(),null,"chevron",foreground,dp(14)));
     open.setPadding(dp(12), 0, 0, 0); header.addView(open);
     PressFeedback.apply(header, foreground != android.graphics.Color.parseColor("#171717"));
-    header.setContentDescription("打开对话"); header.setOnClickListener(v -> openConversation());
+    header.setContentDescription(UiText.get(R.string.ui_open_conversation)); header.setOnClickListener(v -> openConversation());
     body.addView(header, new LinearLayout.LayoutParams(-1, dp(32)));
     LiveProgressTextView content = new LiveProgressTextView(this);
     content.setTextColor(foreground); content.setProgress(progress);
@@ -82,12 +85,12 @@ public final class BubbleActivity extends Activity {
       if (method.equals("item/commandExecution/requestApproval") || method.equals("item/fileChange/requestApproval")) {
         LinearLayout actions = new LinearLayout(this);
         for (String choice : new String[]{"accept", "decline"}) {
-          Button action = new Button(this); action.setText(choice.equals("accept") ? "允许一次" : "拒绝");
+          Button action = new Button(this); action.setText(choice.equals("accept") ? UiText.get(R.string.ui_allow_once) : UiText.get(R.string.ui_deny));
           action.setOnClickListener(v -> answer(req, choice));
           actions.addView(action, new LinearLayout.LayoutParams(0, -2, 1));
         }
         body.addView(actions);
-      } else button("填写信息", this::openConversation);
+      } else button(UiText.get(R.string.ui_answer_question), this::openConversation);
     }
   }
 
