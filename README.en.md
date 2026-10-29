@@ -1,6 +1,6 @@
 # RemoteGPT
 
-English · [简体中文](README.md)
+English · [简体中文](README.zh-CN.md)
 
 Use a native Android interface to work with remote Codex over SSH. Codex execution and account login stay on the host.
 
