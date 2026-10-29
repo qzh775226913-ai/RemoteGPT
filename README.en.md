@@ -10,6 +10,10 @@ Current version: **1.0.66 / versionCode 68**. Android 8+.
 
 ## Screens
 
+<img src="docs/screenshots/device-home-en.jpg" alt="Device screenshot of the English home screen" width="250"> <img src="docs/screenshots/device-remote-control-en.jpg" alt="Device screenshot of remote control in English" width="250"> <img src="docs/screenshots/device-connection-en.jpg" alt="Device screenshot of SSH connection setup in English" width="250">
+
+User-provided device screenshots: English home, remote control and SSH connection setup.
+
 <img src="docs/screenshots/table-conversation.png" alt="Synthetic formula and table example" width="250"> <img src="docs/screenshots/device-multi-task.jpg" alt="Device screenshot of multiple task notifications" width="250">
 
 Left: synthetic formula and table example. Right: device notification example; appearance varies by device.

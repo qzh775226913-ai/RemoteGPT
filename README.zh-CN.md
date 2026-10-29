@@ -10,6 +10,10 @@
 
 ## 界面
 
+<img src="docs/screenshots/device-home-en.jpg" alt="英文首页实机截图" width="250"> <img src="docs/screenshots/device-remote-control-en.jpg" alt="英文远程控制实机截图" width="250"> <img src="docs/screenshots/device-connection-en.jpg" alt="英文 SSH 连接设置实机截图" width="250">
+
+用户提供的英文实机界面：首页、远程控制、SSH 连接设置。
+
 <img src="docs/screenshots/table-conversation.png" alt="公式与表格合成示例" width="250"> <img src="docs/screenshots/device-multi-task.jpg" alt="实机多任务通知示例" width="250">
 
 左：公式与表格合成示例。右：实机多任务通知，展示形式随设备而异。
