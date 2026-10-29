@@ -1,36 +1,36 @@
-# RemoteGPT
+# RemoteGPT — Android Codex GUI Client over SSH
 
-[English](README.en.md) · 简体中文
+English · [简体中文](README.zh-CN.md)
 
-在 Android 手机上通过图形界面操作远端 Codex。Codex 运行和账户登录保留在服务器，手机通过 SSH 连接。
+A native Android app to remotely control OpenAI Codex over SSH. Manage coding sessions, approve commands, browse projects, and transfer files directly from your phone.
 
-**[下载 APK · 1.0.65](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.65/RemoteGPT-1.0.65-Android-universal-debug.apk)** · [更新记录](CHANGELOG.md) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[Download APK · 1.0.65](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.65/RemoteGPT-1.0.65-Android-universal-debug.apk)** · [Changelog](CHANGELOG.md) · [Issues](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-当前版本：**1.0.65 / versionCode 67**。支持 Android 8+。
+Current version: **1.0.65 / versionCode 67**. Android 8+.
 
-## 界面
+## Screens
 
-<img src="docs/screenshots/table-conversation.png" alt="公式与表格合成示例" width="250"> <img src="docs/screenshots/device-multi-task.jpg" alt="实机多任务通知示例" width="250">
+<img src="docs/screenshots/table-conversation.png" alt="Synthetic formula and table example" width="250"> <img src="docs/screenshots/device-multi-task.jpg" alt="Device screenshot of multiple task notifications" width="250">
 
-左：公式与表格合成示例。右：实机多任务通知，展示形式随设备而异。
+Left: synthetic formula and table example. Right: device notification example; appearance varies by device.
 
-## 功能
+## Features
 
-- 浏览项目与历史，多会话保留独立草稿、附件和状态。
-- 执行中补充输入或排队，处理审批与结构化提问。
-- 选择远端模型、推理强度、速度和权限。
-- 上传下载文件，图片缩放、连续翻页及相邻预加载。
-- 显示公式与 Markdown 表格，复制保留原文。
-- 持久模式支持断线后的远端任务保留与重连恢复。
+- Browse projects and history; keep drafts, attachments and status per conversation.
+- Add input or queue a message during execution; respond to approvals and question forms.
+- Select remote models, reasoning effort, speed and permissions.
+- Transfer files; zoom and browse images with adjacent-image preloading.
+- Read formulas and Markdown tables; copying preserves source text.
+- Persistent mode retains remote tasks across SSH disconnections and restores them on reconnect.
 
-## 使用
+## Get started
 
-1. 远端主机准备 SSH/SFTP 和可用的 Codex CLI；持久模式需要 Python 3.8+。
-2. 安装 APK，添加 SSH 连接。
-3. 选择项目，新建或接续对话。
+1. Prepare SSH/SFTP and working Codex CLI access on the host. Persistent mode requires Python 3.8+.
+2. Install the APK and add an SSH connection.
+3. Choose a project, then create or resume a conversation.
 
-## 许可
+## License
 
-[源码可用许可](LICENSE)：允许使用、修改与公开协作；非商业分发须保留来源和许可，商业再利用需书面授权。独立客户端，与 OpenAI 无隶属关系。
+[Source-available license](LICENSE): use, modification and public collaboration are permitted. Non-commercial redistribution must retain attribution and license notices. Commercial reuse requires written permission. Independent client, unaffiliated with OpenAI. English documentation does not imply an English-localized interface.
 
-[贡献](CONTRIBUTING.md) · [第三方许可](docs/THIRD_PARTY.md)
+[Contributing](CONTRIBUTING.md) · [Third-party licenses](docs/THIRD_PARTY.md)
