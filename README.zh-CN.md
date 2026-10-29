@@ -8,6 +8,8 @@
 
 当前版本：**1.0.66 / versionCode 68**。支持 Android 8+。
 
+开发测试版本：**1.0.67 / versionCode 69**；上方下载链接仍为 GitHub 稳定版。
+
 ## 界面
 
 <img src="docs/screenshots/device-home-en.jpg" alt="英文首页实机截图" width="250"> <img src="docs/screenshots/device-remote-control-en.jpg" alt="英文远程控制实机截图" width="250"> <img src="docs/screenshots/device-connection-en.jpg" alt="英文 SSH 连接设置实机截图" width="250">

@@ -132,10 +132,7 @@ final class ModelPicker {
           || !selected[2].equals(ServiceTierOptions.STANDARD) && (!app.speedSelectionEnabled() || supported.isEmpty()));
       if (revoked) selected[2] = "";
       else if (!selected[2].isEmpty()) selected[2] = supported;
-      List<JSONObject> speeds = new ArrayList<>();
-      speeds.add(Json.obj("id", "", "name", UiText.get(R.string.ui_remote_default)));
-      if (app.supportsServiceTier()) speeds.add(Json.obj("id", ServiceTierOptions.STANDARD, "name", UiText.get(R.string.ui_standard)));
-      if (app.speedSelectionEnabled()) speeds.addAll(ServiceTierOptions.tiers(resolved));
+      List<JSONObject> speeds = ServiceTierOptions.choices(resolved, app.supportsServiceTier(), app.speedSelectionEnabled());
       // Each option stays readable when a future server offers more than Fast.
       LinearLayout speedRows = ui.column();
       speedChoices.addView(speedRows, new LinearLayout.LayoutParams(-1, -2));
@@ -157,7 +154,10 @@ final class ModelPicker {
       String speedDetail = "";
       if (selected[2].isEmpty()) speedDetail = app.inheritedTierKnown || app.modelSettings.configKnown
           ? UiText.get(R.string.ui_use_remote_default) + ServiceTierOptions.label(app.defaultServiceTier(resolved), resolved) : UiText.get(R.string.ui_use_remote_defaults_without_overriding_the_remote_configuration);
-      else if (selected[2].equals(ServiceTierOptions.STANDARD)) speedDetail = UiText.get(R.string.ui_standard_speed_applies_next_turn);
+      else if (selected[2].equals(ServiceTierOptions.STANDARD)) {
+        speedDetail = ServiceTierOptions.description(selected[2], resolved);
+        if (speedDetail.isEmpty()) speedDetail = UiText.get(R.string.ui_standard_speed_applies_next_turn);
+      }
       else speedDetail = ServiceTierOptions.description(selected[2], resolved);
       if (!selected[2].isEmpty() && !selected[2].equals(ServiceTierOptions.STANDARD) && speedDetail.isEmpty())
         speedDetail = UiText.get(R.string.ui_remote_tier) + selected[2] + UiText.get(R.string.ui_applies_next_turn);

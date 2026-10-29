@@ -89,3 +89,11 @@ MediaFiles.images 仅扫描正文类型的图片链接，MarkdownImages 屏蔽�
 模型面板的目录说明在首次绘制和状态监听回调中复用同一个 renderCatalogStatus，不直接显示内部状态字符串。推理强度档位名称集中在英文基础资源，标记 translatable=false，显示名称不随语言变化；动态可选项、顺序与协议 ID 仍由远端目录决定，未知 ID 原样保留。
 
 ConnectionService 记录每条会话最近发布的快捷入口名称；名称随语言或阶段变化时，复用原 shortcut ID 更新系统缓存，并沿用原延迟移除桌面动态入口的机制。该缓存仅属于通知服务，不写入会话状态或偏好。
+
+## 客户端诊断的本地化来源
+
+DiagnosticText 只在客户端构造连接／操作诊断时创建，保存原始诊断字符串与重新显示它所需的来源输入；原始异常消息、远端 RPC data 与 stderr 不经过翻译字典。ConnectionFailure 的原始格式、分类与环境检测仍可使用；显示层在来源对象与原始字符串引用相同时，才按当前语言重新呈现本地标题和指引，普通服务器字符串即使内容相同也不会误翻译。只快照显示需要的 threadId／path，RPC 错误数据保存为原始文本快照，不额外保留完整请求或消息内容。
+
+当前诊断来源随 errorDiagnostic 归属于会话，由 ConversationState.capture/apply 保存、恢复，并在原始错误已被其他内容替换时丢弃不匹配来源；最近错误的来源随原有全局 lastError 保留。所有读写沿用 ConversationStore 主线程分发。MainActivity 只做显示／复制连接，持久模式继续判断使用原始诊断，避免语言影响重连选择。
+
+ServiceTierOptions.choices 把“沿用远端默认”作为应用控制项置于远端档位列表之外；远端显式 default 不再过滤或重复插入，名称、说明与列表位置完整保留。旧目录缺少普通档时才补协议隐含的 Standard 控制。ModelCatalog 的 LinkedHashMap 继续保持分页首次出现的模型顺序，不以 isDefault 或名称排序。

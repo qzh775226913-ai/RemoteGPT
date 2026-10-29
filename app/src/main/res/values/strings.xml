@@ -228,7 +228,6 @@
     <string name="ui_speed">"Speed"</string>
     <string name="ui_models_are_provided_by_the_server_if_a_new_model_is_missing_check">"Models are provided by the server. If a new model is missing, check the remote Codex version and account."</string>
     <string name="ui_remote_default">"Remote default"</string>
-    <string name="ui_standard">"Standard"</string>
     <string name="ui_use_remote_default">"Use remote default · "</string>
     <string name="ui_use_remote_defaults_without_overriding_the_remote_configuration">"Use remote defaults without overriding the remote configuration"</string>
     <string name="ui_standard_speed_applies_next_turn">"Standard speed · Applies next turn"</string>
@@ -367,7 +366,6 @@
     <string name="ui_completed">"Completed"</string>
     <string name="ui_submitting">"Submitting"</string>
     <string name="ui_completed_385">"Completed · "</string>
-    <string name="ui_fast">"Fast"</string>
     <string name="ui_refreshing">" · Refreshing"</string>
     <string name="ui_no_usage_window_was_provided">"No usage window was provided"</string>
     <string name="ui_primary_quota">"Primary quota"</string>
@@ -477,4 +475,36 @@
     <string name="reasoning_effort_extra_high" translatable="false">Extra High</string>
     <string name="reasoning_effort_maximum" translatable="false">Max</string>
     <string name="reasoning_effort_ultra" translatable="false">Ultra</string>
+    <string name="service_tier_standard" translatable="false">Standard</string>
+    <string name="diagnostic_open_history">"Open conversation history"</string>
+    <string name="diagnostic_read_history">"Read conversation history"</string>
+    <string name="diagnostic_load_conversations">"Load conversations"</string>
+    <string name="diagnostic_create_conversation">"Create conversation"</string>
+    <string name="diagnostic_steer">"Send steering message"</string>
+    <string name="diagnostic_send">"Send message"</string>
+    <string name="diagnostic_stop">"Stop response"</string>
+    <string name="diagnostic_load_models">"Load models"</string>
+    <string name="diagnostic_browse_directory">"Browse remote directories"</string>
+    <string name="diagnostic_create_directory">"Create project directory"</string>
+    <string name="diagnostic_failed">" failed · "</string>
+    <string name="diagnostic_operation">"\n\nOperation: "</string>
+    <string name="diagnostic_error_code">")\nError code: "</string>
+    <string name="diagnostic_reason">"\nReason: "</string>
+    <string name="diagnostic_thread">"\nThread: "</string>
+    <string name="diagnostic_path">"\nPath: "</string>
+    <string name="diagnostic_server_details">"\nServer details: "</string>
+    <string name="diagnostic_writer_guidance">"\n\nThe server reports that another client still holds write access to this conversation; this does not necessarily mean a task is running. Read-only history will be attempted. A Codex or tmux process may remain after its SSH terminal closes. Exit the original Codex session, then resume here, or reconnect and resume to refresh this app\'s connection. If it still fails, copy the diagnostics to investigate the remote writer."</string>
+    <string name="diagnostic_resume_guidance">"\n\nThis conversation has been kept. Refresh the list and retry, or start a new conversation in the same project."</string>
+    <string name="diagnostic_main_thread">"Connection initialization failed: a network operation ran on the main thread (NetworkOnMainThreadException)"</string>
+    <string name="diagnostic_connection_failed">"Connection failed · "</string>
+    <string name="diagnostic_connection_reason">"\n\nReason: "</string>
+    <string name="diagnostic_upstream_guidance">"\n\nThe remote Codex WebSocket connection to the model service received HTTP 403. This is a failure between the host and the model service, not an incorrect phone SSH password. Under the same remote user, check Codex login, account access, and proxy or network policy. The log alone cannot identify which is responsible. The UNDICI experimental warning is not itself a failure. If the remote process has exited, the client cannot receive further output from it."</string>
+    <string name="diagnostic_tcp_guidance">"\n\nSSH authentication has not started. Check the host address and port. If another SSH client on this phone can reach the same host, check Tailscale → profile → app-based split tunneling, ensure RemoteGPT (app.remotessh) is not excluded, and check whether the phone blocks this app\'s network access. You can also reconnect Tailscale and retry."</string>
+    <string name="diagnostic_ssh_guidance">"\n\nIf using Tailscale, confirm the phone VPN is connected, the host is online, and access rules allow the target port. If MagicDNS resolution fails, try the host\'s 100.x address. Use a password or private key for ordinary SSH, and passwordless authentication for Tailscale SSH. If reauthentication is required, complete it in the Tailscale app before retrying."</string>
+    <string name="diagnostic_exit_code">"\nRemote exit code: "</string>
+    <string name="diagnostic_python_guidance">"\nSSH connected, but python3 was not found. Install Python 3.8 or later for the same SSH user and add it to the non-interactive PATH, or manually disable persistent sessions and reconnect."</string>
+    <string name="diagnostic_program_guidance">"\nSSH connected, but the remote shell could not find the startup program. This is not an IPv6 connection failure. Run command -v codex under the same remote user and enter the resulting absolute path as the startup command, for example /opt/homebrew/bin/codex app-server. If no path is returned, install Codex for that user first."</string>
+    <string name="diagnostic_remote_output">"\n\nRemote diagnostic output (warnings may not be the cause):\n"</string>
+    <string name="diagnostic_phase_initializing">"Initializing remote program"</string>
+    <string name="diagnostic_phase_ssh">"SSH connection and authentication"</string>
 </resources>

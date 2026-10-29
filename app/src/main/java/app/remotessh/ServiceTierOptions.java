@@ -15,7 +15,7 @@ final class ServiceTierOptions {
         JSONObject tier = tiers.optJSONObject(i);
         if (tier == null || tier.isNull("id")) continue;
         String id = tier.optString("id").trim();
-        if (!id.isEmpty() && !id.equals(STANDARD)) result.putIfAbsent(id, tier);
+        if (!id.isEmpty()) result.putIfAbsent(id, tier);
       }
     } else {
       JSONArray legacy = model.optJSONArray("additionalSpeedTiers");
@@ -26,6 +26,19 @@ final class ServiceTierOptions {
       }
     }
     return new ArrayList<>(result.values());
+  }
+  static List<JSONObject> choices(JSONObject model, boolean supported, boolean extraEnabled) {
+    List<JSONObject> choices = new ArrayList<>();
+    choices.add(Json.obj("id", "", "name", UiText.get(R.string.ui_remote_default)));
+    if (!supported) return choices;
+    List<JSONObject> remote = tiers(model);
+    boolean hasStandard = false;
+    for (JSONObject tier : remote) if (tier.optString("id").equals(STANDARD)) hasStandard = true;
+    // Older servers omit the protocol's implicit normal tier from additional tiers.
+    if (!hasStandard) choices.add(Json.obj("id", STANDARD, "name", UiText.get(R.string.service_tier_standard)));
+    for (JSONObject tier : remote)
+      if (extraEnabled || tier.optString("id").equals(STANDARD)) choices.add(tier);
+    return choices;
   }
   static boolean same(String a, String b) {
     return a.equals(b) || isFast(a) && isFast(b);
@@ -40,13 +53,12 @@ final class ServiceTierOptions {
   }
   static String label(String id, JSONObject model) {
     if (id.isEmpty()) return UiText.get(R.string.ui_remote_default);
-    if (id.equals(STANDARD)) return UiText.get(R.string.ui_standard);
     String supported = supportedId(model, id);
     for (JSONObject tier : tiers(model)) if (tier.optString("id").equals(supported)) {
-      String name = tier.isNull("name") ? "" : tier.optString("name").trim();
-      if (!name.isEmpty()) return name;
+      String name = tier.isNull("name") ? "" : tier.optString("name");
+      return name.trim().isEmpty() ? supported : name;
     }
-    if (isFast(id)) return UiText.get(R.string.ui_fast);
+    if (id.equals(STANDARD)) return UiText.get(R.string.service_tier_standard);
     return id;
   }
   static String description(String id, JSONObject model) {

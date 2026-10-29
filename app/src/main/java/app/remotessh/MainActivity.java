@@ -521,7 +521,7 @@ public final class MainActivity extends Activity {
     input.setHint(app.readOnly ? UiText.get(R.string.ui_prepare_a_message_resume_before_sending) : UiText.get(R.string.ui_send_message));
     status.setText(app.connected ? AppIcons.label(this,"●  " + app.profile.title() + "  ·  SSH","status",null,Color.rgb(48,148,112),dp(14)) : UiPresentation.status(app.state));
     status.setTextColor(app.connected ? Color.parseColor(isDark()?"#309470":"#247A5B") : muted);
-    error.setText(app.error.isEmpty() ? "" : app.error.split("\n", 2)[0] + UiText.get(R.string.ui_tap_for_the_cause_and_diagnostic_details));
+    error.setText(app.error.isEmpty() ? "" : DiagnosticText.display(app.error, app.errorDiagnostic).split("\n", 2)[0] + UiText.get(R.string.ui_tap_for_the_cause_and_diagnostic_details));
     error.setVisibility(app.error.isEmpty() ? View.GONE : View.VISIBLE);
     renderAttachments();
     renderQueuedMessage();
@@ -1047,7 +1047,8 @@ public final class MainActivity extends Activity {
   }
 
   private void showConnectionError() {
-    String diagnostic = app.error.isEmpty() ? app.lastError : app.error;
+    String rawDiagnostic = app.error.isEmpty() ? app.lastError : app.error;
+    String diagnostic = DiagnosticText.display(rawDiagnostic, app.error.isEmpty() ? app.lastErrorDiagnostic : app.errorDiagnostic);
     if (diagnostic.isEmpty()) {
       toast(UiText.get(R.string.ui_no_error_record_yet));
       return;
@@ -1062,9 +1063,9 @@ public final class MainActivity extends Activity {
         .setView(sc)
         .setNegativeButton(UiText.get(R.string.ui_copy_diagnostics), (d, w) -> copy(diagnostic))
         .setNeutralButton(
-            ConnectionSetupUi.canContinue(app, diagnostic) ? UiText.get(R.string.ui_disable_persistent_mode) : app.unsentText.isEmpty() ? null : UiText.get(R.string.ui_restore_messages),
+            ConnectionSetupUi.canContinue(app, rawDiagnostic) ? UiText.get(R.string.ui_disable_persistent_mode) : app.unsentText.isEmpty() ? null : UiText.get(R.string.ui_restore_messages),
             (d, w) -> {
-              if (ConnectionSetupUi.canContinue(app, diagnostic)) {
+              if (ConnectionSetupUi.canContinue(app, rawDiagnostic)) {
                 ConnectionSetupUi.continueWithoutPersistence(this, app); return;
               }
               input.setText(app.unsentText);

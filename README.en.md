@@ -8,6 +8,8 @@ Use a native Android interface to work with remote Codex over SSH. Codex executi
 
 Current version: **1.0.66 / versionCode 68**. Android 8+.
 
+Development test build: **1.0.67 / versionCode 69**; the download above remains the GitHub stable release.
+
 ## Screens
 
 <img src="docs/screenshots/device-home-en.jpg" alt="Device screenshot of the English home screen" width="250"> <img src="docs/screenshots/device-remote-control-en.jpg" alt="Device screenshot of remote control in English" width="250"> <img src="docs/screenshots/device-connection-en.jpg" alt="Device screenshot of SSH connection setup in English" width="250">

@@ -14,6 +14,7 @@ public final class RemoteApp extends Application {
   private final ExecutorService worker = Executors.newCachedThreadPool();
   public Vault vault;
   public Profile profile;
+  DiagnosticText errorDiagnostic, lastErrorDiagnostic;
   public String state = "未连接", error = "", threadId = "", turnId = "", model = "", unsentText = "";
   public boolean connecting, connected, busy, steering;
   public String reasoningEffort = "", draftText = "";
@@ -435,7 +436,7 @@ public final class RemoteApp extends Application {
     approvalTokens.keySet().removeIf(req -> !pendingApprovals.contains(req));
     if (!error.isEmpty() && !error.equals(observedError)) {
       observedError = error;
-      lastError = error;
+      lastError = error; lastErrorDiagnostic = errorDiagnostic;
       main.removeCallbacks(hideError);
       int timeout = 6500;
       if (android.os.Build.VERSION.SDK_INT >= 29) {
@@ -455,7 +456,8 @@ public final class RemoteApp extends Application {
   }
 
   public void reportFailure(String method, JSONObject params, Throwable failure) {
-    error = ConnectionFailure.operationError(method, params, failure);
+    errorDiagnostic = DiagnosticText.operation(method, params, failure);
+    error = errorDiagnostic.raw;
     observedError = "";
     changed();
   }
@@ -944,8 +946,8 @@ public final class RemoteApp extends Application {
 
   private void failConnection(Throwable e, SshTransport t) {
     String detail = t == null ? "" : t.diagnostic();
-    String failure =
-        ConnectionFailure.describe(
+    DiagnosticText failure =
+        DiagnosticText.connection(
             e, t == null ? "初始化远端程序" : t.phase(), t == null ? -1 : t.exitStatus(), detail);
     boolean retry = (connected || retryAttempts > 0) && !ConnectionFailure.upstreamForbidden(detail);
     int attempts = retryAttempts;
@@ -954,7 +956,7 @@ public final class RemoteApp extends Application {
     retryEligible = retry;
     if (retry && foreground && retryAttempts < 3)
       main.postDelayed(reconnectTask, 2000L * (retryAttempts + 1));
-    error = failure;
+    error = failure.raw; errorDiagnostic = failure;
     changed();
   }
 
