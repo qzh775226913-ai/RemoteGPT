@@ -1,6 +1,6 @@
 # 当前需求与行为契约
 
-适用：1.0.65 / versionCode 67。最后核对：2026-10-27。
+适用：1.0.66 / versionCode 68。最后核对：2026-10-29。
 
 本文件是当前产品行为的唯一需求清单。版本记录说明曾经发生什么，不覆盖此处。编号永久保留；修改行为时修改对应条目和验收，取消需求时写明取消原因，不把编号转用于别的需求。
 
@@ -42,11 +42,11 @@
 | R-21 | Ω 与带边框公式必须保留完整实心字形，反三角函数及合法简写分式正常排版；浅色界面正文、公式、次要文字维持清晰对比度。 远端正文显式标记的 `\(…\)`、`$…$` 行内公式及 `\[…\]`、`$$…$$` 独立公式由本地原生 TeX 排版；支持分式、上下标、上横线、根式、希腊字母、求和／积分、矩阵及常用对齐环境。分式等与正文基线及行高匹配，跟随字号缩放和明暗主题；长公式可横向滚动，独立公式长按复制原始标记和 TeX。代码块、行内代码、转义标记、链接地址、普通货币和不完整流式片段不误转为公式。传输与会话原文不变；新片段、历史恢复、换会话和窗口释放不得发布迟到排版结果。排版在有界独立 worker 中执行，保留 64 项缓存；单正文最多 512 个公式、单式最多 4096 字符／32 层花括号／256 个命令，采用显式命令与环境允许列表，不执行文件、网络、宏定义或远端代码。队列拥塞、不支持、无效或超过尺寸限制时保留可读原文。 | [MathMarkupTest](../app/src/test/java/app/remotessh/MathMarkupTest.java)、[MathRenderingTest](../app/src/test/java/app/remotessh/MathRenderingTest.java)、[MathDefectsTest](../app/src/test/java/app/remotessh/MathDefectsTest.java)、[MathReadabilityTest](../app/src/test/java/app/remotessh/MathReadabilityTest.java) |
 | R-22 | 标准 Markdown 表格使用原生行列布局与表头，保留横纵分隔线和外框，全部采用同样浅细规格，超出屏幕时整张表横向滚动，不按屏幕强行挤压列宽；横滑允许轻微纵向偏移且保持消息纵向位置，松手不因单元格文字获取焦点而上跳；在表格上以纵向为主的手势仍滚动消息，结束／取消／移除释放横滑保护。表头与内容同为 14sp（正文 16sp），表头加粗；单元格左右 4dp／上下 2dp 留白、额外行距 1dp；列宽按相同字号和留白度量，范围 48–240dp。所有边线均为 1 物理像素、正文前景色约 8% 不透明度，由行统一绘制且交点不重复叠加；隐藏横向滚动条，仍可通过手势横滑。表格内公式同步按较小字号排版，跟随应用和系统字号缩放。列内容在有界列宽内换行，支持左／中／右对齐、单元格内既有 Markdown 和公式。复制表格及完整消息保留原始文本；流式追加保留表格、已有单元格与横向位置，相同表头的不同表格不共用位置。代码围栏、空格排版、分隔行不完整或无效的内容不误转表格；GFM 缺项补空、多余项不展示但保留原文。单正文上限 131072 字符／32 张表／1024 个单元格，单表最多 32 列／128 行（含表头），超限保留完整原文。浅色页面使用灰白底色、白色回复卡片及稍深的输入框／用户消息／表头，保留原布局与文字对比度。 | [TableMarkupTest](../app/src/test/java/app/remotessh/TableMarkupTest.java)、[TableRenderingTest](../app/src/test/java/app/remotessh/TableRenderingTest.java)、[TableGestureTest](../app/src/test/java/app/remotessh/TableGestureTest.java)、[MathReadabilityTest](../app/src/test/java/app/remotessh/MathReadabilityTest.java) |
 
-## 开发中：界面多语言（不代表现有公开 APK 已包含）
+## 界面多语言
 
 | 编号 | 当前行为及失败边界 | 自动化入口 |
 | --- | --- | --- |
-| R-23 | 应用界面支持英文、简体中文、繁体中文、日文、韩文、西班牙语、巴西葡萄牙语、德语、法语、俄语。首次安装和旧版无语言偏好时跟随系统首选语言，不支持时回退英文；中文区分文字体系，葡萄牙语使用巴西版本。设置提供“跟随系统”与十种语言自称，显式选择持久保存；切换刷新页面、通知和气泡，并更新系统缓存的会话快捷入口名称；不改变连接／会话／审批身份与业务状态。仅本地化应用自有 UI 文案（推理档位名称按 R-11 保持官方英文）；服务器消息、错误、问题／选项、模型名称／描述、日志、命令、路径及复制原文不翻译。远端脚本、协议、历史识别标记、既有存储格式、包名、签名与 GitHub 页面不变。系统选择器和系统设置页的语言由系统负责。 | [LocalizationTest](../app/src/test/java/app/remotessh/LocalizationTest.java)、[LocalizationLayoutTest](../app/src/test/java/app/remotessh/LocalizationLayoutTest.java)、[NotificationLanguageTest](../app/src/test/java/app/remotessh/NotificationLanguageTest.java)、[资源检查](../tools/test_localization.py) |
+| R-23 | 应用界面支持英文、简体中文、繁体中文、日文、韩文、西班牙语、巴西葡萄牙语、德语、法语、俄语。首次安装和旧版无语言偏好时跟随系统首选语言，不支持时回退英文；中文区分文字体系，葡萄牙语使用巴西版本。设置提供“跟随系统”与十种语言自称，显式选择持久保存；切换刷新页面、通知和气泡，并更新系统缓存的会话快捷入口名称；不改变连接／会话／审批身份与业务状态。仅本地化应用自有 UI 文案（推理档位名称按 R-11 保持官方英文）；服务器消息、错误、问题／选项、模型名称／描述、日志、命令、路径及复制原文不翻译。远端脚本、协议、历史识别标记、既有存储格式、包名和签名不变。系统选择器和系统设置页的语言由系统负责。 | [LocalizationTest](../app/src/test/java/app/remotessh/LocalizationTest.java)、[LocalizationLayoutTest](../app/src/test/java/app/remotessh/LocalizationLayoutTest.java)、[NotificationLanguageTest](../app/src/test/java/app/remotessh/NotificationLanguageTest.java)、[资源检查](../tools/test_localization.py) |
 
 ## 当前不承诺的能力
 

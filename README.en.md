@@ -4,9 +4,9 @@ English · [简体中文](README.zh-CN.md)
 
 Use a native Android interface to work with remote Codex over SSH. Codex execution and account login stay on the host.
 
-**[Download APK · 1.0.65](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.65/RemoteGPT-1.0.65-Android-universal-debug.apk)** · [Changelog](CHANGELOG.md) · [Issues](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[Download APK · 1.0.66](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.66/RemoteGPT-1.0.66-Android-universal-debug.apk)** · [Changelog](CHANGELOG.md) · [Issues](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-Current version: **1.0.65 / versionCode 67**. Android 8+.
+Current version: **1.0.66 / versionCode 68**. Android 8+.
 
 ## Screens
 
@@ -23,6 +23,12 @@ Left: synthetic formula and table example. Right: device notification example; a
 - Read formulas and Markdown tables; copying preserves source text.
 - Persistent mode retains remote tasks across SSH disconnections and restores them on reconnect.
 
+## Interface languages
+
+English · 简体中文 · 繁體中文 · 日本語 · 한국어 · Español · Português (Brasil) · Deutsch · Français · Русский
+
+The interface follows your phone’s system language by default. Choose another language in Settings → Language; unsupported system languages fall back to English. Reasoning effort names stay in English, and server messages and errors keep their original text.
+
 ## Get started
 
 1. Prepare SSH/SFTP and working Codex CLI access on the host. Persistent mode requires Python 3.8+.
@@ -31,6 +37,6 @@ Left: synthetic formula and table example. Right: device notification example; a
 
 ## License
 
-[Source-available license](LICENSE): use, modification and public collaboration are permitted. Non-commercial redistribution must retain attribution and license notices. Commercial reuse requires written permission. Independent client, unaffiliated with OpenAI. English documentation does not imply an English-localized interface.
+[Source-available license](LICENSE): use, modification and public collaboration are permitted. Non-commercial redistribution must retain attribution and license notices. Commercial reuse requires written permission. Independent client, unaffiliated with OpenAI.
 
 [Contributing](CONTRIBUTING.md) · [Third-party licenses](docs/THIRD_PARTY.md)

@@ -4,9 +4,9 @@
 
 在 Android 手机上通过图形界面操作远端 Codex。Codex 运行和账户登录保留在服务器，手机通过 SSH 连接。
 
-**[下载 APK · 1.0.65](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.65/RemoteGPT-1.0.65-Android-universal-debug.apk)** · [更新记录](CHANGELOG.md) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[下载 APK · 1.0.66](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.66/RemoteGPT-1.0.66-Android-universal-debug.apk)** · [更新记录](CHANGELOG.md) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-当前版本：**1.0.65 / versionCode 67**。支持 Android 8+。
+当前版本：**1.0.66 / versionCode 68**。支持 Android 8+。
 
 ## 界面
 
@@ -22,6 +22,12 @@
 - 上传下载文件，图片缩放、连续翻页及相邻预加载。
 - 显示公式与 Markdown 表格，复制保留原文。
 - 持久模式支持断线后的远端任务保留与重连恢复。
+
+## 界面语言
+
+English · 简体中文 · 繁體中文 · 日本語 · 한국어 · Español · Português (Brasil) · Deutsch · Français · Русский
+
+默认跟随手机系统语言，也可在“设置 → 语言”中选择；不支持的系统语言回退英文。推理强度档位保持英文名称，服务器消息和报错保留原文。
 
 ## 使用
 
