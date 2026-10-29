@@ -401,7 +401,7 @@ public class MainActivityTest {
     assertNotNull(find(shell, "此模型未提供可选强度"));
     app.modelSettings = new ModelSettings(); app.modelSettings.configKnown = true;
     app.modelSettings.model = "gpt-6.1-sol"; app.changed();
-    assertNotNull(find(shell, "默认 · 中等"));
+    assertNotNull(find(shell, "默认 · Medium"));
     find(shell, "完成").performClick();
     assertEquals("", app.model); assertEquals("", app.reasoningEffort);
   }
@@ -539,13 +539,13 @@ public class MainActivityTest {
     assertEquals(2, slider.getMax());
     assertEquals(1, slider.getProgress());
     slider.setProgress(2);
-    assertNotNull(find(shell, "高"));
+    assertNotNull(find(shell, "High"));
     captureView(shell, "model-effort-picker");
     assertEquals(R.style.SheetAnimation, dialog.getWindow().getAttributes().windowAnimations);
     find(shell, "完成").performClick();
     assertEquals("model-a", app.model); assertEquals("high", app.reasoningEffort);
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
-    assertEquals("Model A · 高", ((TextView) model).getText().toString());
+    assertEquals("Model A · High", ((TextView) model).getText().toString());
     assertNotNull(model.getBackground());
     assertTrue(model.getForeground() instanceof android.graphics.drawable.RippleDrawable);
     permission.performClick();

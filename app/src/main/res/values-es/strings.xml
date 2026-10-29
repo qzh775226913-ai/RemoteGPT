@@ -384,14 +384,6 @@
     <string name="ui_ask_for_approval">"Solicitar aprobación"</string>
     <string name="ui_read_only">"Solo lectura"</string>
     <string name="ui_full_access">"Acceso completo"</string>
-    <string name="ui_none">"Ninguno"</string>
-    <string name="ui_minimal">"más bajo"</string>
-    <string name="ui_low">"Bajo"</string>
-    <string name="ui_medium_414">"Medio"</string>
-    <string name="ui_high">"Alto"</string>
-    <string name="ui_extra_high">"Extremadamente alto"</string>
-    <string name="ui_maximum">"Máximo"</string>
-    <string name="ui_ultra">"Súper alto"</string>
     <string name="ui_connected_419">"Conectado"</string>
     <string name="ui_connecting_420">"Conectando…"</string>
     <string name="ui_stopping_421">"Deteniendo…"</string>

@@ -15,8 +15,10 @@ public final class ConnectionService extends Service {
   private final java.util.Map<String,String> bubbleSignatures = new java.util.HashMap<>();
   private int nextBubble = 1000;
   private final java.util.Map<String,String> conversationShortcuts = new java.util.HashMap<>();
+  private final java.util.Map<String,String> shortcutLabels = new java.util.HashMap<>();
   private void releaseShortcut(String thread) {
     String id = conversationShortcuts.remove(thread);
+    shortcutLabels.remove(thread);
     if (id != null && android.os.Build.VERSION.SDK_INT >= 30) {
       android.content.pm.ShortcutManager shortcuts = getSystemService(android.content.pm.ShortcutManager.class);
       shortcuts.removeDynamicShortcuts(java.util.Collections.singletonList(id));
@@ -115,11 +117,12 @@ public final class ConnectionService extends Service {
       Person remote = new Person.Builder().setName("RemoteGPT").setKey("remote-gpt").setBot(true).setIcon(icon).build();
       Intent bubble = app.conversationIntent(BubbleActivity.class, app.threadId);
       String shortcutId = "conversation-" + (app.profile == null ? "" : app.profile.id) + "-" + app.threadId;
-      if (!conversationShortcuts.containsKey(app.threadId)) {
+      if (!title.equals(shortcutLabels.get(app.threadId))) {
         android.content.pm.ShortcutManager shortcuts = getSystemService(android.content.pm.ShortcutManager.class);
         shortcuts.pushDynamicShortcut(new android.content.pm.ShortcutInfo.Builder(this, shortcutId)
             .setShortLabel(title).setLongLived(true).setPerson(remote).setIcon(icon).setIntent(bubble).build());
         conversationShortcuts.put(app.threadId, shortcutId);
+        shortcutLabels.put(app.threadId, title);
         // NotificationManager caches long-lived conversation shortcuts. Keep that
         // cached identity for bubbles, but remove its launcher-menu publication.
         handler.postDelayed(() -> shortcuts.removeDynamicShortcuts(java.util.Collections.singletonList(shortcutId)), 500);

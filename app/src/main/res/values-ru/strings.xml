@@ -384,14 +384,6 @@
     <string name="ui_ask_for_approval">"Запрашивать одобрение"</string>
     <string name="ui_read_only">"Только чтение"</string>
     <string name="ui_full_access">"Полный доступ"</string>
-    <string name="ui_none">"Нет"</string>
-    <string name="ui_minimal">"самый низкий"</string>
-    <string name="ui_low">"Низкий"</string>
-    <string name="ui_medium_414">"Средний"</string>
-    <string name="ui_high">"Высокий"</string>
-    <string name="ui_extra_high">"чрезвычайно высокий"</string>
-    <string name="ui_maximum">"максимум"</string>
-    <string name="ui_ultra">"Супер высокий"</string>
     <string name="ui_connected_419">"Подключено"</string>
     <string name="ui_connecting_420">"Соединение…"</string>
     <string name="ui_stopping_421">"Остановка…"</string>

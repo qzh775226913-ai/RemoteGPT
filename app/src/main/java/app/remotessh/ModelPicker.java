@@ -99,8 +99,9 @@ final class ModelPicker {
     speedHint.setPadding(ui.dp(4), ui.dp(10), ui.dp(4), ui.dp(12)); panelView.addView(speedHint);
     Dialog[] holder = new Dialog[1];
     Runnable[] redraw = new Runnable[1];
+    Runnable renderCatalogStatus = () -> catalogStatus.setText(app.modelsStatus.isEmpty() ? UiText.get(R.string.ui_models_are_provided_by_the_server_if_a_new_model_is_missing_check) : UiPresentation.modelStatus(app.modelsStatus));
     redraw[0] = () -> {
-      catalogStatus.setText(app.modelsStatus.isEmpty() ? UiText.get(R.string.ui_models_are_provided_by_the_server_if_a_new_model_is_missing_check) : UiPresentation.modelStatus(app.modelsStatus));
+      renderCatalogStatus.run();
       modelScroll.getLayoutParams().height = ui.dp(Math.min(240, (app.models.length() + 1) * 52 + 8));
       modelScroll.requestLayout();
       modelList.removeAllViews();
@@ -230,7 +231,7 @@ final class ModelPicker {
       if (!app.connected || app.profile != modelProfile || !app.threadId.equals(modelThread)) {
         dismiss(); return;
       }
-      catalogStatus.setText(app.modelsStatus);
+      renderCatalogStatus.run();
       if (rendered[0] != app.models || renderedSettings[0] != app.modelSettings || settingsLoading[0] != app.modelSettingsLoading) {
         rendered[0] = app.models;
         renderedSettings[0] = app.modelSettings; settingsLoading[0] = app.modelSettingsLoading;

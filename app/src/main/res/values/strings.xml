@@ -385,14 +385,6 @@
     <string name="ui_ask_for_approval">"Ask for approval"</string>
     <string name="ui_read_only">"Read-only"</string>
     <string name="ui_full_access">"Full access"</string>
-    <string name="ui_none">"None"</string>
-    <string name="ui_minimal">"Minimal"</string>
-    <string name="ui_low">"Low"</string>
-    <string name="ui_medium_414">"Medium"</string>
-    <string name="ui_high">"High"</string>
-    <string name="ui_extra_high">"Extra high"</string>
-    <string name="ui_maximum">"Maximum"</string>
-    <string name="ui_ultra">"Ultra"</string>
     <string name="ui_connected_419">"Connected"</string>
     <string name="ui_connecting_420">"Connecting…"</string>
     <string name="ui_stopping_421">"Stopping…"</string>
@@ -477,4 +469,12 @@
     <string name="ui_invalid_project_name">"Project names cannot be empty, contain /, or be . or .."</string>
     <string name="ui_connect_before_attachment">"Connect to the server first"</string>
     <string name="ui_wait_before_attachment">"Resuming or submitting a message. Wait before adding attachments."</string>
+    <string name="reasoning_effort_none" translatable="false">None</string>
+    <string name="reasoning_effort_minimal" translatable="false">Minimal</string>
+    <string name="reasoning_effort_low" translatable="false">Low</string>
+    <string name="reasoning_effort_medium_414" translatable="false">Medium</string>
+    <string name="reasoning_effort_high" translatable="false">High</string>
+    <string name="reasoning_effort_extra_high" translatable="false">Extra High</string>
+    <string name="reasoning_effort_maximum" translatable="false">Max</string>
+    <string name="reasoning_effort_ultra" translatable="false">Ultra</string>
 </resources>

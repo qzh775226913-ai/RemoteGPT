@@ -10,7 +10,7 @@ public class ModelOptionsTest {
         .put(Json.obj("reasoningEffort", "low")).put(Json.obj("reasoningEffort", "high")));
     assertEquals(java.util.Arrays.asList("low", "high"), ModelOptions.efforts(model));
     assertTrue(ModelOptions.efforts(new JSONObject()).isEmpty());
-    assertEquals("高", ModelOptions.label("high"));
+    assertEquals("High", ModelOptions.label("high"));
     assertEquals("future", ModelOptions.label("future"));
   }
   @Test public void emptySummaryFallsBackToReadableContentOnly() {

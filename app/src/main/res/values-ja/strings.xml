@@ -384,14 +384,6 @@
     <string name="ui_ask_for_approval">"必要に応じて承認"</string>
     <string name="ui_read_only">"読み取り専用"</string>
     <string name="ui_full_access">"フルアクセス"</string>
-    <string name="ui_none">"なし"</string>
-    <string name="ui_minimal">"最低"</string>
-    <string name="ui_low">"低い"</string>
-    <string name="ui_medium_414">"媒体"</string>
-    <string name="ui_high">"高い"</string>
-    <string name="ui_extra_high">"非常に高い"</string>
-    <string name="ui_maximum">"最大"</string>
-    <string name="ui_ultra">"超高"</string>
     <string name="ui_connected_419">"つながる"</string>
     <string name="ui_connecting_420">"接続中…"</string>
     <string name="ui_stopping_421">"停止中…"</string>

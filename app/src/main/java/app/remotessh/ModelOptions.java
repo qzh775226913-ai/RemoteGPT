@@ -29,14 +29,14 @@ final class ModelOptions {
   static String label(String effort) {
     switch (effort) {
       case "": return UiText.get(R.string.ui_default);
-      case "none": return UiText.get(R.string.ui_none);
-      case "minimal": return UiText.get(R.string.ui_minimal);
-      case "low": return UiText.get(R.string.ui_low);
-      case "medium": return UiText.get(R.string.ui_medium_414);
-      case "high": return UiText.get(R.string.ui_high);
-      case "xhigh": return UiText.get(R.string.ui_extra_high);
-      case "max": return UiText.get(R.string.ui_maximum);
-      case "ultra": return UiText.get(R.string.ui_ultra);
+      case "none": return UiText.get(R.string.reasoning_effort_none);
+      case "minimal": return UiText.get(R.string.reasoning_effort_minimal);
+      case "low": return UiText.get(R.string.reasoning_effort_low);
+      case "medium": return UiText.get(R.string.reasoning_effort_medium_414);
+      case "high": return UiText.get(R.string.reasoning_effort_high);
+      case "xhigh": return UiText.get(R.string.reasoning_effort_extra_high);
+      case "max": return UiText.get(R.string.reasoning_effort_maximum);
+      case "ultra": return UiText.get(R.string.reasoning_effort_ultra);
       default: return effort;
     }
   }

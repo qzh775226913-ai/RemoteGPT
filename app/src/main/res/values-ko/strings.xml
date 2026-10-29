@@ -384,14 +384,6 @@
     <string name="ui_ask_for_approval">"필요 시 승인 요청"</string>
     <string name="ui_read_only">"읽기 전용"</string>
     <string name="ui_full_access">"전체 액세스"</string>
-    <string name="ui_none">"없음"</string>
-    <string name="ui_minimal">"최소"</string>
-    <string name="ui_low">"낮은"</string>
-    <string name="ui_medium_414">"중간"</string>
-    <string name="ui_high">"높은"</string>
-    <string name="ui_extra_high">"매우 높음"</string>
-    <string name="ui_maximum">"최고"</string>
-    <string name="ui_ultra">"극단론자"</string>
     <string name="ui_connected_419">"연결됨"</string>
     <string name="ui_connecting_420">"연결 중…"</string>
     <string name="ui_stopping_421">"멎는…"</string>

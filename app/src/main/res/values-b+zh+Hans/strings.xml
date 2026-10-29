@@ -384,14 +384,6 @@
     <string name="ui_ask_for_approval">"按需审批"</string>
     <string name="ui_read_only">"只读"</string>
     <string name="ui_full_access">"完全访问"</string>
-    <string name="ui_none">"无"</string>
-    <string name="ui_minimal">"最低"</string>
-    <string name="ui_low">"低"</string>
-    <string name="ui_medium_414">"中等"</string>
-    <string name="ui_high">"高"</string>
-    <string name="ui_extra_high">"极高"</string>
-    <string name="ui_maximum">"最大"</string>
-    <string name="ui_ultra">"超高"</string>
     <string name="ui_connected_419">"已连接"</string>
     <string name="ui_connecting_420">"正在连接…"</string>
     <string name="ui_stopping_421">"正在停止…"</string>
