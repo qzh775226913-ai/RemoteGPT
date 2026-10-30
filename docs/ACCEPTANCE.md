@@ -2,7 +2,7 @@
 
 适用版本：1.0.69（开发测试版）；需求 R-01 至 R-26。最后核对：2026-10-30。
 
-[本版功能验证](verification/2026-10-30-diagnostic-catalog.md) · [本版公开发布](verification/2026-10-30-1.0.67-release.md)
+[本版功能验证](verification/2026-10-30-diagnostic-catalog.md) · [本轮界面修复验证](verification/2026-10-30-background-composer-bubble.md) · [本版公开发布](verification/2026-10-30-1.0.67-release.md)
 
 ## 自动化合并门槛
 
