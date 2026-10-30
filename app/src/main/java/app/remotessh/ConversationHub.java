@@ -124,28 +124,12 @@ final class ConversationHub {
         String name = server.optString("name");
         if (name.isEmpty()) continue;
         String status = server.optString("runtimeStatus");
-        StringBuilder detail = new StringBuilder();
-        if (!status.isEmpty() && !status.equals("null")) detail.append(status);
-        Object auth = server.opt("authStatus");
-        if (auth != null && auth != JSONObject.NULL) {
-          if (detail.length()>0) detail.append(" · ");
-          detail.append(auth instanceof JSONObject ? ((JSONObject)auth).optString("type", auth.toString()) : auth);
-        }
-        JSONObject tools = server.optJSONObject("tools");
-        if (tools != null) {
-          List<String> names = new ArrayList<>();
-          for (Iterator<String> keys = tools.keys(); keys.hasNext();) names.add(keys.next());
-          Collections.sort(names);
-          if (!names.isEmpty()) detail.append("\n\n").append(UiText.get(R.string.ui_detail_tools, String.join(", ", names)));
-        }
-        String error = server.optString("toolsError");
-        if (!error.isEmpty() && !error.equals("null")) detail.append("\n\n").append(error);
+        String auth = server.optString("authStatus");
         int group = status.equals("connected") ? R.string.ui_connected_419 :
-            status.equals("authenticationRequired") || status.equals("failed") ?
+            status.equals("authenticationRequired") || status.equals("failed") || auth.equals("notLoggedIn") ?
                 R.string.ui_needs_attention : R.string.ui_other_status;
         listed.add(new CapabilityDirectoryDialog.Entry(name,
-            UiText.get(group),
-            detail.toString()));
+            UiText.get(group), "", () -> loadMcpDetail(name, threadId)));
       }
       listed.sort(Comparator.comparingInt((CapabilityDirectoryDialog.Entry e) ->
           e.group.equals(UiText.get(R.string.ui_connected_419)) ? 0 :
@@ -153,6 +137,28 @@ final class ConversationHub {
           .thenComparing(e -> e.name, String.CASE_INSENSITIVE_ORDER));
       dialog.showEntries(listed);
     }, error -> dialog.showError());
+  }
+
+  private void loadMcpDetail(String name, String threadId) {
+    if (!app.connected || !threadId.equals(app.threadId)) return;
+    AlertDialog detail = new AlertDialog.Builder(activity).setTitle(name)
+        .setMessage(UiText.get(R.string.ui_loading))
+        .setPositiveButton(UiText.get(R.string.ui_close), null).create();
+    detail.show();
+    JSONObject params = Json.obj("serverName", name, "detail", "full");
+    try { if (!threadId.isEmpty()) params.put("threadId", threadId); }
+    catch (JSONException ignored) {}
+    app.request("mcpServerStatus/list", params, result -> {
+      if (!detail.isShowing() || activity.isDestroyed()) return;
+      if (!threadId.equals(app.threadId)) { detail.dismiss(); return; }
+      JSONArray data = result.optJSONArray("data");
+      JSONObject server = data == null ? null : data.optJSONObject(0);
+      detail.setMessage(server == null ? UiText.get(R.string.ui_no_mcp_servers) :
+          McpServerDetail.describe(server));
+    }, error -> {
+      if (detail.isShowing() && !activity.isDestroyed())
+        detail.setMessage(UiText.get(R.string.ui_remote_list_failed));
+    });
   }
 
   private void unavailable() {

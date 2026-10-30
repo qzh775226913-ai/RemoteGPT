@@ -494,7 +494,7 @@
     <string name="ui_available_skills">利用可能なスキル</string>
     <string name="ui_compact_confirmation">この会話のコンテキストを圧縮しますか？サーバーで圧縮ターンが始まります。</string>
     <string name="ui_compact_context">コンテキストを圧縮</string>
-    <string name="ui_compact_unavailable">接続して待機中の会話を再開してから圧縮してください。</string>
+    <string name="ui_compact_unavailable">接続中で処理が終わっている会話を選択してください。</string>
     <string name="ui_connect_to_view_remote_capabilities">接続するとリモート機能を確認できます。</string>
     <string name="ui_context_cached_tokens">キャッシュ入力：%1$s トークン</string>
     <string name="ui_context_estimate_note">リングはサーバーが最後に報告した使用量の概算です。アカウントの利用枠ではありません。</string>
@@ -530,4 +530,17 @@
     <string name="ui_other_status">その他の状態</string>
     <string name="ui_skill_errors">エラー</string>
     <string name="ui_needs_attention">対応が必要</string>
+    <string name="ui_mcp_runtime_status">接続状態</string>
+    <string name="ui_mcp_auth_status">認証状態</string>
+    <string name="ui_mcp_plugin">プラグイン</string>
+    <string name="ui_mcp_origin">接続先</string>
+    <string name="ui_mcp_server_info">サーバー情報</string>
+    <string name="ui_mcp_title">タイトル</string>
+    <string name="ui_mcp_version">バージョン</string>
+    <string name="ui_mcp_website">ウェブサイト</string>
+    <string name="ui_mcp_tools_count">ツール（%1$d）</string>
+    <string name="ui_mcp_resources_count">リソース（%1$d）</string>
+    <string name="ui_mcp_templates_count">リソーステンプレート（%1$d）</string>
+    <string name="ui_mcp_capabilities">機能</string>
+    <string name="ui_compact_resume_confirmation">この会話を再開してコンテキストを圧縮しますか？サーバーは新しい圧縮ターンを開始します。</string>
 </resources>

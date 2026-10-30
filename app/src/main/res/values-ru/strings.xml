@@ -512,7 +512,7 @@
     <string name="ui_available_skills">Доступные навыки</string>
     <string name="ui_compact_confirmation">Сжать контекст этого диалога сейчас? Сервер запустит отдельный этап сжатия.</string>
     <string name="ui_compact_context">Сжать контекст</string>
-    <string name="ui_compact_unavailable">Подключитесь и возобновите неактивный диалог перед сжатием.</string>
+    <string name="ui_compact_unavailable">Выберите подключённый диалог без активной задачи, чтобы сжать его контекст.</string>
     <string name="ui_connect_to_view_remote_capabilities">Подключитесь для просмотра удалённых возможностей.</string>
     <string name="ui_context_cached_tokens">Кэшированный ввод: %1$s токенов</string>
     <string name="ui_context_estimate_note">Кольцо показывает оценку по последним данным сервера, а не квоту аккаунта.</string>
@@ -548,4 +548,17 @@
     <string name="ui_other_status">Другой статус</string>
     <string name="ui_skill_errors">Ошибки</string>
     <string name="ui_needs_attention">Требует внимания</string>
+    <string name="ui_mcp_runtime_status">Подключение</string>
+    <string name="ui_mcp_auth_status">Аутентификация</string>
+    <string name="ui_mcp_plugin">Плагин</string>
+    <string name="ui_mcp_origin">Адрес сервера</string>
+    <string name="ui_mcp_server_info">Сведения о сервере</string>
+    <string name="ui_mcp_title">Название</string>
+    <string name="ui_mcp_version">Версия</string>
+    <string name="ui_mcp_website">Сайт</string>
+    <string name="ui_mcp_tools_count">Инструменты (%1$d)</string>
+    <string name="ui_mcp_resources_count">Ресурсы (%1$d)</string>
+    <string name="ui_mcp_templates_count">Шаблоны ресурсов (%1$d)</string>
+    <string name="ui_mcp_capabilities">Возможности</string>
+    <string name="ui_compact_resume_confirmation">Продолжить этот диалог и сжать его контекст? Сервер начнёт новый этап сжатия.</string>
 </resources>

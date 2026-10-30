@@ -506,7 +506,7 @@
     <string name="ui_available_skills">Skills disponíveis</string>
     <string name="ui_compact_confirmation">Compactar o contexto desta conversa agora? O servidor iniciará uma etapa de compactação.</string>
     <string name="ui_compact_context">Compactar contexto</string>
-    <string name="ui_compact_unavailable">Conecte-se e retome uma conversa ociosa antes de compactá-la.</string>
+    <string name="ui_compact_unavailable">Selecione uma conversa conectada e inativa para compactar o contexto.</string>
     <string name="ui_connect_to_view_remote_capabilities">Conecte-se para ver os recursos remotos.</string>
     <string name="ui_context_cached_tokens">Entrada em cache: %1$s tokens</string>
     <string name="ui_context_estimate_note">O círculo usa o último uso informado pelo servidor. É uma estimativa, não a cota da conta.</string>
@@ -542,4 +542,17 @@
     <string name="ui_other_status">Outros estados</string>
     <string name="ui_skill_errors">Erros</string>
     <string name="ui_needs_attention">Requer atenção</string>
+    <string name="ui_mcp_runtime_status">Conexão</string>
+    <string name="ui_mcp_auth_status">Autenticação</string>
+    <string name="ui_mcp_plugin">Plugin</string>
+    <string name="ui_mcp_origin">Origem</string>
+    <string name="ui_mcp_server_info">Informações do servidor</string>
+    <string name="ui_mcp_title">Título</string>
+    <string name="ui_mcp_version">Versão</string>
+    <string name="ui_mcp_website">Site</string>
+    <string name="ui_mcp_tools_count">Ferramentas (%1$d)</string>
+    <string name="ui_mcp_resources_count">Recursos (%1$d)</string>
+    <string name="ui_mcp_templates_count">Modelos de recursos (%1$d)</string>
+    <string name="ui_mcp_capabilities">Capacidades</string>
+    <string name="ui_compact_resume_confirmation">Retomar esta conversa e compactar o contexto agora? O servidor iniciará uma nova rodada de compactação.</string>
 </resources>

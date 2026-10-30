@@ -96,6 +96,7 @@ public final class RemoteApp extends Application {
   private final AttachmentController attachments = new AttachmentController(this);
   private final DirectoryController directories = new DirectoryController(this);
   final ThreadDirectory threadDirectory = new ThreadDirectory(this);
+  final ContextCompactionController contextCompaction = new ContextCompactionController(this);
   final ModelRefreshScheduler modelRefresh = new ModelRefreshScheduler(this);
   private final ArrayDeque<String> restoreQueue = new ArrayDeque<>();
   private String restoringThread = "", pendingNavigation = "", replayThread = "";

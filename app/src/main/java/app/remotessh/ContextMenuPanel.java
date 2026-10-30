@@ -48,19 +48,20 @@ final class ContextMenuPanel {
   }
 
   private void confirmCompact() {
-    if (!app.connected || app.threadId.isEmpty() || app.readOnly || app.busy || app.replaying) {
-      new AlertDialog.Builder(activity).setTitle(UiText.get(R.string.ui_compact_context))
-          .setMessage(UiText.get(R.string.ui_compact_unavailable))
-          .setPositiveButton(UiText.get(R.string.ui_close), null).show();
-      return;
-    }
+    if (!app.contextCompaction.canStart()) { compactUnavailable(); return; }
     String id = app.threadId;
     new AlertDialog.Builder(activity).setTitle(UiText.get(R.string.ui_compact_context))
-        .setMessage(UiText.get(R.string.ui_compact_confirmation))
+        .setMessage(UiText.get(app.readOnly ? R.string.ui_compact_resume_confirmation :
+            R.string.ui_compact_confirmation))
         .setNegativeButton(UiText.get(R.string.ui_cancel), null)
         .setPositiveButton(UiText.get(R.string.ui_compact_context), (d,w) -> {
-          if (id.equals(app.threadId) && app.connected && !app.busy && !app.readOnly)
-            app.request("thread/compact/start", Json.obj("threadId", id), result -> {});
+          if (!app.contextCompaction.start(id)) compactUnavailable();
         }).show();
+  }
+
+  private void compactUnavailable() {
+    new AlertDialog.Builder(activity).setTitle(UiText.get(R.string.ui_compact_context))
+        .setMessage(UiText.get(R.string.ui_compact_unavailable))
+        .setPositiveButton(UiText.get(R.string.ui_close), null).show();
   }
 }

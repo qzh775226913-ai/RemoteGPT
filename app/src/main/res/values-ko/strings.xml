@@ -494,7 +494,7 @@
     <string name="ui_available_skills">사용 가능한 스킬</string>
     <string name="ui_compact_confirmation">이 대화의 컨텍스트를 지금 압축할까요? 서버에서 압축 턴이 시작됩니다.</string>
     <string name="ui_compact_context">컨텍스트 압축</string>
-    <string name="ui_compact_unavailable">연결한 뒤 대기 중인 대화를 이어서 압축하세요.</string>
+    <string name="ui_compact_unavailable">연결된 유휴 대화를 선택한 후 컨텍스트를 압축하세요.</string>
     <string name="ui_connect_to_view_remote_capabilities">서버에 연결하면 원격 기능을 볼 수 있습니다.</string>
     <string name="ui_context_cached_tokens">캐시된 입력: %1$s 토큰</string>
     <string name="ui_context_estimate_note">원형 표시기는 서버가 마지막으로 보고한 사용량의 추정치입니다. 계정 한도가 아닙니다.</string>
@@ -530,4 +530,17 @@
     <string name="ui_other_status">기타 상태</string>
     <string name="ui_skill_errors">오류</string>
     <string name="ui_needs_attention">조치 필요</string>
+    <string name="ui_mcp_runtime_status">연결 상태</string>
+    <string name="ui_mcp_auth_status">인증 상태</string>
+    <string name="ui_mcp_plugin">플러그인</string>
+    <string name="ui_mcp_origin">서버 주소</string>
+    <string name="ui_mcp_server_info">서버 정보</string>
+    <string name="ui_mcp_title">제목</string>
+    <string name="ui_mcp_version">버전</string>
+    <string name="ui_mcp_website">웹사이트</string>
+    <string name="ui_mcp_tools_count">도구 (%1$d)</string>
+    <string name="ui_mcp_resources_count">리소스 (%1$d)</string>
+    <string name="ui_mcp_templates_count">리소스 템플릿 (%1$d)</string>
+    <string name="ui_mcp_capabilities">기능</string>
+    <string name="ui_compact_resume_confirmation">이 대화를 다시 시작하고 컨텍스트를 압축할까요? 서버에서 새 압축 턴이 시작됩니다.</string>
 </resources>

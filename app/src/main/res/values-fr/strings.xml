@@ -506,7 +506,7 @@
     <string name="ui_available_skills">Compétences disponibles</string>
     <string name="ui_compact_confirmation">Compresser le contexte de cette conversation maintenant ? Le serveur lancera un tour de compression.</string>
     <string name="ui_compact_context">Compresser le contexte</string>
-    <string name="ui_compact_unavailable">Connectez-vous et reprenez une conversation inactive avant de la compresser.</string>
+    <string name="ui_compact_unavailable">Sélectionnez une conversation connectée et inactive pour compacter son contexte.</string>
     <string name="ui_connect_to_view_remote_capabilities">Connectez-vous pour voir les fonctions distantes.</string>
     <string name="ui_context_cached_tokens">Entrée en cache : %1$s jetons</string>
     <string name="ui_context_estimate_note">L’anneau utilise la dernière consommation signalée par le serveur. C’est une estimation, pas le quota du compte.</string>
@@ -542,4 +542,17 @@
     <string name="ui_other_status">Autre état</string>
     <string name="ui_skill_errors">Erreurs</string>
     <string name="ui_needs_attention">Action requise</string>
+    <string name="ui_mcp_runtime_status">Connexion</string>
+    <string name="ui_mcp_auth_status">Authentification</string>
+    <string name="ui_mcp_plugin">Extension</string>
+    <string name="ui_mcp_origin">Origine</string>
+    <string name="ui_mcp_server_info">Informations du serveur</string>
+    <string name="ui_mcp_title">Titre</string>
+    <string name="ui_mcp_version">Version</string>
+    <string name="ui_mcp_website">Site web</string>
+    <string name="ui_mcp_tools_count">Outils (%1$d)</string>
+    <string name="ui_mcp_resources_count">Ressources (%1$d)</string>
+    <string name="ui_mcp_templates_count">Modèles de ressources (%1$d)</string>
+    <string name="ui_mcp_capabilities">Fonctionnalités</string>
+    <string name="ui_compact_resume_confirmation">Reprendre cette conversation et compacter son contexte maintenant ? Le serveur lancera un nouveau tour de compactage.</string>
 </resources>

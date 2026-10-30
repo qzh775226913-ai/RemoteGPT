@@ -11,8 +11,12 @@ import java.util.*;
 final class CapabilityDirectoryDialog {
   static final class Entry {
     final String name, group, detail;
+    final Runnable open;
     Entry(String name, String group, String detail) {
-      this.name = name; this.group = group; this.detail = detail;
+      this(name, group, detail, null);
+    }
+    Entry(String name, String group, String detail, Runnable open) {
+      this.name = name; this.group = group; this.detail = detail; this.open = open;
     }
   }
 
@@ -78,6 +82,10 @@ final class CapabilityDirectoryDialog {
     if (!isShowing()) return;
     rows.removeAllViews();
     String query = search.getText().toString().trim().toLowerCase(Locale.ROOT);
+    Map<String,Integer> counts = new LinkedHashMap<>();
+    for (Entry entry : entries)
+      if (entry.name.toLowerCase(Locale.ROOT).contains(query))
+        counts.put(entry.group, counts.getOrDefault(entry.group, 0) + 1);
     String group = null;
     int shown = 0;
     for (Entry entry : entries) {
@@ -85,7 +93,7 @@ final class CapabilityDirectoryDialog {
       if (!entry.group.equals(group)) {
         group = entry.group;
         TextView heading = new TextView(activity);
-        heading.setText(group);
+        heading.setText(group + " (" + counts.get(group) + ")");
         heading.setTextSize(13);
         heading.setTypeface(null, android.graphics.Typeface.BOLD);
         heading.setPadding(0, dp(14), 0, dp(5));
@@ -101,8 +109,11 @@ final class CapabilityDirectoryDialog {
       if (activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, feedback, true)
           && feedback.resourceId != 0) name.setBackgroundResource(feedback.resourceId);
       name.setFocusable(true);
-      name.setOnClickListener(v -> new AlertDialog.Builder(activity).setTitle(entry.name)
-          .setMessage(entry.detail).setPositiveButton(UiText.get(R.string.ui_close), null).show());
+      name.setOnClickListener(v -> {
+        if (entry.open != null) entry.open.run();
+        else new AlertDialog.Builder(activity).setTitle(entry.name)
+            .setMessage(entry.detail).setPositiveButton(UiText.get(R.string.ui_close), null).show();
+      });
       rows.addView(name, new LinearLayout.LayoutParams(-1, -2));
       shown++;
     }

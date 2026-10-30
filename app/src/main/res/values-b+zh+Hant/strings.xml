@@ -494,7 +494,7 @@
     <string name="ui_available_skills">可用技能</string>
     <string name="ui_compact_confirmation">現在壓縮此對話的上下文？伺服器會啟動一次壓縮輪次。</string>
     <string name="ui_compact_context">壓縮上下文</string>
-    <string name="ui_compact_unavailable">請先連線並接續閒置對話，再壓縮上下文。</string>
+    <string name="ui_compact_unavailable">請選擇已連線且閒置的對話，再壓縮上下文。</string>
     <string name="ui_connect_to_view_remote_capabilities">連線伺服器後可查看遠端功能。</string>
     <string name="ui_context_cached_tokens">快取輸入：%1$s 個 token</string>
     <string name="ui_context_estimate_note">圓環使用伺服器最近一次回報的用量。這是估算值，不是帳戶額度。</string>
@@ -530,4 +530,17 @@
     <string name="ui_other_status">其他狀態</string>
     <string name="ui_skill_errors">錯誤</string>
     <string name="ui_needs_attention">需要處理</string>
+    <string name="ui_mcp_runtime_status">連線狀態</string>
+    <string name="ui_mcp_auth_status">驗證狀態</string>
+    <string name="ui_mcp_plugin">外掛</string>
+    <string name="ui_mcp_origin">服務位址</string>
+    <string name="ui_mcp_server_info">伺服器資訊</string>
+    <string name="ui_mcp_title">標題</string>
+    <string name="ui_mcp_version">版本</string>
+    <string name="ui_mcp_website">網站</string>
+    <string name="ui_mcp_tools_count">工具（%1$d）</string>
+    <string name="ui_mcp_resources_count">資源（%1$d）</string>
+    <string name="ui_mcp_templates_count">資源範本（%1$d）</string>
+    <string name="ui_mcp_capabilities">能力</string>
+    <string name="ui_compact_resume_confirmation">接續這個對話並立即壓縮上下文嗎？伺服器將開始新的壓縮輪次。</string>
 </resources>

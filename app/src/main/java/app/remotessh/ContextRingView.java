@@ -26,13 +26,13 @@ final class ContextRingView extends IconView {
   @Override protected void onDraw(Canvas canvas) {
     float x = getWidth() / 2f, y = getHeight() / 2f;
     canvas.save();
-    canvas.scale(.6f, .6f, x, y);
+    canvas.scale(.678f, .678f, x, y);
     super.onDraw(canvas);
     canvas.restore();
     float density = getResources().getDisplayMetrics().density;
-    float radius = 10.8f * density;
+    float radius = 12.204f * density;
     stroke.setStyle(Paint.Style.STROKE);
-    stroke.setStrokeWidth(2.6f * density);
+    stroke.setStrokeWidth(2.938f * density);
     stroke.setStrokeCap(Paint.Cap.ROUND);
     stroke.setColor(trackColor);
     canvas.drawCircle(x, y, radius, stroke);

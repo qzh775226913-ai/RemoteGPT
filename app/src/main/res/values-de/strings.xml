@@ -500,7 +500,7 @@
     <string name="ui_available_skills">Verfügbare Skills</string>
     <string name="ui_compact_confirmation">Kontext dieses Gesprächs jetzt komprimieren? Der Server startet einen Komprimierungsschritt.</string>
     <string name="ui_compact_context">Kontext komprimieren</string>
-    <string name="ui_compact_unavailable">Verbinde dich und setze ein inaktives Gespräch fort, bevor du es komprimierst.</string>
+    <string name="ui_compact_unavailable">Wähle eine verbundene, inaktive Unterhaltung aus, um ihren Kontext zu komprimieren.</string>
     <string name="ui_connect_to_view_remote_capabilities">Verbinde dich, um Remote-Funktionen zu sehen.</string>
     <string name="ui_context_cached_tokens">Zwischengespeicherte Eingabe: %1$s Token</string>
     <string name="ui_context_estimate_note">Der Ring zeigt die zuletzt vom Server gemeldete Nutzung als Schätzung, nicht das Kontingent des Kontos.</string>
@@ -536,4 +536,17 @@
     <string name="ui_other_status">Anderer Status</string>
     <string name="ui_skill_errors">Fehler</string>
     <string name="ui_needs_attention">Handlungsbedarf</string>
+    <string name="ui_mcp_runtime_status">Verbindung</string>
+    <string name="ui_mcp_auth_status">Authentifizierung</string>
+    <string name="ui_mcp_plugin">Plugin</string>
+    <string name="ui_mcp_origin">Serveradresse</string>
+    <string name="ui_mcp_server_info">Serverinformationen</string>
+    <string name="ui_mcp_title">Titel</string>
+    <string name="ui_mcp_version">Version</string>
+    <string name="ui_mcp_website">Website</string>
+    <string name="ui_mcp_tools_count">Werkzeuge (%1$d)</string>
+    <string name="ui_mcp_resources_count">Ressourcen (%1$d)</string>
+    <string name="ui_mcp_templates_count">Ressourcenvorlagen (%1$d)</string>
+    <string name="ui_mcp_capabilities">Funktionen</string>
+    <string name="ui_compact_resume_confirmation">Diese Unterhaltung fortsetzen und ihren Kontext jetzt komprimieren? Der Server startet einen neuen Komprimierungsvorgang.</string>
 </resources>

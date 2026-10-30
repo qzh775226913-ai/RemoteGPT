@@ -27,6 +27,6 @@ public class ContextRingViewTest {
     }
     assertEquals(48,ring.getWidth());
     assertTrue(max>=min);
-    assertTrue("ring diameter: "+(max-min+1),max-min+1>=21 && max-min+1<=26);
+    assertTrue("ring diameter: "+(max-min+1),max-min+1>=24 && max-min+1<=29);
   }
 }

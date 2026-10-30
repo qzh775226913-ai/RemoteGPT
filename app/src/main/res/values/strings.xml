@@ -510,7 +510,7 @@
     <string name="ui_available_skills">Available skills</string>
     <string name="ui_compact_confirmation">Compress this conversation context now? The server will start a new compaction turn.</string>
     <string name="ui_compact_context">Compress context</string>
-    <string name="ui_compact_unavailable">Connect and resume an idle conversation before compressing its context.</string>
+    <string name="ui_compact_unavailable">Select a connected, idle conversation to compress its context.</string>
     <string name="ui_connect_to_view_remote_capabilities">Connect to a server to view remote capabilities.</string>
     <string name="ui_context_cached_tokens">Cached input: %1$s tokens</string>
     <string name="ui_context_estimate_note">The ring uses the last usage reported by the server. It is an estimate, not account quota.</string>
@@ -546,4 +546,17 @@
     <string name="ui_other_status">Other status</string>
     <string name="ui_skill_errors">Errors</string>
     <string name="ui_needs_attention">Needs attention</string>
+    <string name="ui_mcp_runtime_status">Connection</string>
+    <string name="ui_mcp_auth_status">Authentication</string>
+    <string name="ui_mcp_plugin">Plugin</string>
+    <string name="ui_mcp_origin">Origin</string>
+    <string name="ui_mcp_server_info">Server information</string>
+    <string name="ui_mcp_title">Title</string>
+    <string name="ui_mcp_version">Version</string>
+    <string name="ui_mcp_website">Website</string>
+    <string name="ui_mcp_tools_count">Tools (%1$d)</string>
+    <string name="ui_mcp_resources_count">Resources (%1$d)</string>
+    <string name="ui_mcp_templates_count">Resource templates (%1$d)</string>
+    <string name="ui_mcp_capabilities">Capabilities</string>
+    <string name="ui_compact_resume_confirmation">Resume this conversation and compress its context now? The server will start a new compaction turn.</string>
 </resources>

@@ -20,7 +20,8 @@
       "DirectoryController",
       "ForcedApprovalController",
       "ModelRefreshScheduler",
-      "ThreadDirectory"
+      "ThreadDirectory",
+      "ContextCompactionController"
     ],
     "protocol_transport": [
       "SshTransport",
@@ -54,6 +55,7 @@
       "ModelPicker",
       "DialogUi",
       "ConversationHub",
+      "McpServerDetail",
       "CapabilityDirectoryDialog",
       "ContextMenuPanel",
       "ContextRingView",
