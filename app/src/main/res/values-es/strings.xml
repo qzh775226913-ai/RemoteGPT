@@ -460,9 +460,9 @@
         <item quantity="other">"Hasta %1$d archivos por mensaje"</item>
     </plurals>
     <plurals name="ui_earlier_messages">
-        <item quantity="one">"Cargar mensajes anteriores (quedan %1$d)"</item>
-        <item quantity="many">"Cargar mensajes anteriores (quedan %1$d)"</item>
-        <item quantity="other">"Cargar mensajes anteriores (quedan %1$d)"</item>
+        <item quantity="one">"Mensajes anteriores (%1$d)"</item>
+        <item quantity="many">"Mensajes anteriores (%1$d)"</item>
+        <item quantity="other">"Mensajes anteriores (%1$d)"</item>
     </plurals>
     <string name="ui_invalid_host">"Introduce una dirección de host SSH válida sin ssh://"</string>
     <string name="ui_missing_username">"Introduce un nombre de usuario SSH"</string>

@@ -651,8 +651,11 @@ public class MainActivityTest {
     captureView(content(), "older-messages-en-narrow");
     TextView button = (TextView) find(content(), "Load older messages");
     assertNotNull(button);
-    assertTrue(button.getText().toString().startsWith("Load earlier messages"));
-    assertTrue(button.getLayout().getLineCount() > 1);
+    assertTrue(button.getText().toString().startsWith("Earlier messages"));
+    assertEquals(Math.round(8 * activity.getResources().getDisplayMetrics().density),
+        button.getPaddingLeft());
+    assertEquals(button.getPaddingLeft(), button.getPaddingRight());
+    assertTrue(button.getLayout().getLineCount() <= 2);
     assertEquals(button.length(), button.getLayout().getLineEnd(button.getLayout().getLineCount() - 1));
     assertTrue(button.getHeight() - button.getTotalPaddingTop() - button.getTotalPaddingBottom()
         >= button.getLayout().getHeight());

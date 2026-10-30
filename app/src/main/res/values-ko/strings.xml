@@ -450,7 +450,7 @@
         <item quantity="other">"메시지당 파일 최대 %1$d개"</item>
     </plurals>
     <plurals name="ui_earlier_messages">
-        <item quantity="other">"이전 메시지 불러오기(%1$d개 남음)"</item>
+        <item quantity="other">"이전 메시지 (%1$d)"</item>
     </plurals>
     <string name="ui_invalid_host">"ssh:// 없이 유효한 SSH 호스트 주소를 입력하세요"</string>
     <string name="ui_missing_username">"SSH 사용자 이름을 입력하세요"</string>

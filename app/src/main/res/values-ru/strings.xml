@@ -465,10 +465,10 @@
         <item quantity="other">"Не более %1$d файлов в сообщении"</item>
     </plurals>
     <plurals name="ui_earlier_messages">
-        <item quantity="one">"Загрузить предыдущие сообщения (осталось: %1$d)"</item>
-        <item quantity="few">"Загрузить предыдущие сообщения (осталось: %1$d)"</item>
-        <item quantity="many">"Загрузить предыдущие сообщения (осталось: %1$d)"</item>
-        <item quantity="other">"Загрузить предыдущие сообщения (осталось: %1$d)"</item>
+        <item quantity="one">"Предыдущие сообщения (%1$d)"</item>
+        <item quantity="few">"Предыдущие сообщения (%1$d)"</item>
+        <item quantity="many">"Предыдущие сообщения (%1$d)"</item>
+        <item quantity="other">"Предыдущие сообщения (%1$d)"</item>
     </plurals>
     <string name="ui_invalid_host">"Введите действительный адрес SSH-сервера без ssh://"</string>
     <string name="ui_missing_username">"Введите имя пользователя SSH"</string>

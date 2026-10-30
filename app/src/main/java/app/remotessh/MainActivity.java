@@ -372,6 +372,7 @@ public final class MainActivity extends Activity {
     empty.setPadding(dp(28), dp(32), dp(28), dp(56));
     conversation.addView(empty, new LinearLayout.LayoutParams(-1, -1));
     historyButton=action(UiText.get(R.string.ui_load_older_messages),this::loadOlderMessages);
+    historyButton.setPadding(dp(8),dp(10),dp(8),dp(10));
     historyButton.setContentDescription(UiText.get(R.string.ui_load_older_messages));
     LinearLayout.LayoutParams historyParams=new LinearLayout.LayoutParams(wide?dp(Math.min(740,available)-32):-1,-2);historyParams.setMargins(dp(16),dp(8),dp(16),0);
     conversation.addView(historyButton,historyParams);historyButton.setVisibility(View.GONE);

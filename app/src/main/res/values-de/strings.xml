@@ -455,8 +455,8 @@
         <item quantity="other">"Bis zu %1$d Dateien pro Nachricht"</item>
     </plurals>
     <plurals name="ui_earlier_messages">
-        <item quantity="one">"Frühere Nachrichten laden (%1$d verbleibend)"</item>
-        <item quantity="other">"Frühere Nachrichten laden (%1$d verbleibend)"</item>
+        <item quantity="one">"Frühere Nachrichten (%1$d)"</item>
+        <item quantity="other">"Frühere Nachrichten (%1$d)"</item>
     </plurals>
     <string name="ui_invalid_host">"Geben Sie eine gültige SSH-Hostadresse ohne ssh:// ein"</string>
     <string name="ui_missing_username">"Geben Sie einen SSH-Benutzernamen ein"</string>

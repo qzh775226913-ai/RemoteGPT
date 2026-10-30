@@ -450,7 +450,7 @@
         <item quantity="other">"1メッセージにつきファイルは最大%1$d個"</item>
     </plurals>
     <plurals name="ui_earlier_messages">
-        <item quantity="other">"以前のメッセージを読み込む（残り%1$d件）"</item>
+        <item quantity="other">"以前のメッセージ（%1$d）"</item>
     </plurals>
     <string name="ui_invalid_host">"ssh:// を含めず、有効な SSH ホストアドレスを入力してください"</string>
     <string name="ui_missing_username">"SSH ユーザー名を入力してください"</string>

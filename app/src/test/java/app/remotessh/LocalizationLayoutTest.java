@@ -19,8 +19,8 @@ public class LocalizationLayoutTest {
   @Test @Config(qualifiers="en-w320dp-h720dp-night-mdpi")
   public void allLanguagesFitAtLargerFontInDarkTheme() throws Exception { capture(true); }
 
-  @Test @Config(qualifiers="en-w280dp-h720dp-mdpi")
-  public void olderMessagesButtonFitsInEveryLanguage() {
+  @Test @Config(qualifiers="en-w240dp-h720dp-mdpi")
+  public void olderMessagesButtonFitsInEveryLanguage() throws Exception {
     RemoteApp app=(RemoteApp)RuntimeEnvironment.getApplication();
     app.getSharedPreferences("display",0).edit().putFloat("fontScale",1.15f).apply();
     app.profile=new Profile();app.connected=true;
@@ -30,16 +30,19 @@ public class LocalizationLayoutTest {
       var owner=Robolectric.buildActivity(MainActivity.class).setup();
       try {
         View root=owner.get().findViewById(android.R.id.content);
-        root.measure(View.MeasureSpec.makeMeasureSpec(280,View.MeasureSpec.EXACTLY),
+        root.measure(View.MeasureSpec.makeMeasureSpec(240,View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(720,View.MeasureSpec.EXACTLY));
-        root.layout(0,0,280,720);
+        root.layout(0,0,240,720);
         TextView button=findByDescription(root,UiText.get(R.string.ui_load_older_messages));
         assertNotNull(tag,button);
+        assertTrue(tag,button.getPaddingLeft()<=8);
+        assertEquals(tag,button.getPaddingLeft(),button.getPaddingRight());
         assertEquals(tag,button.length(),button.getLayout().getLineEnd(button.getLayout().getLineCount()-1));
         assertTrue(tag,button.getLayout().getHeight()<=button.getHeight()
             -button.getTotalPaddingTop()-button.getTotalPaddingBottom());
         for(int line=0;line<button.getLayout().getLineCount();line++)
           assertEquals(tag,0,button.getLayout().getEllipsisCount(line));
+        screenshot(button,"older-messages-"+tag);
       } finally {owner.pause().stop().destroy();}
     }
   }

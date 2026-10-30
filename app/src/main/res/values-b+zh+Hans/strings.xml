@@ -450,7 +450,7 @@
         <item quantity="other">"每条消息最多 %1$d 个文件"</item>
     </plurals>
     <plurals name="ui_earlier_messages">
-        <item quantity="other">"加载更早的消息（还有 %1$d 项）"</item>
+        <item quantity="other">"更早的消息（%1$d）"</item>
     </plurals>
     <string name="ui_invalid_host">"请输入有效的 SSH 主机地址，不包含 ssh://"</string>
     <string name="ui_missing_username">"请输入 SSH 用户名"</string>
