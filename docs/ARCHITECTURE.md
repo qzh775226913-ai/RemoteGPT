@@ -101,3 +101,4 @@ ServiceTierOptions.choices 把“沿用远端默认”作为应用控制项置�
 主页面输入区沿用线性布局和 `adjustResize`。Android 11+ 的窗口自行处理 Insets，根布局用系统栏和输入法底部边距的较大值留白；旧版保留原系统窗口 Insets 路径。根布局消费 Insets，避免子视图重复处理。
 输入框用焦点与输入法可见性控制一行／最多六行的高度限制，不修改草稿文本或会话状态。
 对话切换由 MainActivity 在刷新可见草稿前把焦点交给根视图并收起输入框，直接新建空对话也应用同一复位；不修改 ConversationStore 中的草稿归属。
+历史加载按钮沿用 DialogUi.action 的最小高度与内边距；MainActivity 不再给它固定 48dp 高度，较长本地化文案由文字布局决定最终高度。

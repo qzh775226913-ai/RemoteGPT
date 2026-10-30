@@ -616,6 +616,23 @@ public class MainActivityTest {
   }
 
   @Test
+  @Config(qualifiers="en-rUS-w280dp-h720dp-xhdpi")
+  public void englishOlderMessagesButtonFitsWrappedLabel() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication();
+    app.profile = new Profile(); app.connected = true;
+    for (int i = 0; i < 95; i++) app.items.add(new ChatItem("older" + i, "agentMessage", "Message " + i));
+    app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    captureView(content(), "older-messages-en-narrow");
+    TextView button = (TextView) find(content(), "Load older messages");
+    assertNotNull(button);
+    assertTrue(button.getText().toString().startsWith("Load earlier messages"));
+    assertTrue(button.getLayout().getLineCount() > 1);
+    assertEquals(button.length(), button.getLayout().getLineEnd(button.getLayout().getLineCount() - 1));
+    assertTrue(button.getHeight() - button.getTotalPaddingTop() - button.getTotalPaddingBottom()
+        >= button.getLayout().getHeight());
+  }
+
+  @Test
   @Config(qualifiers="zh-rCN-w360dp-h800dp-night-xhdpi")
   public void darkComposerKeepsFullModelAndImagePreviews() throws Exception {
     verifyComposer("composer-dark");
