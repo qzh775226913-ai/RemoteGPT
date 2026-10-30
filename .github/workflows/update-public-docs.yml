@@ -40,7 +40,7 @@ jobs:
               return sorted((a['id'], a['name'], a['size'], a.get('digest'))
                             for a in release['assets'])
           latest_before = request('/releases/latest')['id']
-          for version in ('1.0.51', '1.0.54', '1.0.55', '1.0.57', '1.0.64', '1.0.65', '1.0.66'):
+          for version in ('1.0.51', '1.0.54', '1.0.55', '1.0.57', '1.0.64', '1.0.65', '1.0.66', '1.0.67'):
               tag = 'v' + version
               release = request('/releases/tags/' + tag)
               assert release['tag_name'] == tag and not release['draft']
