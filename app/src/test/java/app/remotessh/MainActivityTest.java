@@ -576,26 +576,27 @@ public class MainActivityTest {
         .setVisible(WindowInsets.Type.ime(), true).build();
     root.dispatchApplyWindowInsets(bars);
     assertEquals(32, root.getPaddingBottom());
+    input.setText("one\ntwo\nthree\nfour\nfive");
     input.requestFocus();
     root.dispatchApplyWindowInsets(keyboard);
     assertEquals(560, root.getPaddingBottom());
-    assertEquals(6, input.getMaxLines());
+    assertEquals(4, input.getMaxLines());
     root.dispatchApplyWindowInsets(bars);
     assertEquals(32, root.getPaddingBottom());
-    assertEquals(1, input.getMaxLines());
+    assertEquals(3, input.getMaxLines());
     assertSame(input, inputField(root, "消息输入框"));
   }
 
   @Test public void unfocusedComposerKeepsMultilineDraftReadable() {
     EditText input = inputField(content(), "消息输入框");
     assertNotNull(input);
-    String draft = "first line\nsecond line\nthird line";
+    String draft = "first line\nsecond line\nthird line\nfourth line\nfifth line";
     input.setText(draft);
-    assertEquals(6, input.getMaxLines());
+    assertEquals(3, input.getMaxLines());
     input.requestFocus();
-    assertEquals(6, input.getMaxLines());
+    assertEquals(3, input.getMaxLines());
     input.clearFocus();
-    assertEquals(6, input.getMaxLines());
+    assertEquals(3, input.getMaxLines());
     assertEquals(draft, input.getText().toString());
     input.setText("");
     assertEquals(1, input.getMaxLines());
@@ -628,7 +629,7 @@ public class MainActivityTest {
     assertNotNull(input);
     input.setText("old draft\nsecond line");
     input.requestFocus();
-    assertEquals(6, input.getMaxLines());
+    assertEquals(3, input.getMaxLines());
     app.newChat();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     assertEquals("", input.getText().toString());

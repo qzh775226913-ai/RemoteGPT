@@ -248,7 +248,7 @@ public final class MainActivity extends Activity {
           if (Build.VERSION.SDK_INT >= 30) {
             android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
             android.graphics.Insets ime = insets.getInsets(WindowInsets.Type.ime());
-            if (input != null) input.setMaxLines(input.length() > 0 || input.hasFocus() && insets.isVisible(WindowInsets.Type.ime()) ? 6 : 1);
+            if (input != null) sizeComposer(insets.isVisible(WindowInsets.Type.ime()));
             root.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, ime.bottom));
             return WindowInsets.CONSUMED;
           }
@@ -422,7 +422,7 @@ public final class MainActivity extends Activity {
             | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
             | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
     input.setContentDescription(UiText.get(R.string.ui_message_input));
-    input.setOnFocusChangeListener((v, focused) -> input.setMaxLines(focused || input.length() > 0 ? 6 : 1));
+    input.setOnFocusChangeListener((v, focused) -> sizeComposer());
     attachmentStrip = row();
     attachmentStrip.setPadding(dp(4), dp(8), dp(4), dp(4));
     attachmentScroll = new HorizontalScrollView(this);
@@ -455,7 +455,7 @@ public final class MainActivity extends Activity {
 
           public void onTextChanged(CharSequence s, int st, int before, int count) {
             app.draftText=s.toString();
-            input.setMaxLines(s.length() > 0 || input.hasFocus() ? 6 : 1);
+            sizeComposer();
             updateSend();
           }
 
@@ -478,6 +478,16 @@ public final class MainActivity extends Activity {
     root.requestFocus();
     input.setMaxLines(1);
     root.requestApplyInsets();
+  }
+
+  private void sizeComposer() {
+    WindowInsets insets = root.getRootWindowInsets();
+    sizeComposer(Build.VERSION.SDK_INT < 30 ? input.hasFocus()
+        : insets != null && insets.isVisible(WindowInsets.Type.ime()));
+  }
+
+  private void sizeComposer(boolean keyboardVisible) {
+    input.setMaxLines(input.length() == 0 ? 1 : input.hasFocus() && keyboardVisible ? 4 : 3);
   }
 
   private void scheduleRender() {
