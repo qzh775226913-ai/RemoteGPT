@@ -1,8 +1,8 @@
 # 使用说明
 
-适用版本：1.0.66。手机通过 SSH 操作远端 Codex，账户与模型服务在服务器上配置。
+适用版本：1.0.67。手机通过 SSH 操作远端 Codex，账户与模型服务在服务器上配置。
 
-[English guide](USAGE.en.md) · [下载 APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.66/RemoteGPT-1.0.66-Android-universal-debug.apk)
+[English guide](USAGE.en.md) · [下载 APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.67/RemoteGPT-1.0.67-Android-universal-debug.apk)
 
 软件使用与再分发条件见 [项目许可](../LICENSE)。
 

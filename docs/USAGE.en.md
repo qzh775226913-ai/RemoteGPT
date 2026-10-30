@@ -1,6 +1,6 @@
 # First connection guide
 
-For RemoteGPT 1.0.66. [中文说明](USAGE.md) · [Download APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.66/RemoteGPT-1.0.66-Android-universal-debug.apk)
+For RemoteGPT 1.0.67. [中文说明](USAGE.md) · [Download APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.67/RemoteGPT-1.0.67-Android-universal-debug.apk)
 
 RemoteGPT provides an Android graphical interface for Codex running on a host you can access over SSH. Configure the Codex account and model service on that host first. The app does not perform remote Codex account login for you.
 

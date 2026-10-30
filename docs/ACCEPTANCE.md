@@ -1,8 +1,8 @@
 # 验收标准与证据边界
 
-适用版本：1.0.67（开发测试版）；需求 R-01 至 R-23。最后核对：2026-10-30。
+适用版本：1.0.67；需求 R-01 至 R-23。最后核对：2026-10-30。
 
-[本版开发验证](verification/2026-10-30-diagnostic-catalog.md) · [GitHub 稳定版](verification/2026-10-29-1.0.66.md)
+[本版功能验证](verification/2026-10-30-diagnostic-catalog.md) · [本版公开发布](verification/2026-10-30-1.0.67-release.md)
 
 ## 自动化合并门槛
 

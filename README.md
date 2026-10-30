@@ -4,11 +4,9 @@ English · [简体中文](README.zh-CN.md)
 
 A native Android app to remotely control OpenAI Codex over SSH. Manage coding sessions, approve commands, browse projects, and transfer files directly from your phone.
 
-**[Download APK · 1.0.66](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.66/RemoteGPT-1.0.66-Android-universal-debug.apk)** · [Changelog](CHANGELOG.md) · [Issues](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[Download APK · 1.0.67](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.67/RemoteGPT-1.0.67-Android-universal-debug.apk)** · [Changelog](CHANGELOG.md) · [Issues](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-Current version: **1.0.66 / versionCode 68**. Android 8+.
-
-Development test build: **1.0.67 / versionCode 69**; the download above remains the GitHub stable release.
+Current version: **1.0.67 / versionCode 69**. Android 8+.
 
 ## Screens
 
