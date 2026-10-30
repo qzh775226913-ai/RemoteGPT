@@ -80,6 +80,15 @@ final class DialogUi {
     return t;
   }
 
+  TextView compactSummary() {
+    TextView content=new CompactSummaryTextView(activity);
+    content.setTextSize(13);content.setTextColor(muted);content.setFontFeatureSettings("kern");
+    content.setIncludeFontPadding(false);content.setGravity(Gravity.CENTER_VERTICAL);
+    content.setBackground(rounded(panel,16));content.setPadding(dp(10),dp(4),dp(10),dp(4));
+    content.setSingleLine(true);content.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    return content;
+  }
+
   AlertDialog boundedInfo(String title,String message,String positive,Runnable positiveAction,
       String neutral,Runnable neutralAction,String negative) {
     TextView body=text(message,16,fg);

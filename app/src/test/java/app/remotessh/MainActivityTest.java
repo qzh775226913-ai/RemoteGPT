@@ -618,10 +618,18 @@ public class MainActivityTest {
     for (ChatItem item : app.items) {
       TextView bubble = (TextView) find(content(), "›  " + UiPresentation.itemTitle(item) + "  ›");
       assertNotNull(bubble);
+      assertTrue(bubble instanceof CompactSummaryTextView);
       assertFalse(bubble.getIncludeFontPadding());
       assertEquals(bubble.getPaddingTop(), bubble.getPaddingBottom());
       assertTrue((bubble.getGravity() & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.CENTER_VERTICAL);
       assertTrue(bubble.getHeight() <= Math.round(32 * activity.getResources().getDisplayMetrics().density));
+      android.graphics.Rect ink=new android.graphics.Rect();
+      String label=UiPresentation.itemTitle(item).replaceAll("\\s+"," ");
+      bubble.getPaint().getTextBounds(label,0,label.length(),ink);
+      float inkCenter=bubble.getBaseline()+((CompactSummaryTextView)bubble).opticalShift()
+          +(ink.top+ink.bottom)/2f;
+      assertEquals("Visible glyphs must be optically centered: "+item.type,
+          bubble.getHeight()/2f,inkCenter,activity.getResources().getDisplayMetrics().density);
     }
   }
 

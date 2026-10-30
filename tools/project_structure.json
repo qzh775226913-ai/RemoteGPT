@@ -51,6 +51,7 @@
       "ProfileEditor",
       "ModelPicker",
       "DialogUi",
+      "CompactSummaryTextView",
       "RemoteBrowser",
       "DirectoryPicker",
       "RemoteScreens",

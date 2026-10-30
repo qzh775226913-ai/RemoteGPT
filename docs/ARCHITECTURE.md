@@ -8,7 +8,7 @@
 | --- | --- |
 | 界面生命周期 | `MainActivity` 管理页面、消息渲染、系统选择器和 Activity 回调；`BubbleActivity` 管理绑定会话的气泡页面 |
 | 独立窗口 | `ProfileEditor` 管理连接草稿／凭据表单／私钥导入；`ModelPicker` 管理模型／强度／速度选择及监听器；`DialogUi` 保持聊天窗口的原有样式与触摸行为 |
-| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；消息、问答、图像预览、缩略图和滚动各有独立组件 |
+| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 负责折叠摘要的跨字体光学居中；消息、问答、图像预览、缩略图和滚动各有独立组件 |
 | 公式排版 | `MathMarkup` 扫描正文显式公式标记并保护代码／货币；`MathRenderer` 在单 worker 中执行有界本地 TeX 排版与缓存；`MathSpan` 保持原文并提供行内基线；`MathContentView` 拥有正文块的异步 generation、可滚动独立公式和 detach／reattach 清理，不接触会话选择 |
 | 应用协调 | `RemoteApp` 维持连接、初始化、恢复、事件路由和当前选中状态的兼容接口；它不再实现窗口表单、完整发送流程或附件传输流程 |
 | 会话容器 | `ConversationStore` 是会话缓存和临时背景分发的唯一所有者；`ConversationState` 保存每条会话的消息、草稿、权限／速度和运行状态 |
@@ -102,4 +102,4 @@ ServiceTierOptions.choices 把“沿用远端默认”作为应用控制项置�
 输入框用草稿是否为空、焦点与输入法可见性控制空草稿一行／有字草稿失焦最多三行、输入时最多四行的高度限制，不修改草稿文本或会话状态。
 对话切换由 MainActivity 在刷新可见草稿前把焦点交给根视图并收起输入框；写入目标草稿后立即请求布局并在下一帧复核，避免历史对话初次显示沿用上一对话的实测高度。直接新建空对话也应用同一复位；不修改 ConversationStore 中的草稿归属。
 历史加载按钮沿用 DialogUi.action 的最小高度和反馈样式；MainActivity 使用专用的 8dp 水平／10dp 垂直内边距，不再固定 48dp 高度。外边距保持与消息列对齐，简短本地化文案仍由文字布局决定最终高度。
-全部非正文折叠摘要沿用 MainActivity 的同一个原生 TextView 分支，只在该类摘要上去除字体额外边距、收紧上下留白并设置垂直居中。
+全部非正文折叠摘要由 `DialogUi` 统一创建 `CompactSummaryTextView`，只在该类摘要上去除字体额外边距并收紧上下留白。该 View 从当前显示文字与实际 Paint 字体取得可见字形边界，在有限范围内补偿字体基线／下降部造成的视觉偏移；背景、点击区、展开详情与原文不移动。

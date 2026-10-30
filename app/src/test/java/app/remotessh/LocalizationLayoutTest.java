@@ -77,6 +77,29 @@ public class LocalizationLayoutTest {
     }
   }
 
+  @Test public void foldedSummaryTextIsCenteredInEveryLanguage() throws Exception {
+    RemoteApp app=(RemoteApp)RuntimeEnvironment.getApplication();
+    for(int i=1;i<AppLanguage.TAGS.length;i++) {
+      String tag=AppLanguage.TAGS[i];app.language.select(tag);
+      var owner=Robolectric.buildActivity(MainActivity.class).setup();
+      try {
+        DialogUi ui=new DialogUi(owner.get(),Color.WHITE,Color.BLACK,0xff626262,0xffeceef1,0xffd9dde2);
+        CompactSummaryTextView bubble=(CompactSummaryTextView)ui.compactSummary();
+        ChatItem item=new ChatItem("reasoning","reasoning","");
+        String label=UiPresentation.itemTitle(item);
+        bubble.setText(AppIcons.label(owner.get(),"›  "+label+"  ›","chevron","chevron",0xff626262,ui.dp(15)));
+        bubble.measure(View.MeasureSpec.makeMeasureSpec(280,View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(80,View.MeasureSpec.AT_MOST));
+        bubble.layout(0,0,bubble.getMeasuredWidth(),bubble.getMeasuredHeight());
+        android.graphics.Rect ink=new android.graphics.Rect();
+        bubble.getPaint().getTextBounds(label,0,label.length(),ink);
+        float inkCenter=bubble.getBaseline()+bubble.opticalShift()+(ink.top+ink.bottom)/2f;
+        assertEquals(tag,bubble.getHeight()/2f,inkCenter,owner.get().getResources().getDisplayMetrics().density);
+        screenshot(bubble,"folded-summary-"+tag);
+      } finally {owner.pause().stop().destroy();}
+    }
+  }
+
   private void assertVisibleInside(String tag,View root,View action) {
     assertNotNull(tag,action);
     assertEquals(tag,View.VISIBLE,action.getVisibility());

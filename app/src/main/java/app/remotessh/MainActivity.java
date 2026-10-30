@@ -733,8 +733,8 @@ public final class MainActivity extends Activity {
       LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);wrap.addView(card,cp);
       return;
     }
-    TextView content = text("", item.prose() ? 16 : 13, item.prose() ? fg : muted);
-    content.setLineSpacing(dp(5), 1);
+    TextView content = item.prose() ? text("",16,fg) : ui.compactSummary();
+    if(item.prose())content.setLineSpacing(dp(5), 1);
     content.setTextIsSelectable(true);
     content.setLinksClickable(true);
     content.setMovementMethod(LinkMovementMethod.getInstance());
@@ -747,12 +747,6 @@ public final class MainActivity extends Activity {
           dp(wide ? 510 : Math.max(180, getResources().getConfiguration().screenWidthDp - 92)));
     } else if (!item.prose()) {
       content.setTextIsSelectable(false);
-      content.setIncludeFontPadding(false);
-      content.setGravity(Gravity.CENTER_VERTICAL);
-      content.setBackground(rounded(panel, 16));
-      content.setPadding(dp(10), dp(4), dp(10), dp(4));
-      content.setSingleLine(true);
-      content.setEllipsize(TextUtils.TruncateAt.END);
       clickable(
           content,
           () -> {
