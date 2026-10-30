@@ -524,4 +524,10 @@
     <string name="ui_remote_list_failed">サーバーから一覧を取得できませんでした。</string>
     <string name="ui_rename_conversation">会話名を変更</string>
     <string name="ui_unpin_conversation">固定を解除</string>
+    <string name="ui_search_names">名前を検索</string>
+    <string name="ui_no_matching_entries">一致する項目はありません</string>
+    <string name="ui_enabled">有効</string>
+    <string name="ui_other_status">その他の状態</string>
+    <string name="ui_skill_errors">エラー</string>
+    <string name="ui_needs_attention">対応が必要</string>
 </resources>

@@ -536,4 +536,10 @@
     <string name="ui_remote_list_failed">Impossible d’obtenir la liste du serveur.</string>
     <string name="ui_rename_conversation">Renommer la conversation</string>
     <string name="ui_unpin_conversation">Désépingler la conversation</string>
+    <string name="ui_search_names">Rechercher des noms</string>
+    <string name="ui_no_matching_entries">Aucun élément correspondant</string>
+    <string name="ui_enabled">Activé</string>
+    <string name="ui_other_status">Autre état</string>
+    <string name="ui_skill_errors">Erreurs</string>
+    <string name="ui_needs_attention">Action requise</string>
 </resources>

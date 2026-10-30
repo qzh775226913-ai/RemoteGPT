@@ -4,7 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 
-/** Thin context ring around the existing 48dp conversation menu icon. */
+/** Compact context ring centered in the existing 48dp touch target. */
 final class ContextRingView extends IconView {
   private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
   private float fraction;
@@ -24,12 +24,15 @@ final class ContextRingView extends IconView {
   }
 
   @Override protected void onDraw(Canvas canvas) {
-    super.onDraw(canvas);
-    float density = getResources().getDisplayMetrics().density;
-    float radius = 18 * density;
     float x = getWidth() / 2f, y = getHeight() / 2f;
+    canvas.save();
+    canvas.scale(.6f, .6f, x, y);
+    super.onDraw(canvas);
+    canvas.restore();
+    float density = getResources().getDisplayMetrics().density;
+    float radius = 10.8f * density;
     stroke.setStyle(Paint.Style.STROKE);
-    stroke.setStrokeWidth(2 * density);
+    stroke.setStrokeWidth(2.6f * density);
     stroke.setStrokeCap(Paint.Cap.ROUND);
     stroke.setColor(trackColor);
     canvas.drawCircle(x, y, radius, stroke);

@@ -524,4 +524,10 @@
     <string name="ui_remote_list_failed">服务器无法提供此列表。</string>
     <string name="ui_rename_conversation">重命名对话</string>
     <string name="ui_unpin_conversation">取消置顶</string>
+    <string name="ui_search_names">搜索名称</string>
+    <string name="ui_no_matching_entries">没有匹配的条目</string>
+    <string name="ui_enabled">已启用</string>
+    <string name="ui_other_status">其他状态</string>
+    <string name="ui_skill_errors">错误</string>
+    <string name="ui_needs_attention">需要处理</string>
 </resources>

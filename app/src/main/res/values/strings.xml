@@ -540,4 +540,10 @@
     <string name="ui_remote_list_failed">The server could not provide this list.</string>
     <string name="ui_rename_conversation">Rename conversation</string>
     <string name="ui_unpin_conversation">Unpin conversation</string>
+    <string name="ui_search_names">Search names</string>
+    <string name="ui_no_matching_entries">No matching entries</string>
+    <string name="ui_enabled">Enabled</string>
+    <string name="ui_other_status">Other status</string>
+    <string name="ui_skill_errors">Errors</string>
+    <string name="ui_needs_attention">Needs attention</string>
 </resources>

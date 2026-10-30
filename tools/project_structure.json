@@ -54,6 +54,7 @@
       "ModelPicker",
       "DialogUi",
       "ConversationHub",
+      "CapabilityDirectoryDialog",
       "ContextMenuPanel",
       "ContextRingView",
       "CompactSummaryTextView",

@@ -524,4 +524,10 @@
     <string name="ui_remote_list_failed">서버에서 목록을 가져올 수 없습니다.</string>
     <string name="ui_rename_conversation">대화 이름 바꾸기</string>
     <string name="ui_unpin_conversation">고정 해제</string>
+    <string name="ui_search_names">이름 검색</string>
+    <string name="ui_no_matching_entries">일치하는 항목이 없습니다</string>
+    <string name="ui_enabled">사용 설정됨</string>
+    <string name="ui_other_status">기타 상태</string>
+    <string name="ui_skill_errors">오류</string>
+    <string name="ui_needs_attention">조치 필요</string>
 </resources>

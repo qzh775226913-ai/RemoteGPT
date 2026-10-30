@@ -50,11 +50,12 @@ final class ConversationHub {
     if (!app.connected) { unavailable(); return; }
     String cwd = app.currentProject();
     if (cwd.isEmpty()) { unavailable(); return; }
-    AlertDialog dialog = loading(UiText.get(R.string.ui_available_skills));
+    CapabilityDirectoryDialog dialog = new CapabilityDirectoryDialog(activity,
+        UiText.get(R.string.ui_available_skills), UiText.get(R.string.ui_no_skills_available));
     app.request("skills/list", Json.obj("cwds", new JSONArray().put(cwd)), result -> {
-      if (!dialog.isShowing() || activity.isDestroyed()) return;
+      if (!dialog.isShowing()) return;
       if (!cwd.equals(app.currentProject())) { dialog.dismiss(); return; }
-      StringBuilder text = new StringBuilder();
+      List<CapabilityDirectoryDialog.Entry> entries = new ArrayList<>();
       JSONArray groups = result.optJSONArray("data");
       if (groups != null) for (int i=0;i<groups.length();i++) {
         JSONObject group = groups.optJSONObject(i);
@@ -63,73 +64,95 @@ final class ConversationHub {
         if (list != null) for (int n=0;n<list.length();n++) {
           JSONObject item = list.optJSONObject(n);
           if (item == null) continue;
-          if (text.length()>0) text.append("\n\n");
-          text.append(item.optString("name"));
-          if (!item.optBoolean("enabled", true)) text.append(" · ").append(UiText.get(R.string.ui_disabled));
+          String name = item.optString("name");
+          if (name.isEmpty()) continue;
+          boolean enabled = item.optBoolean("enabled", true);
+          StringBuilder detail = new StringBuilder();
+          if (!enabled) detail.append(UiText.get(R.string.ui_disabled));
           String description = item.optString("description");
-          if (!description.isEmpty()) text.append("\n").append(description);
+          if (!description.isEmpty()) { if (detail.length()>0) detail.append("\n\n"); detail.append(description); }
+          String path = item.isNull("path") ? "" : item.optString("path");
+          if (!path.isEmpty()) detail.append("\n\n").append(path);
+          entries.add(new CapabilityDirectoryDialog.Entry(name,
+              UiText.get(enabled ? R.string.ui_enabled : R.string.ui_disabled), detail.toString()));
         }
         JSONArray errors = group.optJSONArray("errors");
         if (errors != null) for (int n=0;n<errors.length();n++) {
           JSONObject problem = errors.optJSONObject(n);
           if (problem != null && !problem.optString("message").isEmpty()) {
-            if (text.length()>0) text.append("\n\n");
-            text.append(problem.optString("message"));
+            String message = problem.optString("message");
+            String path = problem.optString("path");
+            String name = path.isEmpty() ? UiText.get(R.string.ui_skill_errors) :
+                path.substring(path.lastIndexOf('/') + 1);
+            entries.add(new CapabilityDirectoryDialog.Entry(name,
+                UiText.get(R.string.ui_skill_errors), message + (path.isEmpty() ? "" : "\n\n" + path)));
           }
         }
       }
-      dialog.setMessage(text.length()==0 ? UiText.get(R.string.ui_no_skills_available) : text.toString());
-    }, error -> { if (dialog.isShowing() && !activity.isDestroyed()) dialog.setMessage(UiText.get(R.string.ui_remote_list_failed)); });
+      entries.sort(Comparator.comparingInt((CapabilityDirectoryDialog.Entry e) ->
+          e.group.equals(UiText.get(R.string.ui_enabled)) ? 0 : e.group.equals(UiText.get(R.string.ui_disabled)) ? 1 : 2)
+          .thenComparing(e -> e.name, String.CASE_INSENSITIVE_ORDER));
+      dialog.showEntries(entries);
+    }, error -> dialog.showError());
   }
 
   private void mcp() {
     if (!app.connected) { unavailable(); return; }
-    AlertDialog dialog = loading(UiText.get(R.string.ui_mcp_servers));
+    CapabilityDirectoryDialog dialog = new CapabilityDirectoryDialog(activity,
+        UiText.get(R.string.ui_mcp_servers), UiText.get(R.string.ui_no_mcp_servers));
     JSONArray entries = new JSONArray();
     loadMcpPage(dialog, entries, "", 0, app.threadId);
   }
 
-  private void loadMcpPage(AlertDialog dialog, JSONArray entries, String cursor, int page, String threadId) {
+  private void loadMcpPage(CapabilityDirectoryDialog dialog, JSONArray entries, String cursor, int page, String threadId) {
     JSONObject params = Json.obj("limit", 50, "detail", "toolsAndAuthOnly");
     try {
       if (!cursor.isEmpty()) params.put("cursor", cursor);
       if (!threadId.isEmpty()) params.put("threadId", threadId);
     } catch (JSONException ignored) {}
     app.request("mcpServerStatus/list", params, result -> {
-      if (!dialog.isShowing() || activity.isDestroyed()) return;
+      if (!dialog.isShowing()) return;
       if (!threadId.equals(app.threadId)) { dialog.dismiss(); return; }
       JSONArray data = result.optJSONArray("data");
       if (data != null) for (int i=0;i<data.length();i++) entries.put(data.opt(i));
       String next = result.isNull("nextCursor") ? "" : result.optString("nextCursor");
       if (!next.isEmpty() && page < 19 && !next.equals(cursor)) { loadMcpPage(dialog, entries, next, page+1, threadId); return; }
-      StringBuilder text = new StringBuilder();
+      List<CapabilityDirectoryDialog.Entry> listed = new ArrayList<>();
       for (int i=0;i<entries.length();i++) {
         JSONObject server = entries.optJSONObject(i);
         if (server == null) continue;
-        if (text.length()>0) text.append("\n\n");
-        text.append(server.optString("name"));
-        if (!server.isNull("runtimeStatus")) text.append(" · ").append(server.optString("runtimeStatus"));
+        String name = server.optString("name");
+        if (name.isEmpty()) continue;
+        String status = server.optString("runtimeStatus");
+        StringBuilder detail = new StringBuilder();
+        if (!status.isEmpty() && !status.equals("null")) detail.append(status);
         Object auth = server.opt("authStatus");
-        if (auth != null && auth != JSONObject.NULL) text.append(" · ").append(auth instanceof JSONObject ? ((JSONObject)auth).optString("type", auth.toString()) : auth);
+        if (auth != null && auth != JSONObject.NULL) {
+          if (detail.length()>0) detail.append(" · ");
+          detail.append(auth instanceof JSONObject ? ((JSONObject)auth).optString("type", auth.toString()) : auth);
+        }
         JSONObject tools = server.optJSONObject("tools");
         if (tools != null) {
           List<String> names = new ArrayList<>();
           for (Iterator<String> keys = tools.keys(); keys.hasNext();) names.add(keys.next());
           Collections.sort(names);
-          if (!names.isEmpty()) text.append("\n").append(UiText.get(R.string.ui_detail_tools, String.join(", ", names)));
+          if (!names.isEmpty()) detail.append("\n\n").append(UiText.get(R.string.ui_detail_tools, String.join(", ", names)));
         }
         String error = server.optString("toolsError");
-        if (!error.isEmpty()) text.append("\n").append(error);
+        if (!error.isEmpty() && !error.equals("null")) detail.append("\n\n").append(error);
+        int group = status.equals("connected") ? R.string.ui_connected_419 :
+            status.equals("authenticationRequired") || status.equals("failed") ?
+                R.string.ui_needs_attention : R.string.ui_other_status;
+        listed.add(new CapabilityDirectoryDialog.Entry(name,
+            UiText.get(group),
+            detail.toString()));
       }
-      dialog.setMessage(text.length()==0 ? UiText.get(R.string.ui_no_mcp_servers) : text.toString());
-    }, error -> { if (dialog.isShowing() && !activity.isDestroyed()) dialog.setMessage(UiText.get(R.string.ui_remote_list_failed)); });
-  }
-
-  private AlertDialog loading(String title) {
-    AlertDialog dialog = new AlertDialog.Builder(activity).setTitle(title)
-        .setMessage(UiText.get(R.string.ui_loading)).setPositiveButton(UiText.get(R.string.ui_close), null).create();
-    dialog.show();
-    return dialog;
+      listed.sort(Comparator.comparingInt((CapabilityDirectoryDialog.Entry e) ->
+          e.group.equals(UiText.get(R.string.ui_connected_419)) ? 0 :
+              e.group.equals(UiText.get(R.string.ui_needs_attention)) ? 1 : 2)
+          .thenComparing(e -> e.name, String.CASE_INSENSITIVE_ORDER));
+      dialog.showEntries(listed);
+    }, error -> dialog.showError());
   }
 
   private void unavailable() {

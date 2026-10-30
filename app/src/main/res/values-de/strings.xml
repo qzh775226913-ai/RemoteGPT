@@ -530,4 +530,10 @@
     <string name="ui_remote_list_failed">Die Liste konnte nicht vom Server geladen werden.</string>
     <string name="ui_rename_conversation">Gespräch umbenennen</string>
     <string name="ui_unpin_conversation">Anheften lösen</string>
+    <string name="ui_search_names">Namen suchen</string>
+    <string name="ui_no_matching_entries">Keine passenden Einträge</string>
+    <string name="ui_enabled">Aktiviert</string>
+    <string name="ui_other_status">Anderer Status</string>
+    <string name="ui_skill_errors">Fehler</string>
+    <string name="ui_needs_attention">Handlungsbedarf</string>
 </resources>
