@@ -6,8 +6,8 @@ android {
         applicationId 'app.remotessh'
         minSdk 26
         targetSdk 35
-        versionCode 71
-        versionName '1.0.69'
+        versionCode 72
+        versionName '1.1.1'
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     }
     compileOptions {

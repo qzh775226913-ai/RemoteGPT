@@ -30,6 +30,9 @@ public final class MainActivity extends Activity {
   private ModelPicker modelPicker;
   private PermissionPicker permissionPicker;
   private IconView send, permissionButton;
+  private ContextRingView contextRing;
+  private ContextMenuPanel contextMenuPanel;
+  private ConversationHub conversationHub;
   private ProgressBar runningIndicator;
   private LinearLayout attachmentStrip, queuedBar;
   private HorizontalScrollView attachmentScroll;
@@ -127,6 +130,8 @@ public final class MainActivity extends Activity {
     setTheme(isDark() ? R.style.AppThemeDark : R.style.AppTheme);
     super.onCreate(saved);
     app = (RemoteApp) getApplication();
+    contextMenuPanel = new ContextMenuPanel(this, app, this::startNewChat, this::showConnectionError);
+    conversationHub = new ConversationHub(this, app);
     openNotificationConversation(getIntent());
     colors();
     build();
@@ -291,22 +296,20 @@ public final class MainActivity extends Activity {
     status.setEllipsize(TextUtils.TruncateAt.END);
     heading.addView(status);
     bar.addView(heading, new LinearLayout.LayoutParams(0, -2, 1));
-    clickable(heading, this::conversationInfo);
+    clickable(heading, conversationHub::show);
     runningIndicator = new ProgressBar(this);
     runningIndicator.setIndeterminate(true);
     runningIndicator.setContentDescription(UiText.get(R.string.ui_the_current_conversation_is_running));
     bar.addView(runningIndicator, new LinearLayout.LayoutParams(dp(20), dp(20)));
-    bar.addView(
-        icon(
-            "more",
-            UiText.get(R.string.ui_conversation_menu),
-            this::chatMenu),
-        new LinearLayout.LayoutParams(dp(48), dp(48)));
+    contextRing = new ContextRingView(this, fg, line, fg);
+    contextRing.setContentDescription(UiText.get(R.string.ui_conversation_menu));
+    clickable(contextRing, this::chatMenu);
+    bar.addView(contextRing, new LinearLayout.LayoutParams(dp(48), dp(48)));
     projectLabel = text("", 12, muted);
     projectLabel.setPadding(dp(20), 0, dp(20), dp(2));
     projectLabel.setMaxLines(1);
     projectLabel.setEllipsize(TextUtils.TruncateAt.MIDDLE);
-    clickable(projectLabel, this::conversationInfo);
+    clickable(projectLabel, conversationHub::show);
     center.addView(projectLabel);
     usageLabel = text("", 12, muted);
     usageLabel.setPadding(dp(20), dp(2), dp(20), dp(8));
@@ -547,6 +550,9 @@ public final class MainActivity extends Activity {
       messageUpdatesPaused = false;
     }
     title.setText(app.threadTitle.isEmpty() ? (app.threadId.isEmpty() ? getString(R.string.app_name) : UiText.get(R.string.ui_unnamed_conversation)) : app.threadTitle);
+    contextRing.show(app.contextUsage);
+    contextRing.setContentDescription(UiText.get(R.string.ui_context_ring_description,
+        app.contextUsage.known ? java.text.NumberFormat.getPercentInstance(UiText.locale()).format(app.contextUsage.fraction()) : UiText.get(R.string.ui_unknown)));
     String project = app.currentProject();
     projectLabel.setText(UiText.get(R.string.ui_project_1_s, project.isEmpty() ? UiText.get(R.string.ui_remote_default_directory) : project));
     projectLabel.setVisibility(app.profile == null ? View.GONE : View.VISIBLE);
@@ -576,7 +582,7 @@ public final class MainActivity extends Activity {
     permissionButton.setContentDescription(UiText.get(R.string.ui_permissions_1_s, forced ? UiText.get(R.string.ui_force_allow) : UiPresentation.permission(displayedPermission)));
     permissionButton.setTooltipText(forced ? UiText.get(R.string.ui_force_allow_automatically_approve_until_new_permissions_take_effe) : UiPresentation.permission(displayedPermission) + (app.permissionMode==PermissionMode.INHERIT && displayedPermission!=PermissionMode.INHERIT ? UiText.get(R.string.ui_current_remote_status) : ""));
     permissionButton.invalidate();
-    modelButton.setText(ModelOptions.displayName(app.models, app.model)
+    modelButton.setText(ModelOptions.composerName(app.models, app.model)
         + (app.reasoningEffort.isEmpty() ? "" : " · " + ModelOptions.label(app.reasoningEffort))
         + (app.serviceTierSummary().isEmpty() ? "" : " · " + app.serviceTierSummary()));
     modelButton.setTooltipText(modelButton.getText());
@@ -1358,10 +1364,7 @@ public final class MainActivity extends Activity {
   }
 
   private void chatMenu() {
-    new AlertDialog.Builder(this).setTitle(UiText.get(R.string.ui_conversation))
-        .setItems(new String[] {UiText.get(R.string.ui_new_conversation), UiText.get(R.string.ui_last_error), UiText.get(R.string.ui_current_project_and_conversation)}, (d,w)->{
-          if(w==0)startNewChat();else if(w==1)showConnectionError();else conversationInfo();
-        }).show();
+    contextMenuPanel.show();
   }
 
   private void chooseFontSize() {
@@ -1415,21 +1418,6 @@ public final class MainActivity extends Activity {
               .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName())); }
           catch (ActivityNotFoundException e) { toast(UiText.get(R.string.ui_open_remotegpt_s_notification_settings_in_system_settings)); }
         }).setNegativeButton(UiText.get(R.string.ui_back), null).show();
-  }
-
-  private void conversationInfo() {
-    String project = app.currentProject();
-    String details = UiText.get(R.string.ui_project_137) + (project.isEmpty() ? UiText.get(R.string.ui_remote_default_directory_no_path_returned) : project)
-        + UiText.get(R.string.ui_conversation_139) + (app.threadTitle.isEmpty() ? UiText.get(R.string.ui_new_conversation) : app.threadTitle)
-        + UiText.get(R.string.ui_conversation_id) + (app.threadId.isEmpty() ? UiText.get(R.string.ui_created_after_sending_first_message) : app.threadId)
-        + UiText.get(R.string.ui_status) + (!app.connected ? UiText.get(R.string.ui_not_connected) : app.readOnly ? UiText.get(R.string.ui_read_only_try_resuming) : app.busy ? UiText.get(R.string.ui_processing) : UiText.get(R.string.ui_ready_to_continue));
-    new AlertDialog.Builder(this).setTitle(UiText.get(R.string.ui_current_project_and_conversation)).setMessage(details)
-        .setPositiveButton(UiText.get(R.string.ui_close), null)
-        .setNeutralButton(UiText.get(R.string.ui_copy), (d, w) -> {
-          android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-          clipboard.setPrimaryClip(android.content.ClipData.newPlainText(UiText.get(R.string.ui_current_project_and_conversation), details));
-          toast(UiText.get(R.string.ui_copied));
-        }).show();
   }
 
   private void usageInfo() {

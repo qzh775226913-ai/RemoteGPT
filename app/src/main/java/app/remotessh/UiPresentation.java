@@ -60,6 +60,7 @@ final class UiPresentation {
       case "fileChange": return UiText.get(R.string.ui_file_changes_430);
       case "imageView": return UiText.get(R.string.ui_view_image);
       case "imageGeneration": return UiText.get(R.string.ui_generate_image);
+      case "contextCompaction": return UiText.get(R.string.ui_compact_context);
       case "webSearch": return item.text.startsWith("搜索 · ") ? UiText.get(R.string.ui_search) + item.text.substring(5) : item.text;
       default: return item.text;
     }

@@ -19,7 +19,8 @@
       "AttachmentController",
       "DirectoryController",
       "ForcedApprovalController",
-      "ModelRefreshScheduler"
+      "ModelRefreshScheduler",
+      "ThreadDirectory"
     ],
     "protocol_transport": [
       "SshTransport",
@@ -41,6 +42,7 @@
       "ServiceTierOptions",
       "PermissionMode",
       "UsageLimits",
+      "ContextUsage",
       "ConversationJournal",
       "InteractionHistory",
       "ChatItem",
@@ -51,6 +53,9 @@
       "ProfileEditor",
       "ModelPicker",
       "DialogUi",
+      "ConversationHub",
+      "ContextMenuPanel",
+      "ContextRingView",
       "CompactSummaryTextView",
       "RemoteBrowser",
       "DirectoryPicker",

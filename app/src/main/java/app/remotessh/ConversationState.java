@@ -7,6 +7,7 @@ import org.json.JSONObject;
 final class ConversationState {
   String threadId = "", turnId = "", title = "", cwd = "", state = "已连接", error = "", model = "", effort = "", unsent = "", draft = "";
   DiagnosticText diagnostic;
+  ContextUsage contextUsage = new ContextUsage();
   PermissionMode permission = PermissionMode.INHERIT;
   PermissionMode effectivePermission = PermissionMode.INHERIT;
   ForcedApprovalController.State forcedApproval = new ForcedApprovalController.State();
@@ -25,6 +26,7 @@ final class ConversationState {
   void capture(RemoteApp a) {
     forcedApproval = a.forcedApprovalState;
     diagnostic = a.errorDiagnostic!=null && a.errorDiagnostic.raw==a.error ? a.errorDiagnostic : null;
+    contextUsage = a.contextUsage;
     threadId=a.threadId; turnId=a.turnId; title=a.threadTitle; cwd=a.threadCwd; state=a.state; error=a.error;
     model=a.model; effort=a.reasoningEffort; unsent=a.unsentText; draft=a.draftText;
     serviceTier=a.serviceTier; inheritedServiceTier=a.inheritedServiceTier; effectiveServiceTier=a.effectiveServiceTier;
@@ -39,6 +41,7 @@ final class ConversationState {
   void apply(RemoteApp a) {
     a.forcedApprovalState = forcedApproval;
     a.errorDiagnostic = diagnostic;
+    a.contextUsage = contextUsage;
     a.threadId=threadId; a.turnId=turnId; a.threadTitle=title; a.threadCwd=cwd; a.state=state; a.error=error;
     a.model=model; a.reasoningEffort=effort; a.unsentText=unsent; a.draftText=draft;
     a.serviceTier=serviceTier; a.inheritedServiceTier=inheritedServiceTier; a.effectiveServiceTier=effectiveServiceTier;

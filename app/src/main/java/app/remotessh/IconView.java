@@ -12,7 +12,7 @@ import android.graphics.drawable.Drawable;
 import android.view.View;
 
 /** Existing control geometry, backed by the common flat vector family. */
-public final class IconView extends View {
+public class IconView extends View {
   public String icon;
   public int color;
   public boolean alignBottomEnd;

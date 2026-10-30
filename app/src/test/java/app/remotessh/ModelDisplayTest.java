@@ -13,6 +13,14 @@ import org.robolectric.annotation.Config;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=35, qualifiers="en-w411dp-h891dp-xhdpi")
 public class ModelDisplayTest {
+  @Test public void composerShortensOnlyLeadingLiteralGptPrefix() {
+    JSONArray models=new JSONArray().put(Json.obj("model","gpt-a","displayName","GPT-Astra"))
+        .put(Json.obj("model","other","displayName","Other GPT-Model"));
+    assertEquals("Astra",ModelOptions.composerName(models,"gpt-a"));
+    assertEquals("GPT-Astra",ModelOptions.displayName(models,"gpt-a"));
+    assertEquals("Other GPT-Model",ModelOptions.composerName(models,"other"));
+    assertEquals("gpt-unknown",ModelOptions.composerName(models,"gpt-unknown"));
+  }
   @Test public void effortNamesStayEnglishAcrossAllInterfaceLanguages() {
     RemoteApp app=(RemoteApp)RuntimeEnvironment.getApplication();
     String[] ids={"none","minimal","low","medium","high","xhigh","max","ultra","future-effort"};

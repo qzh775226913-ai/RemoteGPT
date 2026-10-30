@@ -36,14 +36,15 @@ public final class RemoteApp extends Application {
   private final Set<String> journalPolling = new HashSet<>();
   public boolean readOnly, remoteRunning;
   public final UsageLimits usage = new UsageLimits();
+  ContextUsage contextUsage = new ContextUsage();
   public String threadCwd = "";
   private String reconnectThread = "", resumeDraftThread = "";
-  public String threadTitle = "", historyProject = "", lastError = "";
+  public String threadTitle = "", historyProject = "", historySearch = "", lastError = "";
   private String observedError = "";
-  private final Set<String> loadedThreads = new HashSet<>();
+  final Set<String> loadedThreads = new HashSet<>();
   private final Set<String> recoveringThreads = new HashSet<>();
   private final Set<String> statusPolling = new HashSet<>();
-  private long statusRevision;
+  long statusRevision;
   private final Runnable hideError =
       () -> {
         error = "";
@@ -94,9 +95,11 @@ public final class RemoteApp extends Application {
   private final TurnController turns = new TurnController(this);
   private final AttachmentController attachments = new AttachmentController(this);
   private final DirectoryController directories = new DirectoryController(this);
+  final ThreadDirectory threadDirectory = new ThreadDirectory(this);
   final ModelRefreshScheduler modelRefresh = new ModelRefreshScheduler(this);
   private final ArrayDeque<String> restoreQueue = new ArrayDeque<>();
-  private String restoringThread = "", pendingNavigation = "", loadingThread = "", replayThread = "";
+  private String restoringThread = "", pendingNavigation = "", replayThread = "";
+  String loadingThread = "";
   private String loadingStage="";
   private ThreadSnapshot preparedThread;
   private boolean multiSessionHost = true;
@@ -360,7 +363,7 @@ public final class RemoteApp extends Application {
     saveInteractions();
   }
 
-  private void clearServerRequests() { approvals.removeIf(req->{if(ConversationJournal.savedQuestion(req))return false;interactions.status(req,"expired");return true;});saveInteractions(); }
+  void clearServerRequests() { approvals.removeIf(req->{if(ConversationJournal.savedQuestion(req))return false;interactions.status(req,"expired");return true;});saveInteractions(); }
 
   List<ChatItem> displayItems() {return interactions.present(items);}
   long savedInteractionRevision;
@@ -517,9 +520,10 @@ public final class RemoteApp extends Application {
     attaching = false; attachingFiles = false;
     threadId = "";
     threadTitle = "";
+    contextUsage = new ContextUsage();
     threadCwd = "";
     readOnly = false;
-    historyProject = "";
+    historyProject = ""; historySearch = "";
     loadedThreads.clear();
     items.clear();
     threads = new JSONArray();
@@ -1111,55 +1115,7 @@ public final class RemoteApp extends Application {
                     }));
   }
 
-  public void refreshThreads(boolean more) {
-    JSONObject p = Json.obj("limit", 50, "sortKey", "updated_at");
-    try {
-      if (!historyProject.isEmpty()) p.put("cwd", historyProject);
-    } catch (JSONException ignored) {
-    }
-    String requestedProject = historyProject;
-    long requestedRevision = statusRevision;
-    if (more && !nextCursor.isEmpty())
-      try {
-        p.put("cursor", nextCursor);
-      } catch (JSONException ignored) {
-      }
-    request(
-        "thread/list",
-        p,
-        r -> {
-          if (!requestedProject.equals(historyProject)) return;
-          JSONArray data = r.optJSONArray("data");
-          if (!more) threads = new JSONArray();
-          if (data != null) for (int i = 0; i < data.length(); i++) {
-            JSONObject listed = data.optJSONObject(i);
-            threads.put(data.opt(i));
-            if (listed == null) continue;
-            String id = listed.optString("id");
-            // Subscribed events own loaded threads; fresh snapshots own passive history.
-            if (requestedRevision == statusRevision && !id.isEmpty() && !loadedThreads.contains(id) && !id.equals(loadingThread))
-              inConversation(id, () -> {
-                remoteRunning = Json.object(listed, "status").optString("type").equals("active");
-                if (!remoteRunning) { busy=false; turnId=""; clearServerRequests(); }
-                threadTitle = restoredTitle(listed, id, threadTitle);
-              });
-          }
-          if (profile != null) {
-            boolean added = false;
-            for (int i = 0; i < threads.length(); i++) {
-              JSONObject thread = threads.optJSONObject(i);
-              if (thread != null) {
-                String cwd = thread.optString("cwd");
-                if (cwd.startsWith("/") && profile.projects.size() < 200)
-                  added |= profile.projects.add(cwd);
-              }
-            }
-            if (added) save();
-          }
-          nextCursor = r.isNull("nextCursor") ? "" : r.optString("nextCursor");
-          changed();
-        });
-  }
+  public void refreshThreads(boolean more) { threadDirectory.refresh(more); }
 
   public void refreshUsage() {
     if (!connected || usage.loading) return;
@@ -1208,6 +1164,7 @@ public final class RemoteApp extends Application {
     attaching = false; attachingFiles = false;
     threadId = "";
     threadTitle = "";
+    contextUsage = new ContextUsage();
     threadCwd = "";
     journalPath="";journal=new ConversationJournal();effectivePermissionMode=PermissionMode.INHERIT;interactions=new InteractionHistory();savedInteractionRevision=0;
     readOnly = false;
@@ -1262,7 +1219,7 @@ public final class RemoteApp extends Application {
     return object.isNull(key) ? "" : object.optString(key, "").trim();
   }
 
-  private String restoredTitle(JSONObject thread, String id, String previous) {
+  String restoredTitle(JSONObject thread, String id, String previous) {
     String name = nonempty(thread, "name");
     if (!name.isEmpty()) return name;
     if (!previous.trim().isEmpty()) return previous;
@@ -1562,6 +1519,7 @@ public final class RemoteApp extends Application {
         || incomingMethod.equals("turn/completed") || incomingMethod.equals("thread/closed") || e.has("id")) statusRevision++;
     JSONObject params = Json.object(e, "params");
     String id = params.optString("threadId");
+    if (incomingMethod.equals("thread/name/updated")) threadDirectory.updateName(id, params.optString("name"));
     if (e.optString("method").equals("thread/status/changed")) {
       for (int i=0;i<threads.length();i++) {
         JSONObject listed=threads.optJSONObject(i);
@@ -1603,6 +1561,12 @@ public final class RemoteApp extends Application {
       changed();
       return;
     }
+    if (method.equals("thread/tokenUsage/updated")) {
+      contextUsage.update(p);
+      changed();
+      return;
+    }
+    if (method.equals("thread/name/updated")) { threadTitle = p.optString("name"); changed(); return; }
     // Older hosts replay journal events without per-event metadata. The replay
     // barrier also covers journal tails from other conversations on this socket.
     boolean historical = replaying || !replayThread.isEmpty();

@@ -16,6 +16,9 @@
 | 附件 | `AttachmentController` 管理批量上传、媒体读取、连接变化取消和主线程结果提交；`MediaFiles`／`FileAttachment` 定义格式、路径与限额 |
 | 消息图片 | `MessageImageTile` 拥有可见缩略图、读取任务与有界重试；同服务器／会话的连接 generation 变化时释放旧任务并重新绑定，主线程核对作用域后才显示结果。消息区暂停更新仍刷新图片连接状态；`ThumbnailLoader`／`ThumbnailCache` 分别提供任务调度和共享有界缓存；`ImageDialog` 拥有本次预览的对话图片快照、当前位置、加载 generation 与原图释放；`ZoomImageView` 负责适配／缩放拖动与边缘翻页手势 |
 | 目录／会话偏好 | `DirectoryController` 管理目录操作的 worker 和迟到结果；`ConversationPreferences` 管理稳定存储键及权限／速度／问答历史快照 |
+| 会话列表与标题 | `ThreadDirectory` 管理远端标题搜索、分页、重命名和连接范围内的本机置顶偏好；远端标题仅在成功响应后写入缓存 |
+| 上下文 | `ContextUsage` 保存单会话最近一次服务器 token 用量及窗口；`ContextRingView` 仅绘制本会话的估算比例；`ContextMenuPanel` 拥有上下文详情和手动压缩确认窗口 |
+| 对话信息 | `ConversationHub` 拥有顶部标题的信息入口、项目／会话详情及只读 Skills、MCP 服务目录窗口 |
 | 传输／协议 | `SshTransport` 管理 SSH、SFTP 和辅助通道；`RpcClient` 管理 JSON-RPC framing、请求匹配和事件分发，不操作 Android View |
 | 连接诊断 | `ConnectionPreflight` 生成无凭据输出的环境探测并解析分类失败、检查公开账户状态；`ConnectionSetupUi` 拥有用户显式关闭持久模式的确认窗口。探测有超时／输出上限，关闭或连接 generation 变化使后续初始化无效 |
 | 强制权限审批 | `ForcedApprovalController` 调度已显式授权的命令／文件审批，按会话和连接 generation 隔离、去重和失败恢复；State 内的 Burst 用单调时钟记录实时唯一权限请求、保留最近 3 个时间点，并在第 4 个到达时判断 30 秒窗口资格。授权与窗口均由现有 `ConversationState.capture/apply` 捕获该 State，不保存到偏好；重放不计数，成功应用新权限结束授权时清空窗口。`PermissionPicker` 拥有权限列表／警告窗口并释放监听器，只在已确认启用期间显示强制允许项；下一轮请求捕获权限选择与授权 revision，成功响应只能结束它实际应用的授权 |
@@ -33,6 +36,7 @@
 | --- | --- | --- |
 | 连接级 | SSH/RPC、连接 generation、登录初始化、恢复队列、全局模型目录 | 换连接使旧异步结果无效；不可保存为某条会话的状态 |
 | 会话级 | threadId/turnId、消息、草稿、审批、权限／速度选择、busy/readOnly、问答历史 | 由 `ConversationState` 和 `ConversationStore` 隔离；后台结果按目标 threadId 分发 |
+| 会话级上下文 | 最近 `thread/tokenUsage/updated`、模型窗口和估算比例 | `ContextUsage` 经 `ConversationState.capture/apply` 隔离；连接切换清空，账户额度仍独立 |
 | 界面级 | View、Dialog、滚动位置、选择器待处理标识、可见缩略图 | Activity 拥有并清理；不能让旋转重启远端，也不能把销毁窗口的监听器留下 |
 
 附件上传批次目前属于连接上的串行操作，上传／创建／恢复中的短暂切换限制是现有行为；不能简单移除这些限制。

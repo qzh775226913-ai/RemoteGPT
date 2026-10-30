@@ -48,6 +48,14 @@ public class MainActivityTest {
     return activity.findViewById(android.R.id.content);
   }
 
+  private ContextRingView contextRing(View root) {
+    if (root instanceof ContextRingView) return (ContextRingView) root;
+    if (root instanceof ViewGroup) for (int i=0;i<((ViewGroup)root).getChildCount();i++) {
+      ContextRingView found=contextRing(((ViewGroup)root).getChildAt(i));if(found!=null)return found;
+    }
+    return null;
+  }
+
   private void capture(String name) throws Exception {
     captureView(content(), name);
   }
@@ -912,6 +920,9 @@ public class MainActivityTest {
     capture("conversation-context-usage");
     ((View) find(content(), "接续远端对话").getParent()).performClick();
     android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertEquals("当前项目与对话", dialog.getListView().getAdapter().getItem(0));
+    dialog.getListView().performItemClick(null, 0, 0);
+    dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
     assertTrue(org.robolectric.Shadows.shadowOf(dialog).getMessage().toString().contains("conversation-123"));
     dialog.dismiss();
   }
@@ -1114,12 +1125,14 @@ public class MainActivityTest {
     capture("phone-dark");
   }
   @Test public void conversationMenuDoesNotOpenNavigation() throws Exception {
-    find(content(), "对话菜单").performClick();
+    assertNotNull(contextRing(content()));
+    contextRing(content()).performClick();
     android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-    assertEquals("新对话", dialog.getListView().getAdapter().getItem(0));
-    assertEquals("最近一次错误", dialog.getListView().getAdapter().getItem(1));
-    assertEquals("当前项目与对话",dialog.getListView().getAdapter().getItem(2));
-    assertEquals(3,dialog.getListView().getAdapter().getCount());
+    assertEquals("上下文信息", dialog.getListView().getAdapter().getItem(0));
+    assertEquals("压缩上下文", dialog.getListView().getAdapter().getItem(1));
+    assertEquals("新对话", dialog.getListView().getAdapter().getItem(2));
+    assertEquals("最近一次错误", dialog.getListView().getAdapter().getItem(3));
+    assertEquals(4,dialog.getListView().getAdapter().getCount());
     captureView(dialog.getWindow().getDecorView(), "conversation-menu");
   }
 

@@ -36,11 +36,13 @@ final class RemoteBrowser {
   private final EditText search;
   private String filter = "", project = "";
   private String renderedSignature = "";
+  private final Runnable remoteSearch;
 
   private boolean centerHost = true;
 
   RemoteBrowser(Activity activity, RemoteApp app, boolean dark, Actions actions) {
     this.app = app;
+    remoteSearch = () -> { if (app.connected && isShowing()) app.refreshThreads(false); };
     this.ui = new RemoteScreens(activity, dark);
     this.actions = actions;
     LinearLayout root = ui.column();
@@ -57,6 +59,7 @@ final class RemoteBrowser {
               else {
                 project = "";
                 app.historyProject = "";
+                app.threadDirectory.invalidate();
                 if (app.connected) app.refreshThreads(false);
                 refresh();
               }
@@ -125,6 +128,13 @@ final class RemoteBrowser {
           public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
           public void onTextChanged(CharSequence s, int start, int before, int count) {
+            String query = s.toString().trim();
+            if (!query.equals(app.historySearch)) {
+              app.historySearch = query;
+              app.threadDirectory.invalidate();
+              search.removeCallbacks(remoteSearch);
+              search.postDelayed(remoteSearch, 300);
+            }
             refreshList();
           }
 
@@ -165,6 +175,7 @@ final class RemoteBrowser {
     renderedSignature = "";
     if (!app.historyProject.isEmpty()) {
       app.historyProject = "";
+      app.threadDirectory.invalidate();
       if (app.connected) app.refreshThreads(false);
     }
     filter = app.profile == null ? (app.vault.profiles.isEmpty() ? "" : app.vault.profiles.get(0).id) : app.profile.id;
@@ -176,6 +187,7 @@ final class RemoteBrowser {
   }
 
   void dismiss() {
+    search.removeCallbacks(remoteSearch);
     dialog.dismiss();
   }
 
@@ -183,12 +195,14 @@ final class RemoteBrowser {
     project = path;
     filter = app.profile == null ? "" : app.profile.id;
     app.historyProject = path;
+    app.threadDirectory.invalidate();
     if (app.connected) app.refreshThreads(false);
     refresh();
   }
 
   void refresh() {
     if (!isShowing()) return;
+    if (!search.getText().toString().trim().equals(app.historySearch)) search.setText(app.historySearch);
     subtitle.setText(
         app.connecting || app.recoveryInProgress()
             ? (app.profile==null?"":app.profile.title()+" · ")+ConnectionService.summary(app)
@@ -216,6 +230,7 @@ final class RemoteBrowser {
                 project = "";
                 if (active) {
                   app.historyProject = "";
+                  app.threadDirectory.invalidate();
                   app.refreshThreads(false);
                 } else {
                   app.historyProject = "";
@@ -251,7 +266,8 @@ final class RemoteBrowser {
       if (thread != null) value.append("|t:").append(thread.optString("id"))
           .append(':').append(thread.optString("name")).append(':').append(thread.optString("preview"))
           .append(':').append(thread.optString("cwd")).append(':').append(thread.optLong("updatedAt"))
-          .append(':').append(app.threadRunning(thread));
+          .append(':').append(app.threadRunning(thread))
+          .append(':').append(app.threadDirectory.pinned(thread.optString("id")));
     }
     return value.toString();
   }
@@ -314,17 +330,24 @@ final class RemoteBrowser {
       section(UiText.get(R.string.ui_recent));
     }
     int count = 0;
-    if (app.connected && filter.equals(app.profile.id))
+    if (app.connected && filter.equals(app.profile.id)) {
+      List<JSONObject> visible = new ArrayList<>();
       for (int i = 0; i < app.threads.length(); i++) {
         JSONObject thread = app.threads.optJSONObject(i);
+        if (thread != null) visible.add(thread);
+      }
+      visible.sort((a,b) -> Boolean.compare(app.threadDirectory.pinned(b.optString("id")), app.threadDirectory.pinned(a.optString("id"))));
+      for (JSONObject thread : visible) {
         if (thread == null) continue;
         if (!project.isEmpty() && !thread.optString("cwd").equals(project)) continue;
         String name = thread.isNull("name") ? "" : thread.optString("name");
         if (name.trim().isEmpty()) name = thread.optString("preview", UiText.get(R.string.ui_new_conversation));
         if (!matches(name)) continue;
+        final String displayName = name;
         count++;
         LinearLayout row = ui.row();
-        TextView text = ui.text(name.isEmpty() ? UiText.get(R.string.ui_new_conversation) : name, 18);
+        TextView text = ui.text((app.threadDirectory.pinned(thread.optString("id")) ? "★  " : "")
+            + (name.isEmpty() ? UiText.get(R.string.ui_new_conversation) : name), 18);
         text.setMaxLines(1);
         text.setEllipsize(TextUtils.TruncateAt.END);
         text.setPadding(0, ui.dp(16), ui.dp(12), ui.dp(16));
@@ -360,8 +383,10 @@ final class RemoteBrowser {
               app.viewConversation(id);
               dialog.dismiss();
             });
+        row.setOnLongClickListener(v -> { showThreadActions(thread, displayName); return true; });
         list.addView(row);
       }
+    }
     if (count == 0) {
       TextView note = ui.text(project.isEmpty() ? UiText.get(R.string.ui_no_conversations) : UiText.get(R.string.ui_no_more_conversations), 16);
       note.setTextColor(ui.muted);
@@ -377,5 +402,28 @@ final class RemoteBrowser {
               () -> app.refreshThreads(!app.nextCursor.isEmpty())));
     if (!app.connected && app.vault.profiles.isEmpty())
       list.addView(ui.button(UiText.get(R.string.ui_add_ssh_connection_211), true, actions::add));
+  }
+
+  private void showThreadActions(JSONObject thread, String name) {
+    String id = thread.optString("id");
+    boolean pinned = app.threadDirectory.pinned(id);
+    new AlertDialog.Builder(ui.activity).setTitle(name)
+        .setItems(new String[] {UiText.get(R.string.ui_rename_conversation),
+            UiText.get(pinned ? R.string.ui_unpin_conversation : R.string.ui_pin_conversation)},
+            (dialog, which) -> {
+              if (which == 0) renameThread(id, name);
+              else { app.threadDirectory.pin(id, !pinned); refresh(); }
+            }).show();
+  }
+
+  private void renameThread(String id, String oldName) {
+    EditText input = new EditText(ui.activity);
+    input.setSingleLine(true);
+    input.setText(oldName);
+    input.selectAll();
+    new AlertDialog.Builder(ui.activity).setTitle(UiText.get(R.string.ui_rename_conversation))
+        .setView(input).setNegativeButton(UiText.get(R.string.ui_cancel), null)
+        .setPositiveButton(UiText.get(R.string.ui_save), (d, w) -> app.threadDirectory.rename(id, input.getText().toString()))
+        .show();
   }
 }

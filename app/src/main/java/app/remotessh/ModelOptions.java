@@ -26,6 +26,9 @@ final class ModelOptions {
     }
     return id;
   }
+  static String composerName(JSONArray models, String id) {
+    return displayName(models, id).replaceFirst("^GPT-", "");
+  }
   static String label(String effort) {
     switch (effort) {
       case "": return UiText.get(R.string.ui_default);

@@ -1,6 +1,6 @@
 # 当前需求与行为契约
 
-适用：1.0.69 / versionCode 71（开发测试版）。最后核对：2026-10-30。
+适用：1.1.1 / versionCode 72（开发测试版）。最后核对：2026-10-30。
 
 本文件是当前产品行为的唯一需求清单。版本记录说明曾经发生什么，不覆盖此处。编号永久保留；修改行为时修改对应条目和验收，取消需求时写明取消原因，不把编号转用于别的需求。
 
@@ -33,7 +33,7 @@
 | R-17 | 前台服务维持连接；每个活跃会话独立通知／气泡。普通状态无审批按钮，待答提供入口，完成可确认隐藏。系统决定流体云资格和数量。 | [LiveStatusTest](../app/src/test/java/app/remotessh/LiveStatusTest.java)、[MultiConversationTest](../app/src/test/java/app/remotessh/MultiConversationTest.java)、[BackgroundConnectionTest](../app/src/test/java/app/remotessh/BackgroundConnectionTest.java) |
 | R-18 | 账户额度来自服务器；未知或不支持时显示原因，不伪造百分比；账户额度与上下文 token 区分。 | [UsageLimitsTest](../app/src/test/java/app/remotessh/UsageLimitsTest.java) |
 | R-19 | 远端版本检查分清运行版本与磁盘安装版本；更新和重启需明确用户操作，检查失败不宣称最新，不自动重启活跃任务。 | [RemoteVersionTest](../app/src/test/java/app/remotessh/RemoteVersionTest.java)、[维护脚本测试](../tools/test_remote_maintenance.py)、[MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java) |
-| R-20 | 保持 1.0.47 导航：远程控制菜单为添加连接、编辑当前连接、刷新项目与对话、设置；对话菜单为新对话、最近一次错误、当前项目与对话。主题／字体／后台设置可用；后台连接窗口用精简要点说明保活与远端任务边界，窄屏／大字号时说明区有界滚动且应用设置、通知设置和返回操作保持可见。字号仅提供跟随系统、小（0.75 倍）、中（0.9 倍）、大（1 倍）、更大（1.15 倍），倍率作用于系统字号；原“小”按原存储值显示为“中”。移除原 1.3 倍档，已有该值读取时按 1.15 倍显示并选中“更大”，保留原偏好键和值以便回退。编辑连接表单的“移除此连接”与上方主机指纹按钮保持 12dp 间距；Activity 销毁释放所拥有的模型监听器。 | [MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java)、[LocalizationLayoutTest](../app/src/test/java/app/remotessh/LocalizationLayoutTest.java)、[DialogStyleTest](../app/src/test/java/app/remotessh/DialogStyleTest.java)、[DialogLifecycleTest](../app/src/test/java/app/remotessh/DialogLifecycleTest.java) |
+| R-20 | 远程控制菜单为添加连接、编辑当前连接、刷新项目与对话、设置；对话右上菜单保留新对话与最近一次错误，上下文入口按 R-27 添加，原“当前项目与对话”迁至顶部名称的信息菜单。主题／字体／后台设置可用；后台连接窗口用精简要点说明保活与远端任务边界，窄屏／大字号时说明区有界滚动且应用设置、通知设置和返回操作保持可见。字号仅提供跟随系统、小（0.75 倍）、中（0.9 倍）、大（1 倍）、更大（1.15 倍），倍率作用于系统字号；原“小”按原存储值显示为“中”。移除原 1.3 倍档，已有该值读取时按 1.15 倍显示并选中“更大”，保留原偏好键和值以便回退。编辑连接表单的“移除此连接”与上方主机指纹按钮保持 12dp 间距；Activity 销毁释放所拥有的模型监听器。 | [MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java)、[LocalizationLayoutTest](../app/src/test/java/app/remotessh/LocalizationLayoutTest.java)、[DialogStyleTest](../app/src/test/java/app/remotessh/DialogStyleTest.java)、[DialogLifecycleTest](../app/src/test/java/app/remotessh/DialogLifecycleTest.java) |
 
 ## 1.0.56 公式显示
 
@@ -50,6 +50,15 @@
 | R-24 | 对话输入区在键盘显示和收起后始终保持正常位置与尺寸，无须点击输入框再点空白处恢复；空草稿在失焦或键盘收起时收为一行；有文字的草稿失焦时最多三行，聚焦且键盘显示时最多四行，超出可在输入框内滚动，并保留原文。Android 11+ 根据系统栏与输入法边距计算底部留白；新对话或只读历史切换时立即收起、失焦并完成布局，无须再次点击；旧版 Android 保留原布局兼容路径。 | [MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java) |
 | R-25 | “加载更早的消息”按钮采用各语言简短、自然的“更早的消息（数量）”文案，保留剩余数量；专用水平内边距为 8dp，外边缘继续与消息列对齐。十种语言在 240dp 窄屏和较大字体下允许换行，按钮高度随文字增长，文字不溢出或被裁切，原有点击与消息间距不变。 | [MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java)、[LocalizationLayoutTest](../app/src/test/java/app/remotessh/LocalizationLayoutTest.java) |
 | R-26 | 折叠的思考、命令执行、文件更改、工具调用、图片查看／生成和网页搜索摘要气泡上下留白一致且紧凑；按当前字体的实际可见字形边界做光学垂直居中，英文、简繁中文、日文、韩文、西／葡／德／法／俄文均不得因基线或下降部偏下。展开详情内容和复制原文保持原样。 | [MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java)、[LocalizationLayoutTest](../app/src/test/java/app/remotessh/LocalizationLayoutTest.java) |
+
+## 1.1.1 对话上下文与管理
+
+| 编号 | 当前行为及失败边界 | 自动化入口 |
+| --- | --- | --- |
+| R-27 | 对话右上角三点按钮有细圆环，按本会话最近一次 `thread/tokenUsage/updated` 的 `last.totalTokens / modelContextWindow` 显示估算使用比例；未知窗口、无上报或换连接时只显示底环，不使用账户额度代替。点击提供上下文详情和手动压缩，以及原新对话、最近一次错误；原“当前项目与对话”不在该菜单。压缩须明确确认，仅对已接续且空闲的当前会话发 `thread/compact/start`，不误发其他会话，失败可见；上下文压缩事件本地化显示。 | [ContextUsageTest](../app/src/test/java/app/remotessh/ContextUsageTest.java)、[ConversationNavigationLanguageTest](../app/src/test/java/app/remotessh/ConversationNavigationLanguageTest.java)、[MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java) |
+| R-28 | 对话列表长按某项可重命名和置顶／取消置顶；名称通过 `thread/name/set` 保存到服务器，仅成功后更新可见名称。置顶是按连接身份保存于本机的显示偏好，已置顶项稳定排在当前列表前面，不修改远端会话或旧凭据格式。搜索服务器历史标题而非只过滤已加载页面，保留项目范围和分页；切换查询、项目或连接时丢弃旧响应。 | [ThreadDirectoryTest](../app/src/test/java/app/remotessh/ThreadDirectoryTest.java)、[RemoteBrowserTest](../app/src/test/java/app/remotessh/RemoteBrowserTest.java) |
+| R-29 | 顶部对话名称打开信息菜单，包含当前项目与对话、远端 Skills、MCP 服务器。详情补充模型、推理强度、权限、速度、远端版本；Skills 按当前项目查询，MCP 列表读取远端服务、工具及认证状态。断开、缺项目、空列表和请求失败均明确显示；远端名称、说明和错误保留原文，关闭窗口后迟到响应不更新窗口。 | [ConversationHubTest](../app/src/test/java/app/remotessh/ConversationHubTest.java)、[ConversationNavigationLanguageTest](../app/src/test/java/app/remotessh/ConversationNavigationLanguageTest.java)、[LocalizationTest](../app/src/test/java/app/remotessh/LocalizationTest.java) |
+| R-30 | 对话输入框下方模型显示名仅移除开头的字面 `GPT-`，完整模型 ID、选择、协议请求及其他位置名称不变；新增界面文案在十种语言中完整，动态服务器文字不翻译。 | [ModelDisplayTest](../app/src/test/java/app/remotessh/ModelDisplayTest.java)、[资源检查](../tools/test_localization.py) |
 
 ## 当前不承诺的能力
 
