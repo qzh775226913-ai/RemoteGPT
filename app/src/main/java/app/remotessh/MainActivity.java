@@ -247,6 +247,7 @@ public final class MainActivity extends Activity {
           if (Build.VERSION.SDK_INT >= 30) {
             android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
             android.graphics.Insets ime = insets.getInsets(WindowInsets.Type.ime());
+            if (input != null) input.setMaxLines(input.hasFocus() && insets.isVisible(WindowInsets.Type.ime()) ? 6 : 1);
             root.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, ime.bottom));
             return WindowInsets.CONSUMED;
           }
@@ -413,13 +414,14 @@ public final class MainActivity extends Activity {
     input.setHint(UiText.get(R.string.ui_send_message));
     input.setBackgroundColor(Color.TRANSPARENT);
     input.setMinLines(1);
-    input.setMaxLines(6);
+    input.setMaxLines(1);
     input.setPadding(dp(12), dp(12), dp(8), dp(8));
     input.setInputType(
         android.text.InputType.TYPE_CLASS_TEXT
             | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
             | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
     input.setContentDescription(UiText.get(R.string.ui_message_input));
+    input.setOnFocusChangeListener((v, focused) -> input.setMaxLines(focused ? 6 : 1));
     attachmentStrip = row();
     attachmentStrip.setPadding(dp(4), dp(8), dp(4), dp(4));
     attachmentScroll = new HorizontalScrollView(this);

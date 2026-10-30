@@ -1,6 +1,6 @@
 # 当前需求与行为契约
 
-适用：1.0.68 / versionCode 70（开发测试版）。最后核对：2026-10-30。
+适用：1.0.69 / versionCode 71（开发测试版）。最后核对：2026-10-30。
 
 本文件是当前产品行为的唯一需求清单。版本记录说明曾经发生什么，不覆盖此处。编号永久保留；修改行为时修改对应条目和验收，取消需求时写明取消原因，不把编号转用于别的需求。
 
@@ -47,7 +47,7 @@
 | 编号 | 当前行为及失败边界 | 自动化入口 |
 | --- | --- | --- |
 | R-23 | 应用界面支持英文、简体中文、繁体中文、日文、韩文、西班牙语、巴西葡萄牙语、德语、法语、俄语。首次安装和旧版无语言偏好时跟随系统首选语言，不支持时回退英文；中文区分文字体系，葡萄牙语使用巴西版本。设置提供“跟随系统”与十种语言自称，显式选择持久保存；切换刷新页面、通知和气泡，并更新系统缓存的会话快捷入口名称；不改变连接／会话／审批身份与业务状态。仅本地化应用自有 UI 文案（推理档位名称按 R-11 保持官方英文）；服务器消息、错误、问题／选项、模型名称／描述、日志、命令、路径及复制原文不翻译。远端脚本、协议、历史识别标记、既有存储格式、包名和签名不变。系统选择器和系统设置页的语言由系统负责。 | [LocalizationTest](../app/src/test/java/app/remotessh/LocalizationTest.java)、[LocalizationLayoutTest](../app/src/test/java/app/remotessh/LocalizationLayoutTest.java)、[NotificationLanguageTest](../app/src/test/java/app/remotessh/NotificationLanguageTest.java)、[资源检查](../tools/test_localization.py) |
-| R-24 | 对话输入区在键盘显示和收起后始终保持正常位置与尺寸，无须点击输入框再点空白处恢复。Android 11+ 根据系统栏与输入法边距计算底部留白；旧版 Android 保留原布局兼容路径。 | [MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java) |
+| R-24 | 对话输入区在键盘显示和收起后始终保持正常位置与尺寸，无须点击输入框再点空白处恢复；输入框失焦或键盘收起时收为一行，聚焦且键盘显示时最多展开六行，保留多行草稿。Android 11+ 根据系统栏与输入法边距计算底部留白；旧版 Android 保留原布局兼容路径。 | [MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java) |
 
 ## 当前不承诺的能力
 

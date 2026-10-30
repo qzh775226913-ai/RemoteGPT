@@ -576,11 +576,27 @@ public class MainActivityTest {
         .setVisible(WindowInsets.Type.ime(), true).build();
     root.dispatchApplyWindowInsets(bars);
     assertEquals(32, root.getPaddingBottom());
+    input.requestFocus();
     root.dispatchApplyWindowInsets(keyboard);
     assertEquals(560, root.getPaddingBottom());
+    assertEquals(6, input.getMaxLines());
     root.dispatchApplyWindowInsets(bars);
     assertEquals(32, root.getPaddingBottom());
+    assertEquals(1, input.getMaxLines());
     assertSame(input, inputField(root, "消息输入框"));
+  }
+
+  @Test public void unfocusedComposerCollapsesWithoutDiscardingMultilineDraft() {
+    EditText input = inputField(content(), "消息输入框");
+    assertNotNull(input);
+    String draft = "first line\nsecond line\nthird line";
+    input.setText(draft);
+    assertEquals(1, input.getMaxLines());
+    input.requestFocus();
+    assertEquals(6, input.getMaxLines());
+    input.clearFocus();
+    assertEquals(1, input.getMaxLines());
+    assertEquals(draft, input.getText().toString());
   }
 
   @Test
