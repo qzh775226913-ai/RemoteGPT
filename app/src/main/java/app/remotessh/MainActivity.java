@@ -248,7 +248,7 @@ public final class MainActivity extends Activity {
           if (Build.VERSION.SDK_INT >= 30) {
             android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
             android.graphics.Insets ime = insets.getInsets(WindowInsets.Type.ime());
-            if (input != null) input.setMaxLines(input.hasFocus() && insets.isVisible(WindowInsets.Type.ime()) ? 6 : 1);
+            if (input != null) input.setMaxLines(input.length() > 0 || input.hasFocus() && insets.isVisible(WindowInsets.Type.ime()) ? 6 : 1);
             root.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, ime.bottom));
             return WindowInsets.CONSUMED;
           }
@@ -422,7 +422,7 @@ public final class MainActivity extends Activity {
             | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
             | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
     input.setContentDescription(UiText.get(R.string.ui_message_input));
-    input.setOnFocusChangeListener((v, focused) -> input.setMaxLines(focused ? 6 : 1));
+    input.setOnFocusChangeListener((v, focused) -> input.setMaxLines(focused || input.length() > 0 ? 6 : 1));
     attachmentStrip = row();
     attachmentStrip.setPadding(dp(4), dp(8), dp(4), dp(4));
     attachmentScroll = new HorizontalScrollView(this);
@@ -455,6 +455,7 @@ public final class MainActivity extends Activity {
 
           public void onTextChanged(CharSequence s, int st, int before, int count) {
             app.draftText=s.toString();
+            input.setMaxLines(s.length() > 0 || input.hasFocus() ? 6 : 1);
             updateSend();
           }
 
@@ -718,8 +719,10 @@ public final class MainActivity extends Activity {
           dp(wide ? 510 : Math.max(180, getResources().getConfiguration().screenWidthDp - 92)));
     } else if (!item.prose()) {
       content.setTextIsSelectable(false);
+      content.setIncludeFontPadding(false);
+      content.setGravity(Gravity.CENTER_VERTICAL);
       content.setBackground(rounded(panel, 16));
-      content.setPadding(dp(10), dp(6), dp(10), dp(6));
+      content.setPadding(dp(10), dp(4), dp(10), dp(4));
       content.setSingleLine(true);
       content.setEllipsize(TextUtils.TruncateAt.END);
       clickable(
