@@ -563,6 +563,26 @@ public class MainActivityTest {
     verifyComposer("composer-narrow");
   }
 
+  @Test public void composerTracksKeyboardInsetsAndReturnsToNavigationInset() {
+    View root = ((ViewGroup) content()).getChildAt(0);
+    EditText input = inputField(root, "消息输入框");
+    assertNotNull(input);
+    WindowInsets bars = new WindowInsets.Builder()
+        .setInsets(WindowInsets.Type.systemBars(), android.graphics.Insets.of(0, 48, 0, 32))
+        .setInsets(WindowInsets.Type.ime(), android.graphics.Insets.NONE)
+        .setVisible(WindowInsets.Type.ime(), false).build();
+    WindowInsets keyboard = new WindowInsets.Builder(bars)
+        .setInsets(WindowInsets.Type.ime(), android.graphics.Insets.of(0, 0, 0, 560))
+        .setVisible(WindowInsets.Type.ime(), true).build();
+    root.dispatchApplyWindowInsets(bars);
+    assertEquals(32, root.getPaddingBottom());
+    root.dispatchApplyWindowInsets(keyboard);
+    assertEquals(560, root.getPaddingBottom());
+    root.dispatchApplyWindowInsets(bars);
+    assertEquals(32, root.getPaddingBottom());
+    assertSame(input, inputField(root, "消息输入框"));
+  }
+
   @Test
   @Config(qualifiers="zh-rCN-w360dp-h800dp-night-xhdpi")
   public void darkComposerKeepsFullModelAndImagePreviews() throws Exception {

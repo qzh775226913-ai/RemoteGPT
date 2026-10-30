@@ -97,3 +97,5 @@ DiagnosticText 只在客户端构造连接／操作诊断时创建，保存原�
 当前诊断来源随 errorDiagnostic 归属于会话，由 ConversationState.capture/apply 保存、恢复，并在原始错误已被其他内容替换时丢弃不匹配来源；最近错误的来源随原有全局 lastError 保留。所有读写沿用 ConversationStore 主线程分发。MainActivity 只做显示／复制连接，持久模式继续判断使用原始诊断，避免语言影响重连选择。
 
 ServiceTierOptions.choices 把“沿用远端默认”作为应用控制项置于远端档位列表之外；远端显式 default 不再过滤或重复插入，名称、说明与列表位置完整保留。旧目录缺少普通档时才补协议隐含的 Standard 控制。ModelCatalog 的 LinkedHashMap 继续保持分页首次出现的模型顺序，不以 isDefault 或名称排序。
+
+主页面输入区沿用线性布局和 `adjustResize`。Android 11+ 的窗口自行处理 Insets，根布局用系统栏和输入法底部边距的较大值留白；旧版保留原系统窗口 Insets 路径。根布局消费 Insets，避免子视图重复处理。

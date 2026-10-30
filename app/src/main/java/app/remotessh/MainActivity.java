@@ -239,16 +239,19 @@ public final class MainActivity extends Activity {
   private void build() {
     root = column();
     root.setBackgroundColor(bg);
-    root.setFitsSystemWindows(true);
+    if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
+    else root.setFitsSystemWindows(true);
     setContentView(root);
     root.setOnApplyWindowInsetsListener(
         (v, insets) -> {
-          int bottom = insets.getSystemWindowInsetBottom();
-          root.setPadding(
-              insets.getSystemWindowInsetLeft(),
-              insets.getSystemWindowInsetTop(),
-              insets.getSystemWindowInsetRight(),
-              bottom);
+          if (Build.VERSION.SDK_INT >= 30) {
+            android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+            android.graphics.Insets ime = insets.getInsets(WindowInsets.Type.ime());
+            root.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, ime.bottom));
+            return WindowInsets.CONSUMED;
+          }
+          root.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
+              insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
           return insets.consumeSystemWindowInsets();
         });
     body = row();
