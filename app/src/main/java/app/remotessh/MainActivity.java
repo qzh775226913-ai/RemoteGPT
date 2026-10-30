@@ -239,6 +239,7 @@ public final class MainActivity extends Activity {
   private void build() {
     root = column();
     root.setBackgroundColor(bg);
+    root.setFocusableInTouchMode(true);
     if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
     else root.setFitsSystemWindows(true);
     setContentView(root);
@@ -469,6 +470,13 @@ public final class MainActivity extends Activity {
           }
           return false;
         });
+    root.requestFocus();
+  }
+
+  private void collapseComposer() {
+    root.requestFocus();
+    input.setMaxLines(1);
+    root.requestApplyInsets();
   }
 
   private void scheduleRender() {
@@ -503,6 +511,7 @@ public final class MainActivity extends Activity {
     if (!renderedThread.equals(app.threadId)) {
       if(imageDialog!=null)imageDialog.dismiss();
       renderedThread = app.threadId;
+      collapseComposer();
       if (input != null) { input.setText(app.draftText); input.setSelection(input.length()); }
       scroll.follow();
       historyLimit=60;firstRender=true;
@@ -1224,6 +1233,7 @@ public final class MainActivity extends Activity {
     }
     app.draftText=input.getText().toString();
     app.newChat();
+    collapseComposer();
   }
 
   private void fillNavigation(LinearLayout nav, boolean modal) {

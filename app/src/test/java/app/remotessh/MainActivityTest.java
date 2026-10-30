@@ -599,6 +599,22 @@ public class MainActivityTest {
     assertEquals(draft, input.getText().toString());
   }
 
+  @Test public void newConversationResetsExpandedComposerBeforeAnotherTap() {
+    RemoteApp app = (RemoteApp) activity.getApplication();
+    app.profile = new Profile(); app.connected = true; app.threadId = "previous-thread";
+    app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    EditText input = inputField(content(), "消息输入框");
+    assertNotNull(input);
+    input.setText("old draft\nsecond line");
+    input.requestFocus();
+    assertEquals(6, input.getMaxLines());
+    app.newChat();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertEquals("", input.getText().toString());
+    assertEquals(1, input.getMaxLines());
+    assertFalse(input.hasFocus());
+  }
+
   @Test
   @Config(qualifiers="zh-rCN-w360dp-h800dp-night-xhdpi")
   public void darkComposerKeepsFullModelAndImagePreviews() throws Exception {
