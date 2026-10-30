@@ -18,6 +18,7 @@ final class CapabilityDirectoryDialog {
 
   private final Activity activity;
   private final LinearLayout rows;
+  private final ScrollView scroll;
   private final EditText search;
   private final AlertDialog dialog;
   private final List<Entry> entries = new ArrayList<>();
@@ -38,7 +39,7 @@ final class CapabilityDirectoryDialog {
     search.setHint(UiText.get(R.string.ui_search_names));
     search.setContentDescription(UiText.get(R.string.ui_search_names));
     root.addView(search, new LinearLayout.LayoutParams(-1, -2));
-    ScrollView scroll = new ScrollView(activity);
+    scroll = new ScrollView(activity);
     rows = new LinearLayout(activity);
     rows.setOrientation(LinearLayout.VERTICAL);
     scroll.addView(rows);
@@ -107,6 +108,7 @@ final class CapabilityDirectoryDialog {
     }
     if (shown == 0) renderMessage(failed ? UiText.get(R.string.ui_remote_list_failed) :
         query.isEmpty() ? emptyText : UiText.get(R.string.ui_no_matching_entries));
+    scroll.post(() -> scroll.scrollTo(0, 0));
   }
 
   private void renderMessage(String text) {
