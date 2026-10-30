@@ -602,17 +602,21 @@ public class MainActivityTest {
     assertEquals(1, input.getMaxLines());
   }
 
-  @Test public void foldedReasoningAndExecutionBubblesAreCompactAndCentered() throws Exception {
+  @Test public void allFoldedToolBubblesAreCompactAndCentered() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication();
     app.profile = new Profile(); app.connected = true;
-    ChatItem reasoning = new ChatItem("reason", "reasoning", "思考过程");
-    reasoning.detail = "摘要";
-    ChatItem execution = new ChatItem("execution", "commandExecution", "运行测试");
-    app.items.add(reasoning); app.items.add(execution); app.changed();
+    String[] types = {"reasoning", "commandExecution", "fileChange", "mcpToolCall",
+        "imageView", "imageGeneration", "webSearch"};
+    for (String type : types) {
+      ChatItem item = new ChatItem(type, type, "tool-" + type);
+      if (type.equals("reasoning")) item.detail = "摘要";
+      app.items.add(item);
+    }
+    app.changed();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     captureView(content(), "compact-folded-details");
-    for (String label : new String[] {"›  思考过程  ›", "›  运行测试  ›"}) {
-      TextView bubble = (TextView) find(content(), label);
+    for (ChatItem item : app.items) {
+      TextView bubble = (TextView) find(content(), "›  " + UiPresentation.itemTitle(item) + "  ›");
       assertNotNull(bubble);
       assertFalse(bubble.getIncludeFontPadding());
       assertEquals(bubble.getPaddingTop(), bubble.getPaddingBottom());
