@@ -110,11 +110,11 @@
     <string name="ui_medium">"Moyenne"</string>
     <string name="ui_large">"Grande"</string>
     <string name="ui_extra_large">"Très grande"</string>
-    <string name="ui_background_connection">"Background connection"</string>
-    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"Une notification persistante est affichée et le CPU reste éveillé pendant la connexion. Veuillez autoriser RemoteGPT à s\'exécuter en arrière-plan dans les paramètres système et définir la politique de batterie sur sans restriction. Si vous utilisez Tailscale, vous devez également autoriser sa mise en réseau en arrière-plan. The wake lock is released upon disconnection. \n\nAprès l\'ouverture d\'une session persistante à distance, la suppression de l\'application ou la déconnexion d\'Internet n\'arrêtera pas automatiquement la tâche à distance ; reconnecting will make up for the message. En attendant l\'approbation, la tâche est suspendue jusqu\'à ce que vous vous reconnectiez et la traitiez. Des interruptions se produiront toujours lors de redémarrages à distance ou de pannes de programme. Android 11 et versions ultérieures peuvent autoriser les bulles dans les paramètres de notification ; lorsque les autorisations de notification ou les bulles sont fermées, vous pouvez cliquer sur la notification pour revenir à la conversation."</string>
-    <string name="ui_open_system_settings">"Open system settings"</string>
+    <string name="ui_background_connection">"Connexion en arrière-plan"</string>
+    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"Pendant la connexion, RemoteGPT affiche une notification permanente et maintient le processeur actif.\n\n• Autorisez l’activité en arrière-plan et l’utilisation illimitée de la batterie pour RemoteGPT.\n• Si vous utilisez Tailscale, autorisez-le aussi en arrière-plan.\n• Les tâches distantes peuvent continuer après la fermeture de l’application ou une coupure réseau. Reconnectez-vous pour restaurer les messages et répondre aux approbations.\n\nUn redémarrage ou un plantage peut interrompre les tâches. Touchez une notification pour revenir à la conversation."</string>
+    <string name="ui_open_system_settings">"Réglages de l’app"</string>
     <string name="ui_open_remotegpt_in_system_app_settings">"Veuillez activer Remote dans les paramètres de l\'application système."</string>
-    <string name="ui_notifications_and_live_updates">"Notifications et mises à jour en direct"</string>
+    <string name="ui_notifications_and_live_updates">"Notifications"</string>
     <string name="ui_back">"Retour"</string>
     <string name="ui_show_task_status_and_approval_live_updates">"Afficher l\'état des tâches et le nuage fluide d\'approbation"</string>
     <string name="ui_live_updates_are_allowed_their_appearance_is_determined_by_coloro">"Le système a permis des notifications en temps réel ; la présentation finale est déterminée par ColorOS."</string>

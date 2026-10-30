@@ -6,6 +6,7 @@ import android.graphics.*;
 import android.view.*;
 import android.widget.*;
 import java.io.*;
+import java.lang.reflect.Method;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.*;
@@ -45,6 +46,63 @@ public class LocalizationLayoutTest {
         screenshot(button,"older-messages-"+tag);
       } finally {owner.pause().stop().destroy();}
     }
+  }
+
+  @Test public void backgroundConnectionActionsStayVisibleInEveryLanguage() throws Exception {
+    RemoteApp app=(RemoteApp)RuntimeEnvironment.getApplication();
+    app.getSharedPreferences("display",0).edit().putFloat("fontScale",1.15f).apply();
+    Method open=MainActivity.class.getDeclaredMethod("backgroundSettings");open.setAccessible(true);
+    for(int i=1;i<AppLanguage.TAGS.length;i++) {
+      String tag=AppLanguage.TAGS[i];app.language.select(tag);
+      var owner=Robolectric.buildActivity(MainActivity.class).setup();
+      AlertDialog dialog=null;
+      try {
+        open.invoke(owner.get());
+        dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(tag,dialog);
+        View root=dialog.getWindow().getDecorView();
+        layout(root);
+        TextView message=dialog.findViewById(android.R.id.message);
+        assertNotNull(tag,message);
+        assertTrue(tag,message.getText().length()<600);
+        assertVisibleInside(tag,root,findByText(root,UiText.get(R.string.ui_background_connection)));
+        assertVisibleInside(tag,root,dialog.getButton(AlertDialog.BUTTON_POSITIVE));
+        assertVisibleInside(tag,root,dialog.getButton(AlertDialog.BUTTON_NEUTRAL));
+        assertVisibleInside(tag,root,dialog.getButton(AlertDialog.BUTTON_NEGATIVE));
+        screenshot(root,"background-connection-"+tag+"-large");
+      } finally {
+        if(dialog!=null)dialog.dismiss();
+        owner.pause().stop().destroy();
+      }
+    }
+  }
+
+  private void assertVisibleInside(String tag,View root,View action) {
+    assertNotNull(tag,action);
+    assertEquals(tag,View.VISIBLE,action.getVisibility());
+    assertTrue(tag,action.getHeight()>0);
+    int left=0,top=0;
+    View current=action;
+    while(current!=root && current.getParent() instanceof View) {
+      left+=current.getLeft();
+      top+=current.getTop();
+      current=(View)current.getParent();
+    }
+    assertSame(tag,root,current);
+    assertTrue(tag,left>=0);
+    assertTrue(tag,left+action.getWidth()<=root.getWidth());
+    assertTrue(tag,top>=0);
+    assertTrue(tag+" action="+((TextView)action).getText()+" top="+top+" height="+action.getHeight()
+        +" root="+root.getHeight(),top+action.getHeight()<=root.getHeight());
+  }
+
+  private TextView findByText(View view,String value) {
+    if(view instanceof TextView && value.contentEquals(((TextView)view).getText()))return (TextView)view;
+    if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++) {
+      TextView found=findByText(((ViewGroup)view).getChildAt(i),value);
+      if(found!=null)return found;
+    }
+    return null;
   }
 
   private TextView findByDescription(View view,String description) {

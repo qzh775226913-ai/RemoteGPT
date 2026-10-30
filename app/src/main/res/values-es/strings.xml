@@ -111,10 +111,10 @@
     <string name="ui_large">"Grande"</string>
     <string name="ui_extra_large">"Muy grande"</string>
     <string name="ui_background_connection">"Conexión en segundo plano"</string>
-    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"Se muestra una notificación persistente y la CPU se mantiene despierta durante la conexión. Permita que RemoteGPT se ejecute en segundo plano en la configuración del sistema y establezca la política de batería sin restricciones. Si usa Tailscale, también debe permitir su conexión en red en segundo plano. El bloqueo de activación se libera al desconectarse. \n\nDespués de abrir una sesión persistente remota, cerrar la aplicación o desconectarse de Internet no detendrá automáticamente la tarea remota; volver a conectarse compensará el mensaje. Mientras espera la aprobación, la tarea se pausa hasta que usted se vuelve a conectar y la procesa. Aún se producirán interrupciones en reinicios remotos o fallas del programa. Android 11 y superiores pueden permitir burbujas en la configuración de notificaciones; Cuando los permisos de notificación o las burbujas están cerrados, puedes hacer clic en la notificación para volver a la conversación."</string>
-    <string name="ui_open_system_settings">"Abrir la configuración del sistema"</string>
+    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"Durante la conexión, RemoteGPT muestra una notificación permanente y mantiene activa la CPU.\n\n• Permite la actividad en segundo plano y el uso de batería sin restricciones para RemoteGPT.\n• Si usas Tailscale, permítele también funcionar en segundo plano.\n• Las tareas remotas pueden continuar al cerrar la app o perder la red. Vuelve a conectarte para recuperar mensajes y responder aprobaciones.\n\nLos reinicios o fallos pueden detener las tareas. Toca una notificación para volver."</string>
+    <string name="ui_open_system_settings">"Ajustes de la app"</string>
     <string name="ui_open_remotegpt_in_system_app_settings">"Active el control remoto en la configuración de la aplicación del sistema"</string>
-    <string name="ui_notifications_and_live_updates">"Notificaciones y actualizaciones en vivo"</string>
+    <string name="ui_notifications_and_live_updates">"Notificaciones"</string>
     <string name="ui_back">"Volver"</string>
     <string name="ui_show_task_status_and_approval_live_updates">"Mostrar el estado de la tarea y la nube fluida de aprobación"</string>
     <string name="ui_live_updates_are_allowed_their_appearance_is_determined_by_coloro">"Las notificaciones en tiempo real están habilitadas; La presentación final está determinada por ColorOS."</string>

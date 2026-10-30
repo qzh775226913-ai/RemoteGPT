@@ -111,10 +111,10 @@
     <string name="ui_large">"大"</string>
     <string name="ui_extra_large">"更大"</string>
     <string name="ui_background_connection">"後台連接"</string>
-    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"連線期間會顯示常駐通知並保持 CPU 喚醒。請在系統設定中允許 RemoteGPT 後台運行，並將電池策略設為不受限制。若使用 Tailscale，也需允許其後台連網。斷開連線後會釋放喚醒鎖定。 \n\n開啟遠端持久會話後，殺掉 App 或斷網不會主動停止遠端任務；重連會補回訊息。等待審批時任務會暫停，直到你重新連線並處理。遠端重啟或程式崩潰仍會中斷。 Android 11 以上可在通知設定中允許氣泡；通知權限或氣泡關閉時可點選通知回到對話。"</string>
-    <string name="ui_open_system_settings">"開啟系統設置"</string>
+    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"連線時，RemoteGPT 會顯示常駐通知並保持 CPU 喚醒。\n\n• 在系統設定中允許 RemoteGPT 於背景執行，並將電池用量設為不受限制。\n• 若使用 Tailscale，也請允許其在背景執行。\n• 關閉 App 或網路中斷後，遠端工作可能仍會繼續。重新連線可恢復訊息並處理待核准要求。\n\n主機重新啟動或程序當機仍會中斷工作。可點按通知返回對話。"</string>
+    <string name="ui_open_system_settings">"App 設定"</string>
     <string name="ui_open_remotegpt_in_system_app_settings">"請在系統應用程式設定中開啟 Remote"</string>
-    <string name="ui_notifications_and_live_updates">"通知與即時動態"</string>
+    <string name="ui_notifications_and_live_updates">"通知設定"</string>
     <string name="ui_back">"返回"</string>
     <string name="ui_show_task_status_and_approval_live_updates">"顯示任務狀態與核准流體雲"</string>
     <string name="ui_live_updates_are_allowed_their_appearance_is_determined_by_coloro">"系統已允許即時通知；最終展示由 ColorOS 決定。"</string>

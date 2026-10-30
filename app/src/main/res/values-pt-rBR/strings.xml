@@ -111,10 +111,10 @@
     <string name="ui_large">"Grande"</string>
     <string name="ui_extra_large">"Muito grande"</string>
     <string name="ui_background_connection">"Conexão em segundo plano"</string>
-    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"Uma notificação persistente é exibida e a CPU é mantida ativa durante a conexão. Permita que o RemoteGPT seja executado em segundo plano nas configurações do sistema e defina a política de bateria como irrestrita. Se você usar Tailscale, também precisará permitir sua rede em segundo plano. O wake lock é liberado após a desconexão. \n\nDepois de abrir uma sessão remota persistente, encerrar o aplicativo ou desconectar-se da Internet não interromperá automaticamente a tarefa remota; reconectar compensará a mensagem. Enquanto aguarda a aprovação, a tarefa é pausada até você reconectá-la e processá-la. Ainda ocorrerão interrupções em reinicializações remotas ou travamentos do programa. Android 11 e superior podem permitir balões nas configurações de notificação; quando as permissões de notificação ou balões são fechados, você pode clicar na notificação para retornar à conversa."</string>
-    <string name="ui_open_system_settings">"Abrir configurações do sistema"</string>
+    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"Durante a conexão, o RemoteGPT exibe uma notificação permanente e mantém a CPU ativa.\n\n• Permita atividade em segundo plano e uso irrestrito da bateria para o RemoteGPT.\n• Se usar o Tailscale, permita também sua execução em segundo plano.\n• Tarefas remotas podem continuar após fechar o app ou perder a rede. Reconecte para restaurar mensagens e responder a aprovações.\n\nReinicializações ou falhas podem interromper tarefas. Toque em uma notificação para voltar."</string>
+    <string name="ui_open_system_settings">"Ajustes do app"</string>
     <string name="ui_open_remotegpt_in_system_app_settings">"Ative o Remote nas configurações do aplicativo do sistema"</string>
-    <string name="ui_notifications_and_live_updates">"Notificações e atualizações ao vivo"</string>
+    <string name="ui_notifications_and_live_updates">"Notificações"</string>
     <string name="ui_back">"Voltar"</string>
     <string name="ui_show_task_status_and_approval_live_updates">"Exibir o status da tarefa e a aprovação da nuvem fluida"</string>
     <string name="ui_live_updates_are_allowed_their_appearance_is_determined_by_coloro">"O sistema permitiu notificações em tempo real; a apresentação final é determinada pelo ColorOS."</string>

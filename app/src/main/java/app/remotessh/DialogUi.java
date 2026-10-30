@@ -80,6 +80,34 @@ final class DialogUi {
     return t;
   }
 
+  AlertDialog boundedInfo(String title,String message,String positive,Runnable positiveAction,
+      String neutral,Runnable neutralAction,String negative) {
+    TextView body=text(message,16,fg);
+    body.setId(android.R.id.message);
+    body.setPadding(dp(24),dp(4),dp(24),dp(4));
+    BoundedScrollView scroller=new BoundedScrollView(activity,
+        Math.min(dp(280),Math.round(activity.getResources().getDisplayMetrics().heightPixels*.34f)));
+    scroller.addView(body,new ScrollView.LayoutParams(-1,-2));
+    AlertDialog dialog=new AlertDialog.Builder(activity).setTitle(title).setView(scroller)
+        .setPositiveButton(positive,(d,w)->positiveAction.run())
+        .setNeutralButton(neutral,(d,w)->neutralAction.run())
+        .setNegativeButton(negative,null).create();
+    dialog.show();
+    return dialog;
+  }
+
+  private static final class BoundedScrollView extends ScrollView {
+    private final int maximumHeight;
+    BoundedScrollView(android.content.Context context,int maximumHeight) {
+      super(context);this.maximumHeight=maximumHeight;
+    }
+    @Override protected void onMeasure(int widthMeasureSpec,int heightMeasureSpec) {
+      int mode=MeasureSpec.getMode(heightMeasureSpec),size=MeasureSpec.getSize(heightMeasureSpec);
+      int height=mode==MeasureSpec.UNSPECIFIED?maximumHeight:Math.min(size,maximumHeight);
+      super.onMeasure(widthMeasureSpec,MeasureSpec.makeMeasureSpec(height,MeasureSpec.AT_MOST));
+    }
+  }
+
   EditText field(
       LinearLayout layout, String label, String value, String hint, boolean secret) {
     TextView l = text(label, 12, muted);

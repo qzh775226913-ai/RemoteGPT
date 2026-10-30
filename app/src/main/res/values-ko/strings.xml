@@ -111,10 +111,10 @@
     <string name="ui_large">"크게"</string>
     <string name="ui_extra_large">"더 크게"</string>
     <string name="ui_background_connection">"백그라운드 연결"</string>
-    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"지속적인 알림이 표시되고 연결된 동안 CPU는 활성 상태를 유지합니다. RemoteGPT가 백그라운드에서 실행되도록 허용하고 시스템 설정에서 배터리 정책을 무제한으로 설정하세요. Tailscale을 사용하는 경우 백그라운드에서도 연결되도록 허용하세요. 연결이 끊어지면 wake lock이 해제됩니다.\n\n영구 원격 세션이 활성화되면 앱을 닫거나 네트워크가 끊어져도 원격 작업이 적극적으로 중지되지 않습니다. 다시 연결하면 메시지가 복원됩니다. 승인 대기 중인 작업은 다시 연결하여 응답할 때까지 일시 중지됩니다. 호스트 재시작 또는 프로세스 충돌로 인해 여전히 중단될 수 있습니다. Android 11 이상에서는 알림 설정에서 풍선을 활성화하세요. 말풍선이 비활성화된 경우 알림을 탭하여 대화로 돌아갑니다."</string>
-    <string name="ui_open_system_settings">"시스템 설정 열기"</string>
+    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"연결 중에는 RemoteGPT가 상시 알림을 표시하고 CPU를 활성 상태로 유지합니다.\n\n• RemoteGPT의 백그라운드 실행과 배터리 사용 제한 해제를 허용하세요.\n• Tailscale을 사용한다면 백그라운드 실행도 허용하세요.\n• 앱을 닫거나 네트워크가 끊겨도 원격 작업은 계속될 수 있습니다. 다시 연결하면 메시지를 복원하고 대기 중인 승인을 처리할 수 있습니다.\n\n호스트 재시작이나 충돌로 작업이 중단될 수 있습니다. 알림을 탭하면 대화로 돌아갑니다."</string>
+    <string name="ui_open_system_settings">"앱 설정"</string>
     <string name="ui_open_remotegpt_in_system_app_settings">"시스템 앱 설정에서 RemoteGPT 열기"</string>
-    <string name="ui_notifications_and_live_updates">"알림 및 실시간 업데이트"</string>
+    <string name="ui_notifications_and_live_updates">"알림 설정"</string>
     <string name="ui_back">"뒤로"</string>
     <string name="ui_show_task_status_and_approval_live_updates">"작업 상태 및 승인 실시간 업데이트 표시"</string>
     <string name="ui_live_updates_are_allowed_their_appearance_is_determined_by_coloro">"실시간 업데이트가 허용됩니다. 모양은 ColorOS에 의해 결정됩니다."</string>

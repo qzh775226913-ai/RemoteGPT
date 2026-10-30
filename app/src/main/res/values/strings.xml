@@ -112,10 +112,10 @@
     <string name="ui_large">"Large"</string>
     <string name="ui_extra_large">"Extra large"</string>
     <string name="ui_background_connection">"Background connection"</string>
-    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"A persistent notification is shown and the CPU stays awake while connected. Allow RemoteGPT to run in the background and set its battery policy to unrestricted in system settings. If you use Tailscale, allow it to connect in the background too. The wake lock is released on disconnection.\n\nWith persistent remote sessions enabled, closing the app or losing the network does not actively stop remote tasks. Messages are restored on reconnect. Tasks awaiting approval pause until you reconnect and respond. Host restarts or process crashes can still interrupt them. On Android 11 and later, enable bubbles in notification settings. If bubbles are disabled, tap a notification to return to the conversation."</string>
-    <string name="ui_open_system_settings">"Open system settings"</string>
+    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"While connected, RemoteGPT shows an ongoing notification and keeps the CPU awake.\n\n• Allow RemoteGPT background activity and unrestricted battery use.\n• If used, allow Tailscale background activity too.\n• Remote tasks can continue after the app closes or the network drops. Reconnect to restore messages and answer approvals.\n\nHost restarts or crashes can still stop tasks. Tap a notification to return."</string>
+    <string name="ui_open_system_settings">"App settings"</string>
     <string name="ui_open_remotegpt_in_system_app_settings">"Open RemoteGPT in system app settings"</string>
-    <string name="ui_notifications_and_live_updates">"Notifications and live updates"</string>
+    <string name="ui_notifications_and_live_updates">"Notification settings"</string>
     <string name="ui_back">"Back"</string>
     <string name="ui_show_task_status_and_approval_live_updates">"Show task status and approval live updates"</string>
     <string name="ui_live_updates_are_allowed_their_appearance_is_determined_by_coloro">"Live updates are allowed. Their appearance is determined by ColorOS."</string>

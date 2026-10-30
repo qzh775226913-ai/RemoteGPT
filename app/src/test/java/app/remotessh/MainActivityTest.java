@@ -641,6 +641,35 @@ public class MainActivityTest {
     assertFalse(input.hasFocus());
   }
 
+  @Test public void openingHistorySettlesComposerBeforeInputIsTapped() throws Exception {
+    RemoteApp app = (RemoteApp) activity.getApplication();
+    app.profile = new Profile(); app.connected = true; app.threadId = "previous-thread";
+    app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    EditText input = inputField(content(), "消息输入框");
+    assertNotNull(input);
+    input.setText("one\ntwo\nthree\nfour\nfive");
+    capture("composer-before-history-switch");
+    int expandedHeight = input.getHeight();
+    assertEquals(3, input.getMaxLines());
+
+    app.threadId = "history-thread";
+    app.readOnly = true;
+    app.draftText = "";
+    app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    capture("composer-history-settled");
+    int settledHeight = input.getHeight();
+    assertEquals("", input.getText().toString());
+    assertEquals(1, input.getMaxLines());
+    assertFalse(input.hasFocus());
+    assertTrue(settledHeight < expandedHeight);
+
+    input.requestFocus();
+    input.clearFocus();
+    capture("composer-history-after-focus-cycle");
+    assertEquals("A focus cycle must not be needed to repair the height", settledHeight, input.getHeight());
+  }
+
   @Test
   @Config(qualifiers="en-rUS-w280dp-h720dp-xhdpi")
   public void englishOlderMessagesButtonFitsWrappedLabel() throws Exception {

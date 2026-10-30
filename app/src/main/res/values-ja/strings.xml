@@ -111,10 +111,10 @@
     <string name="ui_large">"大"</string>
     <string name="ui_extra_large">"特大"</string>
     <string name="ui_background_connection">"バックグラウンド接続"</string>
-    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"永続的な通知が表示され、接続中は CPU が起動したままになります。システム設定で RemoteGPT がバックグラウンドで実行できるようにし、バッテリー ポリシーを無制限に設定してください。 Tailscale を使用する場合は、そのバックグラウンド ネットワークも許可する必要があります。ウェイクロックは切断時に解放されます。 \n\nリモート永続セッションを開いた後、アプリを終了したり、インターネットから切断しても、リモート タスクは自動的に停止しません。再接続するとメッセージが補われます。承認を待っている間、タスクは再接続して処理するまで一時停止されます。リモートの再起動やプログラムのクラッシュ時には、引き続き中断が発生します。 Android 11 以降では、通知設定でバブルを許可できます。通知の権限またはバブルが閉じている場合は、通知をクリックして会話に戻ることができます。"</string>
-    <string name="ui_open_system_settings">"オープンシステム設定"</string>
+    <string name="ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while">"接続中、RemoteGPT は常時通知を表示して CPU を起動状態に保ちます。\n\n• RemoteGPT のバックグラウンド動作とバッテリー使用の制限解除を許可してください。\n• Tailscale を使う場合は、そちらもバックグラウンド動作を許可してください。\n• アプリの終了や切断後もリモートタスクは続くことがあります。再接続するとメッセージを復元し、保留中の承認に対応できます。\n\nホストの再起動やクラッシュでは停止することがあります。通知をタップすると会話に戻れます。"</string>
+    <string name="ui_open_system_settings">"アプリ設定"</string>
     <string name="ui_open_remotegpt_in_system_app_settings">"システムアプリケーション設定でリモートをオンにしてください"</string>
-    <string name="ui_notifications_and_live_updates">"通知とライブアップデート"</string>
+    <string name="ui_notifications_and_live_updates">"通知設定"</string>
     <string name="ui_back">"戻る"</string>
     <string name="ui_show_task_status_and_approval_live_updates">"タスクのステータスと承認の流体クラウドを表示"</string>
     <string name="ui_live_updates_are_allowed_their_appearance_is_determined_by_coloro">"システムはリアルタイム通知を可能にしました。最終的なプレゼンテーションは ColorOS によって決定されます。"</string>

@@ -481,6 +481,19 @@ public final class MainActivity extends Activity {
     root.requestApplyInsets();
   }
 
+  private void settleComposerLayout() {
+    sizeComposer();
+    input.requestLayout();
+    composer.requestLayout();
+    input.post(
+        () -> {
+          if (isDestroyed()) return;
+          sizeComposer();
+          input.requestLayout();
+          composer.requestLayout();
+        });
+  }
+
   private void sizeComposer() {
     WindowInsets insets = root.getRootWindowInsets();
     sizeComposer(Build.VERSION.SDK_INT < 30 ? input.hasFocus()
@@ -524,7 +537,11 @@ public final class MainActivity extends Activity {
       if(imageDialog!=null)imageDialog.dismiss();
       renderedThread = app.threadId;
       collapseComposer();
-      if (input != null) { input.setText(app.draftText); input.setSelection(input.length()); }
+      if (input != null) {
+        input.setText(app.draftText);
+        input.setSelection(input.length());
+        settleComposerLayout();
+      }
       scroll.follow();
       historyLimit=60;firstRender=true;
       messageUpdatesPaused = false;
@@ -1367,13 +1384,14 @@ public final class MainActivity extends Activity {
   }
 
   private void backgroundSettings() {
-    new AlertDialog.Builder(this).setTitle(UiText.get(R.string.ui_background_connection))
-        .setMessage(UiText.get(R.string.ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while))
-        .setPositiveButton(UiText.get(R.string.ui_open_system_settings), (d, w) -> {
+    ui.boundedInfo(UiText.get(R.string.ui_background_connection),
+        UiText.get(R.string.ui_a_persistent_notification_is_shown_and_the_cpu_stays_awake_while),
+        UiText.get(R.string.ui_open_system_settings), () -> {
           try { startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
               android.net.Uri.parse("package:" + getPackageName()))); }
           catch (ActivityNotFoundException e) { toast(UiText.get(R.string.ui_open_remotegpt_in_system_app_settings)); }
-        }).setNeutralButton(UiText.get(R.string.ui_notifications_and_live_updates), (d, w) -> liveStatusSettings()).setNegativeButton(UiText.get(R.string.ui_back), null).show();
+        },UiText.get(R.string.ui_notifications_and_live_updates),this::liveStatusSettings,
+        UiText.get(R.string.ui_back));
   }
 
   private void liveStatusSettings() {
