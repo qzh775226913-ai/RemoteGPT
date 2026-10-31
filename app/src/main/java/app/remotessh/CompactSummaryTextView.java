@@ -52,6 +52,8 @@ final class CompactSummaryTextView extends TextView {
     return super.onTouchEvent(event);
   }
 
+  @Override public boolean performClick(){return super.performClick();}
+
   float opticalShift() {
     String value=getText().toString().trim();
     if(value.length()>2)value=value.substring(1,value.length()-1).trim();

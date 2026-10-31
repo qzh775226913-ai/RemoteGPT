@@ -18,7 +18,8 @@ import java.util.regex.Pattern;
 
 /** Animate real changes once, retaining the latest value across rapid updates. */
 final class RollingChangeNumbers {
-  private static final Pattern COUNT=Pattern.compile("[+−]\\d+");
+  private static final Pattern COUNT=Pattern.compile("(?<!\\S)[+−]\\d+");
+  private static final Pattern FILE_COUNT=Pattern.compile("(?<!\\S)[+−]\\d+(?=\\s*(?:[+−]\\d+)?$)");
   private static final int MAX_PENDING=8;
   private final Map<String,Counter> counters=new HashMap<>();
   private final Runnable redraw,settled;
@@ -31,7 +32,7 @@ final class RollingChangeNumbers {
 
   CharSequence style(String scope,CharSequence label,boolean animateChanges,boolean animateFirst){
     SpannableString result=new SpannableString(label);
-    Matcher matcher=COUNT.matcher(label);int index=0;
+    Matcher matcher=(scope.startsWith("file:")?FILE_COUNT:COUNT).matcher(label);int index=0;
     while(matcher.find()){
       String value=matcher.group(),sign=value.substring(0,1);
       String key=scope+"/"+(index++)+sign;

@@ -21,6 +21,7 @@ public final class ConversationScrollView extends ScrollView {
     if(event.getActionMasked()==MotionEvent.ACTION_DOWN)flinging=false;
     return super.dispatchTouchEvent(event);
   }
+  @android.annotation.SuppressLint("ClickableViewAccessibility") // ScrollView handles clicks; this observes its drag.
   @Override public boolean onTouchEvent(MotionEvent event) {
     boolean previous=handlingUserScroll;
     handlingUserScroll=event.getActionMasked()==MotionEvent.ACTION_MOVE;

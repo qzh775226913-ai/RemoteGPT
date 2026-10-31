@@ -724,7 +724,7 @@ public final class MainActivity extends Activity {
     String title=m.type.equals("reasoning")?ToolActivityPresenter.reasoningPreview(m):UiPresentation.itemTitle(m);
     if(m.type.equals("fileChange"))title=ToolActivityGroupView.fileLabel(m);
     CharSequence label=AppIcons.label(this,symbol + "  " + title.replaceAll("\\s+", " ") + "  ›",icon,"chevron",muted,dp(15));
-    return m.type.equals("fileChange")?ToolActivityGroupView.tintStats(label,isDark()):label;
+    return m.type.equals("fileChange") && ToolActivityGroupView.hasFileStats(m)?ToolActivityGroupView.tintStats(label,isDark()):label;
   }
 
   private void renderEmpty() {

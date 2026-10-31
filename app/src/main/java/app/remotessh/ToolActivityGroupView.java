@@ -61,7 +61,7 @@ final class ToolActivityGroupView extends LinearLayout {
     boolean running=!summary && item.status.equals("inProgress");
     if(!summary && !running)numbers.settle();
     boolean open=expanded.contains(item.id);
-    for(ChatItem child:item.children)if(child.type.equals("fileChange"))
+    for(ChatItem child:item.children)if(child.type.equals("fileChange") && hasFileStats(child))
       numbers.style("file:"+child.id,fileLabel(child),running && open,false);
     String label=(summary?item.text+"  "+item.detail:item.text)+(open?"  ⌄":"  ›");
     String groupIcon="book";
@@ -97,7 +97,7 @@ final class ToolActivityGroupView extends LinearLayout {
     String label=child.type.equals("fileChange")?fileLabel(child):child.type.equals("reasoning")?
         ToolActivityPresenter.reasoningPreview(child):UiPresentation.itemTitle(child);
     boolean file=child.type.equals("fileChange");
-    text.setText(file?numbers.style("file:"+child.id,label,!summary && item.status.equals("inProgress"),false):colors(label));
+    text.setText(file && hasFileStats(child)?numbers.style("file:"+child.id,label,!summary && item.status.equals("inProgress"),false):label);
     if(file)rollingRows.add(text);
     row.addView(text,new LayoutParams(0,-2,1));
     row.addView(new IconView(getContext(),expanded.contains(child.id)?"chevronDown":"chevron",ui.muted),
@@ -129,8 +129,9 @@ final class ToolActivityGroupView extends LinearLayout {
     return path+(diff.files.size()>1?" · "+diff.files.size():"")+"  +"+diff.added()+" −"+diff.removed();
   }
 
-  private CharSequence colors(String label){
-    return tintStats(label,ui.bg==Color.BLACK);
+  static boolean hasFileStats(ChatItem child){
+    DiffSummary diff=DiffSummary.fromItem(child);
+    return !diff.files.isEmpty() && !diff.files.get(0).diff.isEmpty();
   }
 
   boolean countsAnimating(){return numbers.animating();}
@@ -141,12 +142,11 @@ final class ToolActivityGroupView extends LinearLayout {
 
   static CharSequence tintStats(CharSequence label,boolean dark){
     SpannableString s=new SpannableString(label);
-    java.util.regex.Matcher plus=java.util.regex.Pattern.compile("\\+\\d+").matcher(label);
-    java.util.regex.Matcher minus=java.util.regex.Pattern.compile("[−-]\\d+").matcher(label);
-    while(plus.find())s.setSpan(new ForegroundColorSpan(dark?0xff64df83:0xff168c45),
-        plus.start(),plus.end(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-    while(minus.find())s.setSpan(new ForegroundColorSpan(dark?0xffff7777:0xffba3434),
-        minus.start(),minus.end(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    java.util.regex.Matcher pair=java.util.regex.Pattern.compile("(\\+\\d+)\\s+([−-]\\d+)(?=\\s*(?:›)?\\s*$)").matcher(label);
+    while(pair.find()){
+      s.setSpan(new ForegroundColorSpan(dark?0xff64df83:0xff168c45),pair.start(1),pair.end(1),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+      s.setSpan(new ForegroundColorSpan(dark?0xffff7777:0xffba3434),pair.start(2),pair.end(2),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    }
     return s;
   }
 }

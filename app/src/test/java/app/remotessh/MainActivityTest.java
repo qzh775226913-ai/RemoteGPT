@@ -1517,6 +1517,24 @@ public class MainActivityTest {
     running.text="已编辑 1 个文件  +6 −2";card.bind(running);assertTrue(card.countsAnimating());
     running.status="completed";card.bind(running);assertFalse(card.countsAnimating());
   }
+  @Test public void fileNameNumbersAreNotColoredOrAnimatedAsChangeCounts() {
+    DialogUi ui=new DialogUi(activity,Color.WHITE,Color.BLACK,0xff666666,0xffeeeeee,0xffdddddd);
+    String path="src/my +12 file −7.java";
+    ChatItem edit=ChatItem.from(Json.obj("id","edit","type","fileChange","changes",
+        new org.json.JSONArray().put(Json.obj("path",path,"diff","@@ -1 +1 @@\n-old\n+new\n"))));
+    ChatItem group=new ChatItem("group","activityGroup","已编辑 1 个文件  +1 −1");group.children.add(edit);
+    java.util.Set<String> open=new java.util.HashSet<>();open.add(group.id);
+    ToolActivityGroupView card=new ToolActivityGroupView(activity,ui,group,open,item->{});
+    LinearLayout row=(LinearLayout)((LinearLayout)((LinearLayout)card.getChildAt(1)).getChildAt(0)).getChildAt(0);
+    android.text.Spanned label=(android.text.Spanned)((TextView)row.getChildAt(1)).getText();
+    String value=label.toString();int filenameNumber=value.indexOf("+12"),added=value.lastIndexOf("+1");
+    assertEquals(0,label.getSpans(filenameNumber,filenameNumber+3,android.text.style.ForegroundColorSpan.class).length);
+    assertEquals(1,label.getSpans(added,added+2,android.text.style.ForegroundColorSpan.class).length);
+    android.text.Spanned single=(android.text.Spanned)ToolActivityGroupView.tintStats("✓  "+path+"  +1 −1  ›",false);
+    int pathPlus=single.toString().indexOf("+12"),actualPlus=single.toString().lastIndexOf("+1");
+    assertEquals(0,single.getSpans(pathPlus,pathPlus+3,android.text.style.ForegroundColorSpan.class).length);
+    assertEquals(1,single.getSpans(actualPlus,actualPlus+2,android.text.style.ForegroundColorSpan.class).length);
+  }
   @Test public void scrollingToOlderMessagesCollapsesHeaderAndComposerThenRestoresThem() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="scroll";
     for(int i=0;i<24;i++)app.items.add(new ChatItem("message-"+i,"agentMessage",
