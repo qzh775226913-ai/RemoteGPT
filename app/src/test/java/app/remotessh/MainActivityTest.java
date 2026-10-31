@@ -872,8 +872,8 @@ public class MainActivityTest {
     View resume=find(content(),"接续");
     java.lang.reflect.Field bar=MainActivity.class.getDeclaredField("readOnlyBar");bar.setAccessible(true);
     LinearLayout readOnly=(LinearLayout)bar.get(activity);
-    assertEquals(2,readOnly.getChildCount());
-    assertSame(resume,readOnly.getChildAt(1));
+    assertEquals(1,readOnly.getChildCount());
+    assertSame(resume,readOnly.getChildAt(0));
     assertNull(find(readOnly,"刷新"));assertNull(find(readOnly,"重连并接续"));
     capture("copy-blocks-readonly-single-resume");
   }
@@ -1356,7 +1356,8 @@ public class MainActivityTest {
     capture("nested-tool-actions-and-final-diff");
     fileRow.performClick();
     LinearLayout expandedFile=(LinearLayout)((LinearLayout)files.getChildAt(1)).getChildAt(0);
-    assertTrue(((TextView)((HorizontalScrollView)expandedFile.getChildAt(1)).getChildAt(0)).getText().toString().contains("+new"));
+    ToolInlineDetailView code=(ToolInlineDetailView)expandedFile.getChildAt(1);
+    assertTrue(((TextView)((HorizontalScrollView)code.getChildAt(1)).getChildAt(0)).getText().toString().contains("+new"));
     capture("nested-inline-code-diff");
   }
   @Test public void readingBubbleRestoresDraftAndReadOnlyControlsStayBehindComposer() throws Exception {
@@ -1382,6 +1383,41 @@ public class MainActivityTest {
     enlarge.performClick();assertEquals("收起输入框",enlarge.getContentDescription());
     chrome.restore();assertEquals("放大输入框",enlarge.getContentDescription());
   }
+  @Test public void expandedComposerBeforeResumeKeepsInputAndResumeSeparate() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;
+    app.readOnly=true;app.threadId="history";app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));
+    capture("before-resume-normal-composer");
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);
+    LinearLayout composer=(LinearLayout)field.get(activity);
+    field=MainActivity.class.getDeclaredField("readOnlyBar");field.setAccessible(true);
+    LinearLayout readOnly=(LinearLayout)field.get(activity);
+    TextView resume=(TextView)readOnly.getChildAt(0);
+    assertTrue(resume.getWidth()<composer.getWidth()/2);
+    int[] resumeLocation=new int[2],composerLocation=new int[2];
+    readOnly.getLocationOnScreen(resumeLocation);composer.getLocationOnScreen(composerLocation);
+    assertTrue(resumeLocation[1]+readOnly.getHeight()<composerLocation[1]);
+    FrameLayout inputLayer=(FrameLayout)composer.getChildAt(2);
+    EditText input=(EditText)inputLayer.getChildAt(0);
+    assertEquals(input.getHeight(),inputLayer.getHeight());
+    IconView enlarge=(IconView)((FrameLayout)composer.getChildAt(2)).getChildAt(2);
+    enlarge.performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));
+    capture("before-resume-expanded-composer");
+    assertEquals(Gravity.TOP|Gravity.START,input.getGravity()&(Gravity.VERTICAL_GRAVITY_MASK|Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK));
+    assertEquals(input.getHeight(),composer.getChildAt(2).getHeight());
+    assertTrue(composer.getClipToOutline());
+    assertEquals(View.GONE,readOnly.getVisibility());
+    int[] buttonLocation=new int[2];
+    View controls=composer.getChildAt(3);controls.getLocationOnScreen(buttonLocation);
+    assertTrue("controls lost height: composer="+composer.getHeight()+" input="+input.getHeight(),
+        controls.getHeight()>=activity.getResources().getDisplayMetrics().density*40);
+    assertTrue("controls below screen: top="+buttonLocation[1]+" height="+controls.getHeight()+
+        " composer="+composer.getHeight()+" input="+input.getHeight(),
+        buttonLocation[1]+controls.getHeight()<=activity.getResources().getDisplayMetrics().heightPixels);
+    enlarge.performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));
+    assertEquals(View.VISIBLE,readOnly.getVisibility());
+    input.requestFocus();assertEquals(View.GONE,readOnly.getVisibility());
+  }
   @Test public void fileSummaryCanRepeatedlyExpandAndShowInlineColoredDiff() {
     UiText.initialize(activity.getApplication());
     DialogUi ui=new DialogUi(activity,Color.BLACK,0xffeeeeee,0xffaaaaaa,0xff303030,0xff444444);
@@ -1402,10 +1438,56 @@ public class MainActivityTest {
     first.getChildAt(0).performClick();
     first=(LinearLayout)content.getChildAt(0);
     assertEquals(3,first.getChildCount());
-    HorizontalScrollView code=(HorizontalScrollView)first.getChildAt(1);
+    ToolInlineDetailView inline=(ToolInlineDetailView)first.getChildAt(1);
+    HorizontalScrollView code=(HorizontalScrollView)inline.getChildAt(1);
     TextView source=(TextView)code.getChildAt(0);
     assertTrue(source.getText().toString().contains("+new"));
     assertTrue(source.getText() instanceof android.text.Spanned);
+  }
+  @Test public void liveReasoningAndToolsFoldTogetherWithReadableDetails() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;
+    app.threadId="chat";app.busy=true;app.turnId="turn";
+    ChatItem thought=new ChatItem("thought","reasoning","思考过程");
+    thought.turnId="turn";thought.status="inProgress";thought.detail="先检查文件，再核对输出。";
+    ChatItem command=new ChatItem("command","commandExecution","git diff --check");
+    command.turnId="turn";command.detail="检查通过";
+    ChatItem edit=ChatItem.from(Json.obj("id","edit","type","fileChange","changes",
+        new org.json.JSONArray().put(Json.obj("path","src/Main.java","diff","@@ -1 +1 @@\n-old\n+new\n"))));
+    edit.turnId="turn";
+    app.items.add(thought);app.items.add(command);app.items.add(edit);app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("activityViews");field.setAccessible(true);
+    java.util.Map<?,?> groups=(java.util.Map<?,?>)field.get(activity);
+    ToolActivityGroupView group=(ToolActivityGroupView)groups.get("activity-turn-thought");
+    assertNotNull(group);
+    TextView header=(TextView)group.getChildAt(0);
+    assertTrue(header.getText().toString().contains("思考过程"));
+    assertTrue(header.getText().toString().contains("+1 −1"));
+    android.text.Spanned moving=(android.text.Spanned)header.getText();
+    int animated=moving.getSpans(0,moving.length(),android.text.style.ReplacementSpan.class).length;
+    group.getChildAt(0).performClick();
+    LinearLayout children=(LinearLayout)group.getChildAt(1);
+    assertEquals(3,children.getChildCount());
+    ((LinearLayout)children.getChildAt(0)).getChildAt(0).performClick();
+    ToolInlineDetailView prose=(ToolInlineDetailView)((LinearLayout)children.getChildAt(0)).getChildAt(1);
+    assertEquals("先检查文件，再核对输出。",((TextView)prose.getChildAt(0)).getText().toString());
+    ((LinearLayout)children.getChildAt(2)).getChildAt(0).performClick();
+    ToolInlineDetailView diff=(ToolInlineDetailView)((LinearLayout)children.getChildAt(2)).getChildAt(1);
+    TextView fileLabel=(TextView)((LinearLayout)((LinearLayout)children.getChildAt(2)).getChildAt(0)).getChildAt(1);
+    android.text.Spanned fileMoving=(android.text.Spanned)fileLabel.getText();
+    int fileAnimated=fileMoving.getSpans(0,fileMoving.length(),android.text.style.ReplacementSpan.class).length;
+    TextView code=(TextView)((HorizontalScrollView)diff.getChildAt(1)).getChildAt(0);
+    assertTrue(code.getText().toString().contains("+new"));
+    assertTrue(code.getText() instanceof android.text.Spanned);
+    capture("live-reasoning-tool-group");
+    app.turnId="";app.busy=false;app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    android.text.Spanned stopped=(android.text.Spanned)((TextView)group.getChildAt(0)).getText();
+    assertEquals(2,animated-stopped.getSpans(0,stopped.length(),android.text.style.ReplacementSpan.class).length);
+    LinearLayout settledChildren=(LinearLayout)group.getChildAt(1);
+    TextView settledFileLabel=(TextView)((LinearLayout)((LinearLayout)settledChildren.getChildAt(2)).getChildAt(0)).getChildAt(1);
+    android.text.Spanned fileStopped=(android.text.Spanned)settledFileLabel.getText();
+    assertEquals(2,fileAnimated-fileStopped.getSpans(0,fileStopped.length(),android.text.style.ReplacementSpan.class).length);
   }
   @Test public void runningFileNumbersRollAndStopAsSoonAsTurnCompletes() {
     UiText.initialize(activity.getApplication());
@@ -1433,23 +1515,26 @@ public class MainActivityTest {
     field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);
     LinearLayout composer=(LinearLayout)field.get(activity);
     EditText input=(EditText)find(content(),"消息输入框");
+    input.requestFocus();
+    assertTrue(input.hasFocus());
     assertTrue(scroll.getScrollY()>120);
     long time=android.os.SystemClock.uptimeMillis();
-    scroll.onTouchEvent(MotionEvent.obtain(time,time,MotionEvent.ACTION_DOWN,20,20,0));
+    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time,MotionEvent.ACTION_DOWN,20,20,0));
+    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time+10,MotionEvent.ACTION_MOVE,20,20,0));
     scroll.scrollBy(0,-400);
-    scroll.onTouchEvent(MotionEvent.obtain(time,time+30,MotionEvent.ACTION_UP,20,20,0));
+    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time+30,MotionEvent.ACTION_UP,20,20,0));
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
     assertEquals(View.GONE,details.getVisibility());
     assertEquals(View.GONE,composer.getChildAt(2).getVisibility());
     assertEquals("发送消息",((TextView)composer.getChildAt(0)).getText().toString());
     captureLaidOutView(content(),"scroll-chrome-compact-corrected");
     time=android.os.SystemClock.uptimeMillis();
-    scroll.onTouchEvent(MotionEvent.obtain(time,time,MotionEvent.ACTION_DOWN,20,20,0));
+    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time,MotionEvent.ACTION_DOWN,20,20,0));
+    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time+10,MotionEvent.ACTION_MOVE,20,20,0));
     int olderY=scroll.getScrollY();
     scroll.scrollBy(0,120);
     assertTrue("return scroll must advance toward latest: "+olderY+" -> "+scroll.getScrollY(),scroll.getScrollY()>olderY);
-    assertFalse("input unexpectedly focused during reading scroll",input.hasFocus());
-    scroll.onTouchEvent(MotionEvent.obtain(time,time+30,MotionEvent.ACTION_UP,20,20,0));
+    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time+30,MotionEvent.ACTION_UP,20,20,0));
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
     assertEquals(View.VISIBLE,details.getVisibility());
     assertEquals(View.VISIBLE,composer.getChildAt(2).getVisibility());
@@ -1476,7 +1561,7 @@ public class MainActivityTest {
     app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     TextView button=(TextView)find(content(),"接续");assertEquals("接续中",button.getText().toString());assertFalse(button.isEnabled());
     LoadingSpinner spinner=(LoadingSpinner)button.getCompoundDrawables()[0];assertTrue(spinner.isRunning());
-    assertNotNull(find(content(),ConnectionService.summary(app)));capture("resume-progress");
+    capture("resume-progress");
     app.replaying=true;app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));assertEquals("同步中",button.getText().toString());
     assertEquals("正在同步离线消息…",ConnectionService.summary(app));
     controller.pause().stop();assertFalse(spinner.isRunning());controller.start().resume();

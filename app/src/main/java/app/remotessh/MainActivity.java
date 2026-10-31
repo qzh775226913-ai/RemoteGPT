@@ -67,7 +67,7 @@ public final class MainActivity extends Activity {
   private ImageDialog imageDialog;
   private DirectoryPicker directoryPicker;
   private LinearLayout readOnlyBar;
-  private TextView readOnlyLabel,resumeButton;
+  private TextView resumeButton;
   private LoadingSpinner resumeSpinner;
   private boolean visibleActivity;
   private String shownApproval = "";
@@ -323,16 +323,15 @@ public final class MainActivity extends Activity {
     clickable(usageLabel, this::usageInfo);
     headerDetails.addView(usageLabel);
     readOnlyBar = column();
-    readOnlyBar.setPadding(dp(16), dp(2), dp(16), dp(6));
-    readOnlyLabel = text(UiText.get(R.string.ui_read_only_history_write_access_not_acquired), 13, muted);
-    readOnlyLabel.setPadding(dp(4), dp(6), dp(4), dp(6));
-    readOnlyBar.addView(readOnlyLabel);
+    readOnlyBar.setGravity(Gravity.CENTER_HORIZONTAL);
     resumeButton=action(UiText.get(R.string.ui_resume),()->{
       if(app.connected)app.resume(app.threadId);else app.reconnectAndResume();
     });
     resumeButton.setContentDescription(UiText.get(R.string.ui_resume));resumeSpinner=new LoadingSpinner(fg,dp(16));
     resumeButton.setSingleLine(true);resumeButton.setEllipsize(TextUtils.TruncateAt.END);
-    readOnlyBar.addView(resumeButton,new LinearLayout.LayoutParams(-1,-2));
+    resumeButton.setMinWidth(dp(112));resumeButton.setMaxWidth(dp(220));
+    resumeButton.setMinHeight(dp(44));resumeButton.setPadding(dp(22),dp(10),dp(22),dp(10));
+    readOnlyBar.addView(resumeButton,new LinearLayout.LayoutParams(-2,-2));
     readOnlyBar.setVisibility(View.GONE);
     error = text("", 13, isDark() ? Color.rgb(255, 151, 137) : Color.rgb(165, 47, 36));
     error.setContentDescription(UiText.get(R.string.ui_view_connection_errors));
@@ -433,6 +432,7 @@ public final class MainActivity extends Activity {
     input.setMinLines(1);
     input.setMaxLines(1);
     input.setPadding(dp(12), dp(12), dp(8), dp(8));
+    input.setGravity(Gravity.TOP | Gravity.START);
     input.setInputType(
         android.text.InputType.TYPE_CLASS_TEXT
             | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -529,7 +529,10 @@ public final class MainActivity extends Activity {
     WindowInsets insets=root.getRootWindowInsets();
     boolean keyboard=Build.VERSION.SDK_INT>=30 && insets!=null && insets.isVisible(WindowInsets.Type.ime());
     FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)readOnlyBar.getLayoutParams();
-    int bottom=keyboard?0:footer.getHeight()+dp(4);
+    boolean editorActive=keyboard || input!=null && input.hasFocus() || chrome!=null && chrome.large();
+    readOnlyBar.setVisibility((app.readOnly || app.connecting || app.recoveryInProgress()) && !editorActive?
+        View.VISIBLE:View.GONE);
+    int bottom=footer.getHeight()+dp(10);
     if(lp.bottomMargin!=bottom){lp.bottomMargin=bottom;readOnlyBar.setLayoutParams(lp);}
   }
 
@@ -594,8 +597,7 @@ public final class MainActivity extends Activity {
     usageLabel.setText(app.usage.summary());
     usageLabel.setVisibility(app.connected ? View.VISIBLE : View.GONE);
     boolean recovering=app.recoveryInProgress();
-    readOnlyBar.setVisibility(app.readOnly || app.connecting || recovering ? View.VISIBLE : View.GONE);
-    readOnlyLabel.setText(app.connecting || recovering ? UiPresentation.status(app.recoveryStatus()) : UiText.get(R.string.ui_read_only_history_write_access_not_acquired));
+    positionReadOnlyBar();
     boolean available=app.connected && !app.connecting && !recovering;
     resumeButton.setEnabled((available && app.readOnly && !app.attaching) ||
         (!app.connected && !app.connecting && !recovering && !app.busy));

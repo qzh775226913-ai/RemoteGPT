@@ -7,6 +7,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -43,7 +44,12 @@ final class ConversationChromeController {
     composer.addView(prompt,0,new LinearLayout.LayoutParams(-1,dp(40)));
     int inputIndex=composer.indexOfChild(input);
     composer.removeView(input);
-    inputLayer=new FrameLayout(activity);
+    inputLayer=new FrameLayout(activity){
+      @Override protected void onMeasure(int widthSpec,int heightSpec){
+        super.onMeasure(widthSpec,heightSpec);
+        setMeasuredDimension(getMeasuredWidth(),input.getMeasuredHeight());
+      }
+    };
     inputLayer.addView(input,new FrameLayout.LayoutParams(-1,-2));
     View glass=new View(activity);
     GradientDrawable haze=new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
@@ -65,6 +71,7 @@ final class ConversationChromeController {
     inputLayer.addView(enlarge,expandParams);
     composer.addView(inputLayer,inputIndex,new LinearLayout.LayoutParams(-1,-2));
     composer.setBackground(rounded(panel,26));
+    composer.setClipToOutline(true);
     composer.setPadding(dp(4),dp(3),dp(4),dp(4));
   }
 
@@ -73,8 +80,7 @@ final class ConversationChromeController {
     enlarge.setContentDescription(UiText.get(R.string.ui_expand_composer));enlarge.invalidate();resizeInput.run();}
 
   void onScroll(int y,int oldY,boolean userScroll) {
-    if(!userScroll || input.hasFocus() || headerAnimator!=null && headerAnimator.isRunning()
-        || composerAnimator!=null && composerAnimator.isRunning())return;
+    if(!userScroll || editingWithKeyboard())return;
     int delta=y-oldY;
     if(delta==0)return;
     int sign=delta<0?1:-1;
@@ -149,6 +155,11 @@ final class ConversationChromeController {
 
   private GradientDrawable rounded(int color,int radius) {GradientDrawable d=new GradientDrawable();
     d.setColor(color);d.setCornerRadius(dp(radius));return d;}
+  private boolean editingWithKeyboard(){
+    if(!input.hasFocus() || android.os.Build.VERSION.SDK_INT<30)return false;
+    WindowInsets insets=activity.getWindow().getDecorView().getRootWindowInsets();
+    return insets!=null && insets.isVisible(WindowInsets.Type.ime());
+  }
   private int normalWidth(){return regularWidth>0?regularWidth:
       Math.max(dp(206),((View)composer.getParent()).getWidth()-dp(36));}
   private int dp(float value){return Math.round(value*activity.getResources().getDisplayMetrics().density);}

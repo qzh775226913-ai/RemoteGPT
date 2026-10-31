@@ -60,4 +60,28 @@ public class ToolActivityPresenterTest {
     assertEquals("completed",finished.status);
     assertEquals(active.text,finished.text);
   }
+
+  @Test public void reasoningAndExecutionSummariesShareOneRunningDisclosure() {
+    UiText.initialize(RuntimeEnvironment.getApplication());
+    ChatItem thought=new ChatItem("thought","reasoning","思考过程");
+    thought.turnId="turn";thought.status="inProgress";thought.detail="先检查状态";
+    ChatItem command=new ChatItem("cmd","commandExecution","git status");command.turnId="turn";
+    ChatItem edit=ChatItem.from(Json.obj("id","edit","type","fileChange","changes",
+        new JSONArray().put(Json.obj("path","Main.java","diff","@@ -1 +1 @@\n-old\n+new\n"))));
+    edit.turnId="turn";
+    ChatItem commentary=new ChatItem("text","agentMessage","继续检查");
+    commentary.turnId="turn";commentary.phase="commentary";
+    List<ChatItem> source=Arrays.asList(thought,command,edit,commentary);
+    List<ChatItem> first=ToolActivityPresenter.present(source,"turn");
+    assertEquals(2,first.size());assertEquals("activityGroup",first.get(0).type);
+    assertEquals(3,first.get(0).children.size());
+    assertTrue(first.get(0).text.contains(UiText.get(R.string.ui_reasoning)));
+    assertTrue(first.get(0).text.contains("+1 −1"));
+    edit.changes=new JSONArray().put(Json.obj("path","Main.java","diff","@@ -1 +1,2 @@\n-old\n+new\n+more\n"));
+    edit.detail="Main.java\n@@ -1 +1,2 @@\n-old\n+new\n+more\n";
+    ChatItem progressed=ToolActivityPresenter.present(source,"turn").get(0);
+    assertTrue(progressed.text.contains("+2 −1"));
+    assertNotEquals(first.get(0).detail,progressed.detail);
+    assertEquals("completed",ToolActivityPresenter.present(source,"").get(0).status);
+  }
 }

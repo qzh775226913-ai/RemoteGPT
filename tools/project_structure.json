@@ -65,6 +65,7 @@
       "ConversationChromeController",
       "ToolDetailDialog",
       "ToolActivityGroupView",
+      "ToolInlineDetailView",
       "CompactSummaryTextView",
       "RemoteBrowser",
       "DirectoryPicker",

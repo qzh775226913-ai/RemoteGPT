@@ -6,7 +6,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.graphics.Typeface;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextUtils;
@@ -15,8 +14,9 @@ import android.text.style.ReplacementSpan;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
-import android.widget.HorizontalScrollView;
 import android.widget.TextView;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -33,6 +33,7 @@ final class ToolActivityGroupView extends LinearLayout {
   private float rollProgress;
   private boolean summaryRollDone;
   private final Rect visibleBounds=new Rect();
+  private final List<TextView> rollingRows=new ArrayList<>();
 
   ToolActivityGroupView(Activity activity,DialogUi ui,ChatItem item,Set<String> expanded,
       Consumer<ChatItem> openDetail){
@@ -57,6 +58,7 @@ final class ToolActivityGroupView extends LinearLayout {
     countRoll.addUpdateListener(a->{
       rollProgress=(float)a.getAnimatedValue();
       if(header.getGlobalVisibleRect(visibleBounds))header.invalidate();
+      for(TextView row:rollingRows)if(row.getGlobalVisibleRect(visibleBounds))row.invalidate();
     });
     if(summary)countRoll.addListener(new android.animation.AnimatorListenerAdapter(){
       private boolean cancelled;
@@ -80,9 +82,13 @@ final class ToolActivityGroupView extends LinearLayout {
     if(!rolling() && countRoll!=null){countRoll.cancel();countRoll=null;rollProgress=0;}
     boolean open=expanded.contains(item.id);
     String label=(summary?item.text+"  "+item.detail:item.text)+(open?"  ⌄":"  ›");
-    CharSequence title=summary?label:AppIcons.label(getContext(),"✎  "+label,"pencil",null,ui.muted,ui.dp(16));
+    String groupIcon="book";
+    for(ChatItem child:item.children)if(child.type.equals("fileChange")){groupIcon="pencil";break;}
+    else if(child.type.equals("commandExecution") || child.type.equals("mcpToolCall"))groupIcon="terminal";
+    CharSequence title=summary?label:AppIcons.label(getContext(),"◦  "+label,groupIcon,null,ui.muted,ui.dp(16));
     header.setText(rolling()?rollingStats(title):tintStats(title,ui.bg==Color.BLACK));
     header.setContentDescription(label);
+    rollingRows.clear();
     content.removeAllViews();
     content.setVisibility(open?View.VISIBLE:View.GONE);
     if(!open)return;
@@ -102,11 +108,14 @@ final class ToolActivityGroupView extends LinearLayout {
     LinearLayout disclosure=ui.column();
     LinearLayout row=ui.row();row.setGravity(Gravity.CENTER_VERTICAL);
     String icon=child.type.equals("fileChange")?"pencil":child.type.equals("commandExecution")?"terminal":
-        child.type.equals("webSearch")?"search":child.type.equals("imageView")?"book":"computer";
+        child.type.equals("webSearch")?"search":child.type.equals("reasoning")?"book":
+            child.type.equals("imageView")?"book":"computer";
     row.addView(new IconView(getContext(),icon,ui.muted),new LayoutParams(ui.dp(30),ui.dp(32)));
     TextView text=ui.text("",13,ui.fg);text.setSingleLine(true);text.setEllipsize(TextUtils.TruncateAt.MIDDLE);
     String label=child.type.equals("fileChange")?fileLabel(child):UiPresentation.itemTitle(child);
-    text.setText(colors(label));
+    boolean animateCount=rolling() && child.type.equals("fileChange") && label.matches("(?s).*[+−]\\d+.*");
+    text.setText(animateCount?rollingStats(label):colors(label));
+    if(animateCount)rollingRows.add(text);
     row.addView(text,new LayoutParams(0,-2,1));
     row.addView(new IconView(getContext(),expanded.contains(child.id)?"chevronDown":"chevron",ui.muted),
         new LayoutParams(ui.dp(22),ui.dp(32)));
@@ -114,40 +123,18 @@ final class ToolActivityGroupView extends LinearLayout {
     ui.clickable(row,()->{if(!expanded.add(child.id))expanded.remove(child.id);bind(this.item);});
     disclosure.addView(row,new LayoutParams(-1,ui.dp(34)));
     if(expanded.contains(child.id)){
-      String code=child.type.equals("fileChange")?diffText(child):child.detail;
-      if(!code.isEmpty()){
-        TextView source=ui.text("",13,ui.fg);
-        source.setTypeface(Typeface.MONOSPACE);
-        source.setTextIsSelectable(true);
-        source.setHorizontallyScrolling(true);
-        source.setMaxLines(16);
-        source.setLineSpacing(ui.dp(3),1);
-        source.setPadding(ui.dp(12),ui.dp(10),ui.dp(12),ui.dp(10));
-        source.setText(ToolDetailDialog.highlight(code,child.type.equals("fileChange"),ui.fg,ui.muted));
-        HorizontalScrollView codeScroll=new HorizontalScrollView(getContext());
-        codeScroll.setHorizontalScrollBarEnabled(false);
-        codeScroll.setBackground(ui.rounded(ui.bg,12));
-        codeScroll.addView(source,new HorizontalScrollView.LayoutParams(-2,-2));
-        LayoutParams codeParams=new LayoutParams(-1,-2);codeParams.setMargins(ui.dp(30),ui.dp(3),ui.dp(4),0);
-        disclosure.addView(codeScroll,codeParams);
-      }
-      TextView full=ui.compactSummary();full.setText(UiText.get(R.string.ui_execution_details)+"  ↗");
-      full.setTextColor(ui.muted);ui.clickable(full,()->openDetail.accept(child));
-      LayoutParams fullParams=new LayoutParams(-1,-2);fullParams.setMargins(ui.dp(30),ui.dp(2),0,ui.dp(6));
+      ToolInlineDetailView detail=new ToolInlineDetailView(getContext(),ui,child);
+      LayoutParams codeParams=new LayoutParams(-1,-2);codeParams.setMargins(ui.dp(30),ui.dp(3),ui.dp(4),0);
+      disclosure.addView(detail,codeParams);
+      TextView full=ui.text(UiText.get(child.type.equals("reasoning")?
+          R.string.ui_reasoning:R.string.ui_execution_details)+"  ↗",12,ui.muted);
+      full.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
+      full.setPadding(0,ui.dp(3),ui.dp(7),ui.dp(3));
+      ui.clickable(full,()->openDetail.accept(child));
+      LayoutParams fullParams=new LayoutParams(-1,-2);fullParams.setMargins(ui.dp(30),ui.dp(2),ui.dp(4),ui.dp(5));
       disclosure.addView(full,fullParams);
     }
     content.addView(disclosure,new LayoutParams(-1,-2));
-  }
-
-  private static String diffText(ChatItem child){
-    DiffSummary diff=DiffSummary.fromItem(child);
-    if(diff.files.isEmpty())return child.detail;
-    StringBuilder source=new StringBuilder();
-    for(DiffSummary.File file:diff.files)if(!file.diff.isEmpty()){
-      if(source.length()>0)source.append('\n');
-      source.append(file.diff);
-    }
-    return source.toString();
   }
 
   static String fileLabel(ChatItem child){

@@ -11,15 +11,19 @@ public final class ConversationScrollView extends ScrollView {
   private boolean following = true, layingOut, pinning;
   private View horizontalGesture;
   private boolean touching;
+  private long lastGesture=-1000000;
+  private boolean moved;
   public ConversationScrollView(Context context) { super(context); }
   public boolean isFollowing() { return following; }
   public void follow() { following = true; requestLayout(); }
   public void read() { following = false; }
-  boolean userScrolling() {return touching;}
-  @Override public boolean onTouchEvent(MotionEvent event) {
+  boolean userScrolling() {return touching && moved ||
+      android.os.SystemClock.uptimeMillis()-lastGesture<450;}
+  @Override public boolean dispatchTouchEvent(MotionEvent event) {
     int action=event.getActionMasked();
-    if(action==MotionEvent.ACTION_DOWN || action==MotionEvent.ACTION_MOVE)touching=true;
-    boolean handled=super.onTouchEvent(event);
+    if(action==MotionEvent.ACTION_DOWN){touching=true;moved=false;lastGesture=-1000000;}
+    if(action==MotionEvent.ACTION_MOVE){touching=true;moved=true;lastGesture=android.os.SystemClock.uptimeMillis();}
+    boolean handled=super.dispatchTouchEvent(event);
     if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_CANCEL)touching=false;
     return handled;
   }

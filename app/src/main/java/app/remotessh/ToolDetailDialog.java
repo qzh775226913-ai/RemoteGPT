@@ -77,7 +77,7 @@ final class ToolDetailDialog {
           !line.startsWith("+++") && !line.startsWith("---"))
         result.setSpan(new BackgroundColorSpan(line.startsWith("+")?0x2236a75a:0x22ce5555),
             offset,offset+line.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-      if(diff && color!=muted && !line.isEmpty()) {
+      if((!diff || color!=muted && !line.startsWith("+") && !line.startsWith("-")) && !line.isEmpty()) {
         Matcher token=TOKEN.matcher(line);
         while(token.find())result.setSpan(new ForegroundColorSpan(0xff94b8f6),offset+token.start(),offset+token.end(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         Matcher string=STRING.matcher(line);
