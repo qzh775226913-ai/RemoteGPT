@@ -526,7 +526,6 @@
     <string name="ui_detail_permission">Permiso: %1$s</string>
     <string name="ui_detail_remote_version">Versión remota: %1$s</string>
     <string name="ui_detail_speed">Velocidad: %1$s</string>
-    <string name="ui_detail_tools">Herramientas: %1$s</string>
     <string name="ui_disabled">Desactivado</string>
     <string name="ui_loading">Cargando…</string>
     <string name="ui_mcp_servers">Servidores MCP</string>
@@ -555,4 +554,5 @@
     <string name="ui_mcp_templates_count">Plantillas de recursos (%1$d)</string>
     <string name="ui_mcp_capabilities">Capacidades</string>
     <string name="ui_compact_resume_confirmation">¿Reanudar esta conversación y comprimir su contexto ahora? El servidor iniciará un nuevo turno de compresión.</string>
+    <string name="ui_group_count">%1$s (%2$d)</string>
 </resources>

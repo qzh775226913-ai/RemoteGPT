@@ -514,7 +514,6 @@
     <string name="ui_detail_permission">權限：%1$s</string>
     <string name="ui_detail_remote_version">遠端版本：%1$s</string>
     <string name="ui_detail_speed">速度：%1$s</string>
-    <string name="ui_detail_tools">工具：%1$s</string>
     <string name="ui_disabled">已停用</string>
     <string name="ui_loading">載入中…</string>
     <string name="ui_mcp_servers">MCP 伺服器</string>
@@ -543,4 +542,5 @@
     <string name="ui_mcp_templates_count">資源範本（%1$d）</string>
     <string name="ui_mcp_capabilities">能力</string>
     <string name="ui_compact_resume_confirmation">接續這個對話並立即壓縮上下文嗎？伺服器將開始新的壓縮輪次。</string>
+    <string name="ui_group_count">%1$s（%2$d）</string>
 </resources>

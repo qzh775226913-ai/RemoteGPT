@@ -93,7 +93,7 @@ final class CapabilityDirectoryDialog {
       if (!entry.group.equals(group)) {
         group = entry.group;
         TextView heading = new TextView(activity);
-        heading.setText(group + " (" + counts.get(group) + ")");
+        heading.setText(UiText.get(R.string.ui_group_count, group, counts.get(group)));
         heading.setTextSize(13);
         heading.setTypeface(null, android.graphics.Typeface.BOLD);
         heading.setPadding(0, dp(14), 0, dp(5));

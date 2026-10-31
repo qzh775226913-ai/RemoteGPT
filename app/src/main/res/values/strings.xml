@@ -530,7 +530,6 @@
     <string name="ui_detail_permission">Permission: %1$s</string>
     <string name="ui_detail_remote_version">Remote version: %1$s</string>
     <string name="ui_detail_speed">Speed: %1$s</string>
-    <string name="ui_detail_tools">Tools: %1$s</string>
     <string name="ui_disabled">Disabled</string>
     <string name="ui_loading">Loading…</string>
     <string name="ui_mcp_servers">MCP servers</string>
@@ -559,4 +558,5 @@
     <string name="ui_mcp_templates_count">Resource templates (%1$d)</string>
     <string name="ui_mcp_capabilities">Capabilities</string>
     <string name="ui_compact_resume_confirmation">Resume this conversation and compress its context now? The server will start a new compaction turn.</string>
+    <string name="ui_group_count">%1$s (%2$d)</string>
 </resources>

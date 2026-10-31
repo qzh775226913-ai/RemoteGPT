@@ -526,7 +526,6 @@
     <string name="ui_detail_permission">Autorisation : %1$s</string>
     <string name="ui_detail_remote_version">Version distante : %1$s</string>
     <string name="ui_detail_speed">Vitesse : %1$s</string>
-    <string name="ui_detail_tools">Outils : %1$s</string>
     <string name="ui_disabled">Désactivé</string>
     <string name="ui_loading">Chargement…</string>
     <string name="ui_mcp_servers">Serveurs MCP</string>
@@ -555,4 +554,5 @@
     <string name="ui_mcp_templates_count">Modèles de ressources (%1$d)</string>
     <string name="ui_mcp_capabilities">Fonctionnalités</string>
     <string name="ui_compact_resume_confirmation">Reprendre cette conversation et compacter son contexte maintenant ? Le serveur lancera un nouveau tour de compactage.</string>
+    <string name="ui_group_count">%1$s (%2$d)</string>
 </resources>

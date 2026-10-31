@@ -526,7 +526,6 @@
     <string name="ui_detail_permission">Permissão: %1$s</string>
     <string name="ui_detail_remote_version">Versão remota: %1$s</string>
     <string name="ui_detail_speed">Velocidade: %1$s</string>
-    <string name="ui_detail_tools">Ferramentas: %1$s</string>
     <string name="ui_disabled">Desativado</string>
     <string name="ui_loading">Carregando…</string>
     <string name="ui_mcp_servers">Servidores MCP</string>
@@ -555,4 +554,5 @@
     <string name="ui_mcp_templates_count">Modelos de recursos (%1$d)</string>
     <string name="ui_mcp_capabilities">Capacidades</string>
     <string name="ui_compact_resume_confirmation">Retomar esta conversa e compactar o contexto agora? O servidor iniciará uma nova rodada de compactação.</string>
+    <string name="ui_group_count">%1$s (%2$d)</string>
 </resources>

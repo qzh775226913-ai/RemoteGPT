@@ -514,7 +514,6 @@
     <string name="ui_detail_permission">권한: %1$s</string>
     <string name="ui_detail_remote_version">원격 버전: %1$s</string>
     <string name="ui_detail_speed">속도: %1$s</string>
-    <string name="ui_detail_tools">도구: %1$s</string>
     <string name="ui_disabled">사용 안 함</string>
     <string name="ui_loading">불러오는 중…</string>
     <string name="ui_mcp_servers">MCP 서버</string>
@@ -543,4 +542,5 @@
     <string name="ui_mcp_templates_count">리소스 템플릿 (%1$d)</string>
     <string name="ui_mcp_capabilities">기능</string>
     <string name="ui_compact_resume_confirmation">이 대화를 다시 시작하고 컨텍스트를 압축할까요? 서버에서 새 압축 턴이 시작됩니다.</string>
+    <string name="ui_group_count">%1$s（%2$d）</string>
 </resources>

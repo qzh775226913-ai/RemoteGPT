@@ -532,7 +532,6 @@
     <string name="ui_detail_permission">Разрешение: %1$s</string>
     <string name="ui_detail_remote_version">Удалённая версия: %1$s</string>
     <string name="ui_detail_speed">Скорость: %1$s</string>
-    <string name="ui_detail_tools">Инструменты: %1$s</string>
     <string name="ui_disabled">Отключено</string>
     <string name="ui_loading">Загрузка…</string>
     <string name="ui_mcp_servers">Серверы MCP</string>
@@ -561,4 +560,5 @@
     <string name="ui_mcp_templates_count">Шаблоны ресурсов (%1$d)</string>
     <string name="ui_mcp_capabilities">Возможности</string>
     <string name="ui_compact_resume_confirmation">Продолжить этот диалог и сжать его контекст? Сервер начнёт новый этап сжатия.</string>
+    <string name="ui_group_count">%1$s (%2$d)</string>
 </resources>
