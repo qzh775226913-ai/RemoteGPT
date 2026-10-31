@@ -463,9 +463,9 @@ public final class MainActivity extends Activity {
     controls.addView(modelButton, modelParams);
     permissionButton = icon("shield", UiText.get(R.string.ui_permissions_1_s, UiPresentation.permission(PermissionMode.INHERIT)), this::choosePermission);
     controls.addView(permissionButton, new LinearLayout.LayoutParams(dp(44), dp(44)));
-    send = icon("arrow", UiText.get(R.string.ui_send_message), this::sendMessage);
+    send = icon("arrow", UiText.get(R.string.ui_send_message), this::sendMessage);send.glyphScale=.36f;
     controls.addView(send, new LinearLayout.LayoutParams(dp(44), dp(44)));
-    chrome=new ConversationChromeController(this,headerDetails,composer,input,attachmentScroll,controls,
+    chrome=new ConversationChromeController(this,headerDetails,composer,input,
         fg,muted,panel,this::sizeComposer);
     input.addTextChangedListener(
         new TextWatcher() {
@@ -521,6 +521,7 @@ public final class MainActivity extends Activity {
   private void sizeComposer(boolean keyboardVisible) {
     input.setMinLines(chrome!=null && chrome.large()?8:1);
     input.setMaxLines(chrome!=null && chrome.large()?8:input.length() == 0 ? 1 : input.hasFocus() && keyboardVisible ? 4 : 3);
+    if(chrome!=null)chrome.contentChanged();
     positionReadOnlyBar();
   }
 
@@ -720,7 +721,7 @@ public final class MainActivity extends Activity {
   private CharSequence toolTitle(ChatItem m) {
     String symbol = m.status.equals("completed") ? "✓" : m.status.equals("failed") ? "!" : "›";
     String icon=m.status.equals("completed")?"check":m.status.equals("failed")?"error":"chevron";
-    String title=UiPresentation.itemTitle(m);
+    String title=m.type.equals("reasoning")?ToolActivityPresenter.reasoningPreview(m):UiPresentation.itemTitle(m);
     if(m.type.equals("fileChange"))title=ToolActivityGroupView.fileLabel(m);
     CharSequence label=AppIcons.label(this,symbol + "  " + title.replaceAll("\\s+", " ") + "  ›",icon,"chevron",muted,dp(15));
     return m.type.equals("fileChange")?ToolActivityGroupView.tintStats(label,isDark()):label;
@@ -878,7 +879,7 @@ public final class MainActivity extends Activity {
             && (app.busy ? (stop || app.canSteer()) : (app.connected && !app.recoveryInProgress() && hasContent));
     send.setAlpha(enabled ? 1 : .28f);
     send.color = bg;
-    send.setBackground(rounded(fg, 24));
+    send.setBackground(new InsetDrawable(rounded(fg, 24),dp(5.5f)));
     send.setContentDescription(stop ? UiText.get(R.string.ui_stop_generating) : app.busy ? UiText.get(R.string.ui_send_steering_message) : UiText.get(R.string.ui_send_message));
     send.setEnabled(enabled);
     send.invalidate();
@@ -1019,6 +1020,7 @@ public final class MainActivity extends Activity {
       TextView uploading = text((app.attachingFiles?UiText.get(R.string.ui_uploading_files):UiText.get(R.string.ui_uploading_images)) + (app.imageUploadCount > 1 ? "（" + app.imageUploadIndex + " / " + app.imageUploadCount + "）" : ""), 13, muted);
       uploading.setContentDescription(app.attachingFiles?UiText.get(R.string.ui_uploading_files):UiText.get(R.string.ui_uploading_images)); attachmentStrip.addView(uploading);
     }
+    if(chrome!=null)chrome.contentChanged();
   }
 
   private void addAttachmentPreview(android.graphics.Bitmap bitmap, String path, int index) {

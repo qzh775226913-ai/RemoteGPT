@@ -75,7 +75,7 @@ public class ToolActivityPresenterTest {
     List<ChatItem> first=ToolActivityPresenter.present(source,"turn");
     assertEquals(2,first.size());assertEquals("activityGroup",first.get(0).type);
     assertEquals(3,first.get(0).children.size());
-    assertTrue(first.get(0).text.contains(UiText.get(R.string.ui_reasoning)));
+    assertFalse(first.get(0).text.contains(UiText.get(R.string.ui_reasoning)));
     assertTrue(first.get(0).text.contains("+1 −1"));
     edit.changes=new JSONArray().put(Json.obj("path","Main.java","diff","@@ -1 +1,2 @@\n-old\n+new\n+more\n"));
     edit.detail="Main.java\n@@ -1 +1,2 @@\n-old\n+new\n+more\n";
@@ -83,5 +83,14 @@ public class ToolActivityPresenterTest {
     assertTrue(progressed.text.contains("+2 −1"));
     assertNotEquals(first.get(0).detail,progressed.detail);
     assertEquals("completed",ToolActivityPresenter.present(source,"").get(0).status);
+  }
+
+  @Test public void reasoningOnlyGroupUsesItsActualSummary() {
+    UiText.initialize(RuntimeEnvironment.getApplication());
+    ChatItem first=new ChatItem("one","reasoning","");first.turnId="turn";first.detail="Checking\nthe result";
+    ChatItem second=new ChatItem("two","reasoning","");second.turnId="turn";second.detail="Done";
+    ChatItem group=ToolActivityPresenter.present(Arrays.asList(first,second),"turn").get(0);
+    assertEquals("Checking the result",group.text);
+    assertEquals(2,group.children.size());
   }
 }

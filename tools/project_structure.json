@@ -65,6 +65,7 @@
       "ConversationChromeController",
       "ToolDetailDialog",
       "ToolActivityGroupView",
+      "RollingChangeNumbers",
       "ToolInlineDetailView",
       "CompactSummaryTextView",
       "RemoteBrowser",

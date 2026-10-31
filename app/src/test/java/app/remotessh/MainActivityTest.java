@@ -624,7 +624,9 @@ public class MainActivityTest {
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     captureView(content(), "compact-folded-details");
     for (ChatItem item : app.items) {
-      TextView bubble = (TextView) find(content(), "›  " + (item.type.equals("fileChange") ? item.text : UiPresentation.itemTitle(item)) + "  ›");
+      String title=item.type.equals("reasoning")?ToolActivityPresenter.reasoningPreview(item):
+          item.type.equals("fileChange")?item.text:UiPresentation.itemTitle(item);
+      TextView bubble = (TextView) find(content(), "›  " + title + "  ›");
       assertNotNull(bubble);
       assertTrue(bubble instanceof CompactSummaryTextView);
       assertFalse(bubble.getIncludeFontPadding());
@@ -632,7 +634,7 @@ public class MainActivityTest {
       assertTrue((bubble.getGravity() & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.CENTER_VERTICAL);
       assertTrue(bubble.getHeight() <= Math.round(32 * activity.getResources().getDisplayMetrics().density));
       android.graphics.Rect ink=new android.graphics.Rect();
-      String label=(item.type.equals("fileChange") ? item.text : UiPresentation.itemTitle(item)).replaceAll("\\s+"," ");
+      String label=title.replaceAll("\\s+"," ");
       bubble.getPaint().getTextBounds(label,0,label.length(),ink);
       float inkCenter=bubble.getBaseline()+((CompactSummaryTextView)bubble).opticalShift()
           +(ink.top+ink.bottom)/2f;
@@ -824,7 +826,7 @@ public class MainActivityTest {
     assertTrue(find(content(), "发送引导消息").isEnabled());
     capture("steering-compact-permissions");
     input.setText(""); assertNotNull(find(content(), "停止生成"));
-    find(content(), "›  思考过程  ›").performClick();
+    find(content(), "›  正在检查服务器返回的状态  ›").performClick();
     android.app.Dialog details = org.robolectric.shadows.ShadowDialog.getLatestDialog();
     assertNotNull(find(details.getWindow().getDecorView(), "正在检查服务器返回的状态"));
     reasoning.detail += "\n继续验证";
@@ -845,7 +847,7 @@ public class MainActivityTest {
     ChatItem reasoning = new ChatItem("r", "reasoning", "思考过程");
     reasoning.status = "inProgress"; app.items.add(reasoning); app.changed();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
-    View card = find(content(), "›  思考过程  ›");
+    View card = find(content(), "›  正在等待思考摘要…  ›");
     assertEquals(View.VISIBLE, ((View) card.getParent()).getVisibility());
     card.performClick();
     android.app.Dialog details = org.robolectric.shadows.ShadowDialog.getLatestDialog();
@@ -1277,7 +1279,7 @@ public class MainActivityTest {
     app.items.add(result);app.items.add(InteractionHistoryTest.message("a","userMessage","t2","回答上一轮的问题：\n选择方案\nB\n\n"));app.changed();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));capture("typed-conversation-history-"+((activity.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES?"dark":"light"));
     assertNull(find(content(),"进展"));assertNotNull(find(content(),"正在检查项目结构。"));assertNotNull(find(content(),"回复"));assertNotNull(find(content(),"交互提问 · 已回答"));assertNull(find(content(),"你的回答"));assertNull(find(content(),"复制问答回答"));
-    assertNotNull(find(content(),"✓  B"));assertNotNull(find(content(),"✓  思考过程  ›"));
+    assertNotNull(find(content(),"✓  B"));assertNotNull(find(content(),"✓  优先检查关键流程  ›"));
     find(content(),"复制交互问答").performClick();
     assertEquals("选择方案\n○ A — 优先兼容\n✓ B\n回答：B",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
     find(content(),"复制内容块 1").performClick();assertEquals("版本 1.0.35\n",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
@@ -1373,13 +1375,13 @@ public class MainActivityTest {
     chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
     field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);
     LinearLayout composer=(LinearLayout)field.get(activity);
-    TextView compact=(TextView)composer.getChildAt(0);
+    TextView compact=(TextView)((FrameLayout)composer.getParent()).getChildAt(1);
     assertEquals("发送消息",compact.getText().toString());
     compact.performClick();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
     assertEquals("未发送草稿",draft.getText().toString());
     assertEquals(View.VISIBLE,draft.getVisibility());
-    IconView enlarge=(IconView)((FrameLayout)composer.getChildAt(2)).getChildAt(2);
+    IconView enlarge=(IconView)((FrameLayout)composer.getChildAt(1)).getChildAt(2);
     enlarge.performClick();assertEquals("收起输入框",enlarge.getContentDescription());
     chrome.restore();assertEquals("放大输入框",enlarge.getContentDescription());
   }
@@ -1397,18 +1399,18 @@ public class MainActivityTest {
     int[] resumeLocation=new int[2],composerLocation=new int[2];
     readOnly.getLocationOnScreen(resumeLocation);composer.getLocationOnScreen(composerLocation);
     assertTrue(resumeLocation[1]+readOnly.getHeight()<composerLocation[1]);
-    FrameLayout inputLayer=(FrameLayout)composer.getChildAt(2);
+    FrameLayout inputLayer=(FrameLayout)composer.getChildAt(1);
     EditText input=(EditText)inputLayer.getChildAt(0);
     assertEquals(input.getHeight(),inputLayer.getHeight());
-    IconView enlarge=(IconView)((FrameLayout)composer.getChildAt(2)).getChildAt(2);
+    IconView enlarge=(IconView)((FrameLayout)composer.getChildAt(1)).getChildAt(2);
     enlarge.performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));
     capture("before-resume-expanded-composer");
     assertEquals(Gravity.TOP|Gravity.START,input.getGravity()&(Gravity.VERTICAL_GRAVITY_MASK|Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK));
-    assertEquals(input.getHeight(),composer.getChildAt(2).getHeight());
-    assertTrue(composer.getClipToOutline());
+    assertEquals(input.getHeight(),composer.getChildAt(1).getHeight());
+    assertTrue(((View)composer.getParent()).getClipToOutline());
     assertEquals(View.GONE,readOnly.getVisibility());
     int[] buttonLocation=new int[2];
-    View controls=composer.getChildAt(3);controls.getLocationOnScreen(buttonLocation);
+    View controls=composer.getChildAt(2);controls.getLocationOnScreen(buttonLocation);
     assertTrue("controls lost height: composer="+composer.getHeight()+" input="+input.getHeight(),
         controls.getHeight()>=activity.getResources().getDisplayMetrics().density*40);
     assertTrue("controls below screen: top="+buttonLocation[1]+" height="+controls.getHeight()+
@@ -1461,10 +1463,9 @@ public class MainActivityTest {
     ToolActivityGroupView group=(ToolActivityGroupView)groups.get("activity-turn-thought");
     assertNotNull(group);
     TextView header=(TextView)group.getChildAt(0);
-    assertTrue(header.getText().toString().contains("思考过程"));
+    assertFalse(header.getText().toString().contains("思考过程"));
     assertTrue(header.getText().toString().contains("+1 −1"));
-    android.text.Spanned moving=(android.text.Spanned)header.getText();
-    int animated=moving.getSpans(0,moving.length(),android.text.style.ReplacementSpan.class).length;
+    assertFalse("unchanged values remain still",group.countsAnimating());
     group.getChildAt(0).performClick();
     LinearLayout children=(LinearLayout)group.getChildAt(1);
     assertEquals(3,children.getChildCount());
@@ -1473,34 +1474,48 @@ public class MainActivityTest {
     assertEquals("先检查文件，再核对输出。",((TextView)prose.getChildAt(0)).getText().toString());
     ((LinearLayout)children.getChildAt(2)).getChildAt(0).performClick();
     ToolInlineDetailView diff=(ToolInlineDetailView)((LinearLayout)children.getChildAt(2)).getChildAt(1);
-    TextView fileLabel=(TextView)((LinearLayout)((LinearLayout)children.getChildAt(2)).getChildAt(0)).getChildAt(1);
-    android.text.Spanned fileMoving=(android.text.Spanned)fileLabel.getText();
-    int fileAnimated=fileMoving.getSpans(0,fileMoving.length(),android.text.style.ReplacementSpan.class).length;
     TextView code=(TextView)((HorizontalScrollView)diff.getChildAt(1)).getChildAt(0);
     assertTrue(code.getText().toString().contains("+new"));
     assertTrue(code.getText() instanceof android.text.Spanned);
     capture("live-reasoning-tool-group");
+    field=MainActivity.class.getDeclaredField("scroll");field.setAccessible(true);
+    ConversationScrollView scroll=(ConversationScrollView)field.get(activity);scroll.follow();scroll.pin();
+    edit.changes=new org.json.JSONArray().put(Json.obj("path","src/Main.java","diff","@@ -1 +1,2 @@\n-old\n+new\n+more\n"));
+    edit.detail="@@ -1 +1,2 @@\n-old\n+new\n+more\n";app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(45));
+    assertTrue("changed total rolls from its old value",group.countTransitioned("header",0,"+","1","2"));
+    assertFalse("unchanged deletion count remains still",group.countAnimating("header",1,"−"));
+    assertTrue("changed visible file count rolls from its old value",group.countTransitioned("file:edit",0,"+","1","2"));
     app.turnId="";app.busy=false;app.changed();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
-    android.text.Spanned stopped=(android.text.Spanned)((TextView)group.getChildAt(0)).getText();
-    assertEquals(2,animated-stopped.getSpans(0,stopped.length(),android.text.style.ReplacementSpan.class).length);
-    LinearLayout settledChildren=(LinearLayout)group.getChildAt(1);
-    TextView settledFileLabel=(TextView)((LinearLayout)((LinearLayout)settledChildren.getChildAt(2)).getChildAt(0)).getChildAt(1);
-    android.text.Spanned fileStopped=(android.text.Spanned)settledFileLabel.getText();
-    assertEquals(2,fileAnimated-fileStopped.getSpans(0,fileStopped.length(),android.text.style.ReplacementSpan.class).length);
+    assertFalse("task completion settles all counters immediately",group.countsAnimating());
   }
-  @Test public void runningFileNumbersRollAndStopAsSoonAsTurnCompletes() {
+  @Test public void runningFileNumbersOnlyRollOnChangeAndStopWhenTurnCompletes() {
     UiText.initialize(activity.getApplication());
     DialogUi ui=new DialogUi(activity,Color.BLACK,0xffeeeeee,0xffaaaaaa,0xff303030,0xff444444);
-    ChatItem running=new ChatItem("activity","activityGroup","已编辑 1 个文件  +2 −1");
+    ChatItem running=new ChatItem("activity","activityGroup","已执行 1 项操作");
     running.status="inProgress";
     ToolActivityGroupView card=new ToolActivityGroupView(activity,ui,running,new java.util.HashSet<>(),item->{});
-    TextView header=(TextView)card.getChildAt(0);
-    android.text.Spanned moving=(android.text.Spanned)header.getText();
-    int movingCount=moving.getSpans(0,moving.length(),android.text.style.ReplacementSpan.class).length;
-    running.status="completed";card.bind(running);
-    android.text.Spanned stopped=(android.text.Spanned)header.getText();
-    assertEquals(2,movingCount-stopped.getSpans(0,stopped.length(),android.text.style.ReplacementSpan.class).length);
+    ((ViewGroup)content()).addView(card,new FrameLayout.LayoutParams(-1,-2));layoutContent();
+    assertFalse(card.countsAnimating());
+    running.text="已编辑 1 个文件  +2 −1";card.bind(running);
+    assertTrue("newly reported additions roll from zero",card.countAnimating("header",0,"+"));
+    assertTrue("newly reported removals roll from zero",card.countAnimating("header",1,"−"));
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(600));
+    assertFalse(card.countsAnimating());
+    running.text="已编辑 1 个文件  +3 −1";card.bind(running);
+    assertTrue(card.countAnimating("header",0,"+"));assertFalse(card.countAnimating("header",1,"−"));
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(300));card.bind(running);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+    assertFalse("rebinding unchanged numbers must not restart the animation",card.countsAnimating());
+    running.text="已编辑 1 个文件  +4 −2";card.bind(running);
+    assertTrue(card.countAnimating("header",0,"+"));assertTrue(card.countAnimating("header",1,"−"));
+    running.text="已编辑 1 个文件  +5 −2";card.bind(running);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(1100));
+    assertFalse("rapid updates settle on their latest value",card.countsAnimating());
+    assertTrue(((TextView)card.getChildAt(0)).getText().toString().contains("+5 −2"));
+    running.text="已编辑 1 个文件  +6 −2";card.bind(running);assertTrue(card.countsAnimating());
+    running.status="completed";card.bind(running);assertFalse(card.countsAnimating());
   }
   @Test public void scrollingToOlderMessagesCollapsesHeaderAndComposerThenRestoresThem() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="scroll";
@@ -1519,25 +1534,27 @@ public class MainActivityTest {
     assertTrue(input.hasFocus());
     assertTrue(scroll.getScrollY()>120);
     long time=android.os.SystemClock.uptimeMillis();
-    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time,MotionEvent.ACTION_DOWN,20,20,0));
-    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time+10,MotionEvent.ACTION_MOVE,20,20,0));
-    scroll.scrollBy(0,-400);
-    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time+30,MotionEvent.ACTION_UP,20,20,0));
+    int latestY=scroll.getScrollY();
+    dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,20,120);
+    dispatchTouch(scroll,time,time+10,MotionEvent.ACTION_MOVE,20,180);
+    dispatchTouch(scroll,time,time+20,MotionEvent.ACTION_MOVE,20,520);
+    dispatchTouch(scroll,time,time+30,MotionEvent.ACTION_UP,20,520);
+    assertTrue("reading gesture must move toward older messages",scroll.getScrollY()<latestY);
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
     assertEquals(View.GONE,details.getVisibility());
-    assertEquals(View.GONE,composer.getChildAt(2).getVisibility());
-    assertEquals("发送消息",((TextView)composer.getChildAt(0)).getText().toString());
+    assertEquals(View.GONE,composer.getVisibility());
+    assertEquals("发送消息",((TextView)((FrameLayout)composer.getParent()).getChildAt(1)).getText().toString());
     captureLaidOutView(content(),"scroll-chrome-compact-corrected");
     time=android.os.SystemClock.uptimeMillis();
-    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time,MotionEvent.ACTION_DOWN,20,20,0));
-    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time+10,MotionEvent.ACTION_MOVE,20,20,0));
     int olderY=scroll.getScrollY();
-    scroll.scrollBy(0,120);
+    dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,20,600);
+    dispatchTouch(scroll,time,time+10,MotionEvent.ACTION_MOVE,20,540);
+    dispatchTouch(scroll,time,time+20,MotionEvent.ACTION_MOVE,20,250);
     assertTrue("return scroll must advance toward latest: "+olderY+" -> "+scroll.getScrollY(),scroll.getScrollY()>olderY);
-    scroll.dispatchTouchEvent(MotionEvent.obtain(time,time+30,MotionEvent.ACTION_UP,20,20,0));
+    dispatchTouch(scroll,time,time+30,MotionEvent.ACTION_UP,20,250);
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
     assertEquals(View.VISIBLE,details.getVisibility());
-    assertEquals(View.VISIBLE,composer.getChildAt(2).getVisibility());
+    assertEquals(View.VISIBLE,composer.getVisibility());
     field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
     ConversationChromeController chrome=(ConversationChromeController)field.get(activity);
     chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
@@ -1545,6 +1562,135 @@ public class MainActivityTest {
     ((View)field.get(activity)).performClick();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
     assertEquals(View.VISIBLE,details.getVisibility());
+  }
+  @Test public void composerExpansionNeverOvershootsAndKeepsAttachmentVisibility() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="motion";
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    EditText input=(EditText)find(content(),"消息输入框");input.setText("first\nsecond\nthird");input.clearFocus();
+    capture("composer-motion-normal");
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);
+    LinearLayout composer=(LinearLayout)field.get(activity);FrameLayout host=(FrameLayout)composer.getParent();
+    int normalHeight=host.getHeight(),normalWidth=host.getWidth();
+    assertEquals(View.GONE,composer.getChildAt(0).getVisibility());
+    field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
+    ConversationChromeController chrome=(ConversationChromeController)field.get(activity);
+    chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+    layoutContent();int compactHeight=host.getHeight(),previous=compactHeight;
+    assertTrue(compactHeight<normalHeight);
+    chrome.setCompact(false);
+    for(int i=0;i<10;i++){
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));layoutContent();
+      int height=host.getHeight();
+      assertTrue("expansion must not shrink at frame "+i+": "+previous+" -> "+height,height>=previous);
+      assertTrue("expansion must not overshoot its final height",height<=normalHeight);
+      if(i==3)captureLaidOutView(content(),"composer-motion-mid-expansion");
+      previous=height;
+    }
+    assertEquals(normalHeight,host.getHeight());assertEquals(normalWidth,host.getWidth());
+    assertEquals(View.GONE,composer.getChildAt(0).getVisibility());
+    chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(70));layoutContent();
+    int interrupted=host.getHeight();chrome.setCompact(false);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));layoutContent();
+    assertTrue("reversing the animation should continue from its current height",host.getHeight()>=interrupted);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    assertEquals(normalHeight,host.getHeight());
+    chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    previous=host.getHeight();chrome.setCompact(false);
+    java.lang.reflect.Field animationField=ConversationChromeController.class.getDeclaredField("composerAnimator");
+    animationField.setAccessible(true);android.animation.ValueAnimator animator=(android.animation.ValueAnimator)animationField.get(chrome);
+    for(int time=0;time<=224;time+=8){
+      animator.setCurrentPlayTime(time);layoutContent();int height=host.getHeight();
+      assertTrue("8 ms frame samples stay monotonic",height>=previous);
+      assertTrue("8 ms frame samples stay within the final size",height<=normalHeight);
+      assertTrue("8 ms frame samples avoid jumps",height-previous<=Math.max(3,(normalHeight-compactHeight)*.12f));
+      previous=height;
+    }
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    assertEquals(normalHeight,host.getHeight());
+    IconView send=(IconView)find(content(),"发送消息");
+    android.graphics.Rect inset=new android.graphics.Rect();send.getBackground().getPadding(inset);
+    assertEquals(send.getWidth()*.75f,send.getWidth()-inset.left-inset.right,2f);
+    assertEquals(.36f,send.glyphScale,.001f);
+    captureLaidOutView(content(),"composer-motion-settled");
+    app.draftFiles.add(new FileAttachment("report.txt","/remote/report.txt",42));app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));layoutContent();
+    int attachmentHeight=host.getHeight();
+    ((FrameLayout)composer.getChildAt(1)).getChildAt(2).performClick();layoutContent();
+    int largeHeight=host.getHeight();assertTrue(largeHeight>normalHeight);
+    assertEquals(View.VISIBLE,composer.getChildAt(0).getVisibility());
+    chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    previous=host.getHeight();chrome.setCompact(false);
+    for(int i=0;i<10;i++){
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(30));layoutContent();
+      int height=host.getHeight();assertTrue(height>=previous);assertTrue(height<=largeHeight);previous=height;
+    }
+    assertEquals(largeHeight,host.getHeight());assertEquals(View.VISIBLE,composer.getChildAt(0).getVisibility());
+    chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    chrome.setCompact(false);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(60));layoutContent();
+    ((FrameLayout)composer.getChildAt(1)).getChildAt(2).performClick();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    assertEquals("changing input size while expanding retargets the animation",attachmentHeight,host.getHeight());
+  }
+
+  private void layoutContent() {
+    View view=content();int width=activity.getResources().getDisplayMetrics().widthPixels;
+    int height=activity.getResources().getDisplayMetrics().heightPixels;
+    view.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),
+        View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));
+    view.layout(0,0,width,height);
+  }
+
+  @Test public void foldedSummaryScrollsHorizontallyWithoutTriggeringItsClick() {
+    DialogUi ui=new DialogUi(activity,Color.WHITE,Color.BLACK,0xff666666,0xffeeeeee,0xffdddddd);
+    TextView summary=ui.compactSummary();
+    summary.setText("已编辑 12 个文件 +123 −456 · 已浏览 28 个文件 · 已执行 37 项操作");
+    int[] clicks={0};summary.setOnClickListener(v->clicks[0]++);
+    int width=ui.dp(140);((ViewGroup)content()).addView(summary,new FrameLayout.LayoutParams(width,-2));
+    layoutContent();
+    long time=android.os.SystemClock.uptimeMillis();float y=summary.getHeight()/2f;
+    dispatchTouch(summary,time,time,MotionEvent.ACTION_DOWN,width-5,y);
+    dispatchTouch(summary,time,time+10,MotionEvent.ACTION_MOVE,5,y);
+    dispatchTouch(summary,time,time+20,MotionEvent.ACTION_UP,5,y);
+    assertTrue("the full label must be reachable by swiping",summary.getScrollX()>0);assertEquals(0,clicks[0]);
+    time+=100;dispatchTouch(summary,time,time,MotionEvent.ACTION_DOWN,5,y);
+    dispatchTouch(summary,time,time+10,MotionEvent.ACTION_MOVE,width-5,y);
+    dispatchTouch(summary,time,time+20,MotionEvent.ACTION_UP,width-5,y);
+    assertEquals(0,summary.getScrollX());assertEquals(0,clicks[0]);
+    time+=100;dispatchTouch(summary,time,time,MotionEvent.ACTION_DOWN,20,y);
+    dispatchTouch(summary,time,time+10,MotionEvent.ACTION_UP,20,y);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));assertEquals(1,clicks[0]);
+  }
+  @Test public void finalFileSummaryDoesNotChangeComposerWhenItsLayoutMovesTheTimeline() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="summary";
+    for(int i=0;i<18;i++)app.items.add(new ChatItem("text-"+i,"agentMessage","Message "+i+" with enough content to scroll."));
+    ChatItem edit=ChatItem.from(Json.obj("id","edit","type","fileChange","changes",
+        new org.json.JSONArray().put(Json.obj("path","src/Main.java","diff","@@ -1 +1 @@\n-old\n+new\n"))));
+    edit.turnId="turn";app.items.add(edit);
+    ChatItem reply=new ChatItem("answer","agentMessage","Done");reply.turnId="turn";reply.phase="final_answer";
+    app.items.add(reply);app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));
+    capture("summary-independent-before");
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("activityViews");field.setAccessible(true);
+    ToolActivityGroupView summary=(ToolActivityGroupView)((java.util.Map<?,?>)field.get(activity)).get("files-turn");
+    assertNotNull(summary);
+    field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
+    ConversationChromeController chrome=(ConversationChromeController)field.get(activity);
+    field=MainActivity.class.getDeclaredField("scroll");field.setAccessible(true);
+    ConversationScrollView scroll=(ConversationScrollView)field.get(activity);
+    field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);
+    LinearLayout composer=(LinearLayout)field.get(activity);
+    for(boolean compact:new boolean[]{false,true}){
+      chrome.setCompact(compact);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+      layoutContent();scroll.follow();scroll.pin();int before=scroll.getScrollY();
+      long time=android.os.SystemClock.uptimeMillis();
+      dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,2,2);
+      dispatchTouch(scroll,time,time+10,MotionEvent.ACTION_MOVE,3,3);
+      dispatchTouch(scroll,time,time+20,MotionEvent.ACTION_UP,3,3);
+      summary.getChildAt(0).performClick();layoutContent();scroll.pin();
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+      assertEquals("summary must leave the composer state unchanged",compact?View.GONE:View.VISIBLE,composer.getVisibility());
+      assertNotEquals("the expanded/collapsed summary must actually move the timeline",before,scroll.getScrollY());
+    }
+    captureLaidOutView(content(),"summary-independent-after");
   }
   @Test @Config(qualifiers="zh-rCN-w411dp-h891dp-night-xhdpi")
   public void conversationSpacingIsBalancedInDarkTheme() throws Exception {verifyConversationSpacing("conversation-spacing-dark");}

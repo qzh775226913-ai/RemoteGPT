@@ -49,11 +49,13 @@ final class ToolActivityPresenter {
     group.turnId=first.turnId;
     group.status=first.turnId.equals(runningTurn)?"inProgress":"completed";
     group.children.addAll(children);
-    Set<String> edited=new HashSet<>(),viewed=new HashSet<>();int actions=0,thoughts=0,added=0,removed=0;
+    Set<String> edited=new HashSet<>(),viewed=new HashSet<>();int actions=0,added=0,removed=0;
+    String thoughtPreview="";
     StringBuilder version=new StringBuilder();
     for(ChatItem child:children){
       version.append(child.id).append(child.status).append(child.text).append(child.detail.hashCode());
-      if(child.type.equals("reasoning"))thoughts++;
+      if(child.type.equals("reasoning") && thoughtPreview.isEmpty() && !child.detail.trim().isEmpty())
+        thoughtPreview=reasoningPreview(child);
       if(child.type.equals("fileChange") && !child.status.equals("failed") && !child.status.equals("declined"))
         for(DiffSummary.File file:DiffSummary.fromItem(child).files){
           edited.add(file.path);added+=file.added;removed+=file.removed;
@@ -69,13 +71,17 @@ final class ToolActivityPresenter {
     }
     group.detail=version.toString();
     List<String> parts=new ArrayList<>();
-    if(thoughts>0)parts.add(thoughts==1?UiText.get(R.string.ui_reasoning):
-        UiText.get(R.string.ui_group_count,UiText.get(R.string.ui_reasoning),thoughts));
     if(!edited.isEmpty())parts.add(UiText.get(R.string.ui_edited_files_count,edited.size())+"  +"+added+" −"+removed);
     if(!viewed.isEmpty())parts.add(UiText.get(R.string.ui_viewed_files_count,viewed.size()));
     if(actions>0)parts.add(UiText.get(R.string.ui_ran_actions_count,actions));
+    if(parts.isEmpty())parts.add(thoughtPreview.isEmpty()?UiText.get(R.string.ui_waiting_for_reasoning_summary):thoughtPreview);
     group.text=String.join(" · ",parts);
     return group;
+  }
+
+  static String reasoningPreview(ChatItem item) {
+    String text=item.detail.trim().replaceAll("\\s+"," ");
+    return text.isEmpty()?UiText.get(R.string.ui_waiting_for_reasoning_summary):text;
   }
 
   private static ChatItem summary(String turnId,DiffSummary diff) {

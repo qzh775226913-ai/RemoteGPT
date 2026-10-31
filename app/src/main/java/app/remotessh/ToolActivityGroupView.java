@@ -1,16 +1,12 @@
 package app.remotessh;
 
 import android.app.Activity;
-import android.animation.ValueAnimator;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.Rect;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
-import android.text.style.ReplacementSpan;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -29,9 +25,7 @@ final class ToolActivityGroupView extends LinearLayout {
   private final TextView header;
   private final LinearLayout content;
   private final boolean summary;
-  private ValueAnimator countRoll;
-  private float rollProgress;
-  private boolean summaryRollDone;
+  private final RollingChangeNumbers numbers;
   private final Rect visibleBounds=new Rect();
   private final List<TextView> rollingRows=new ArrayList<>();
 
@@ -39,6 +33,8 @@ final class ToolActivityGroupView extends LinearLayout {
       Consumer<ChatItem> openDetail){
     super(activity);this.ui=ui;this.item=item;this.expanded=expanded;this.openDetail=openDetail;
     summary=item.type.equals("fileSummary");
+    numbers=new RollingChangeNumbers(ui.bg==Color.BLACK,this::invalidateNumbers,
+        ()->post(()->{if(getWindowToken()!=null)bind(this.item);}));
     setOrientation(VERTICAL);
     if(summary){setBackground(ui.rounded(ui.panel,18));setPadding(ui.dp(12),ui.dp(6),ui.dp(12),ui.dp(6));}
     header=ui.compactSummary();
@@ -49,44 +45,30 @@ final class ToolActivityGroupView extends LinearLayout {
     bind(item);
   }
 
-  private void startRoll(){
-    if(countRoll!=null)return;
-    countRoll=ValueAnimator.ofFloat(0f,1f);
-    countRoll.setDuration(summary?1000:2200);
-    countRoll.setRepeatCount(summary?0:ValueAnimator.INFINITE);
-    countRoll.setInterpolator(new android.view.animation.LinearInterpolator());
-    countRoll.addUpdateListener(a->{
-      rollProgress=(float)a.getAnimatedValue();
-      if(header.getGlobalVisibleRect(visibleBounds))header.invalidate();
-      for(TextView row:rollingRows)if(row.getGlobalVisibleRect(visibleBounds))row.invalidate();
-    });
-    if(summary)countRoll.addListener(new android.animation.AnimatorListenerAdapter(){
-      private boolean cancelled;
-      @Override public void onAnimationCancel(android.animation.Animator animation){cancelled=true;}
-      @Override public void onAnimationEnd(android.animation.Animator animation){
-        if(!cancelled){summaryRollDone=true;countRoll=null;rollProgress=0;bind(item);}
-      }
-    });
-    countRoll.start();
+  private void invalidateNumbers(){
+    if(header.getGlobalVisibleRect(visibleBounds))header.invalidate();
+    for(TextView row:rollingRows)if(row.getGlobalVisibleRect(visibleBounds))row.invalidate();
   }
 
-  @Override protected void onAttachedToWindow(){super.onAttachedToWindow();if(rolling())startRoll();}
+  @Override protected void onAttachedToWindow(){super.onAttachedToWindow();numbers.attach();}
   @Override protected void onDetachedFromWindow(){
-    if(countRoll!=null){countRoll.cancel();countRoll=null;}
+    numbers.detach();
     super.onDetachedFromWindow();
   }
 
   void bind(ChatItem item){
     this.item=item;
-    if(rolling() && getWindowToken()!=null)startRoll();
-    if(!rolling() && countRoll!=null){countRoll.cancel();countRoll=null;rollProgress=0;}
+    boolean running=!summary && item.status.equals("inProgress");
+    if(!summary && !running)numbers.settle();
     boolean open=expanded.contains(item.id);
+    for(ChatItem child:item.children)if(child.type.equals("fileChange"))
+      numbers.style("file:"+child.id,fileLabel(child),running && open,false);
     String label=(summary?item.text+"  "+item.detail:item.text)+(open?"  ⌄":"  ›");
     String groupIcon="book";
     for(ChatItem child:item.children)if(child.type.equals("fileChange")){groupIcon="pencil";break;}
     else if(child.type.equals("commandExecution") || child.type.equals("mcpToolCall"))groupIcon="terminal";
     CharSequence title=summary?label:AppIcons.label(getContext(),"◦  "+label,groupIcon,null,ui.muted,ui.dp(16));
-    header.setText(rolling()?rollingStats(title):tintStats(title,ui.bg==Color.BLACK));
+    header.setText(numbers.style("header",title,running,summary));
     header.setContentDescription(label);
     rollingRows.clear();
     content.removeAllViews();
@@ -112,10 +94,11 @@ final class ToolActivityGroupView extends LinearLayout {
             child.type.equals("imageView")?"book":"computer";
     row.addView(new IconView(getContext(),icon,ui.muted),new LayoutParams(ui.dp(30),ui.dp(32)));
     TextView text=ui.text("",13,ui.fg);text.setSingleLine(true);text.setEllipsize(TextUtils.TruncateAt.MIDDLE);
-    String label=child.type.equals("fileChange")?fileLabel(child):UiPresentation.itemTitle(child);
-    boolean animateCount=rolling() && child.type.equals("fileChange") && label.matches("(?s).*[+−]\\d+.*");
-    text.setText(animateCount?rollingStats(label):colors(label));
-    if(animateCount)rollingRows.add(text);
+    String label=child.type.equals("fileChange")?fileLabel(child):child.type.equals("reasoning")?
+        ToolActivityPresenter.reasoningPreview(child):UiPresentation.itemTitle(child);
+    boolean file=child.type.equals("fileChange");
+    text.setText(file?numbers.style("file:"+child.id,label,!summary && item.status.equals("inProgress"),false):colors(label));
+    if(file)rollingRows.add(text);
     row.addView(text,new LayoutParams(0,-2,1));
     row.addView(new IconView(getContext(),expanded.contains(child.id)?"chevronDown":"chevron",ui.muted),
         new LayoutParams(ui.dp(22),ui.dp(32)));
@@ -150,35 +133,10 @@ final class ToolActivityGroupView extends LinearLayout {
     return tintStats(label,ui.bg==Color.BLACK);
   }
 
-  private boolean rolling(){return summary?!summaryRollDone:
-      item.status.equals("inProgress") && item.text.matches("(?s).*[+−]\\d+.*");}
-
-  private CharSequence rollingStats(CharSequence label){
-    SpannableString styled=new SpannableString(label);
-    java.util.regex.Matcher counts=java.util.regex.Pattern.compile("[+−]\\d+").matcher(label);
-    while(counts.find())styled.setSpan(new RollingCountSpan(counts.group(),
-        counts.group().startsWith("+")?(ui.bg==Color.BLACK?0xff64df83:0xff168c45):
-            (ui.bg==Color.BLACK?0xffff7777:0xffba3434)),counts.start(),counts.end(),
-        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-    return styled;
-  }
-
-  private final class RollingCountSpan extends ReplacementSpan {
-    private final String sign,digits;
-    private final int color;
-    RollingCountSpan(String value,int color){sign=value.substring(0,1);digits=value.substring(1);this.color=color;}
-    @Override public int getSize(Paint paint,CharSequence text,int start,int end,Paint.FontMetricsInt metrics){
-      return (int)Math.ceil(paint.measureText(sign+digits));
-    }
-    @Override public void draw(Canvas canvas,CharSequence text,int start,int end,float x,int top,int baseline,int bottom,Paint paint){
-      int old=paint.getColor();paint.setColor(color);
-      canvas.drawText(sign,x,baseline,paint);
-      float signWidth=paint.measureText(sign),height=bottom-top;
-      canvas.save();canvas.clipRect(x+signWidth,top,x+signWidth+paint.measureText(digits),bottom);
-      canvas.drawText(digits,x+signWidth,baseline-height*rollProgress,paint);
-      canvas.drawText(digits,x+signWidth,baseline+height*(1-rollProgress),paint);
-      canvas.restore();paint.setColor(old);
-    }
+  boolean countsAnimating(){return numbers.animating();}
+  boolean countAnimating(String scope,int index,String sign){return numbers.animating(scope,index,sign);}
+  boolean countTransitioned(String scope,int index,String sign,String from,String to){
+    return numbers.transitioned(scope,index,sign,from,to);
   }
 
   static CharSequence tintStats(CharSequence label,boolean dark){

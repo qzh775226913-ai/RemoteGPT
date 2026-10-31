@@ -10,22 +10,31 @@ import android.widget.ScrollView;
 public final class ConversationScrollView extends ScrollView {
   private boolean following = true, layingOut, pinning;
   private View horizontalGesture;
-  private boolean touching;
-  private long lastGesture=-1000000;
-  private boolean moved;
+  private boolean handlingUserScroll, flinging;
+  private long lastFlingMotion;
   public ConversationScrollView(Context context) { super(context); }
   public boolean isFollowing() { return following; }
   public void follow() { following = true; requestLayout(); }
   public void read() { following = false; }
-  boolean userScrolling() {return touching && moved ||
-      android.os.SystemClock.uptimeMillis()-lastGesture<450;}
+  boolean userScrolling() {return handlingUserScroll;}
   @Override public boolean dispatchTouchEvent(MotionEvent event) {
-    int action=event.getActionMasked();
-    if(action==MotionEvent.ACTION_DOWN){touching=true;moved=false;lastGesture=-1000000;}
-    if(action==MotionEvent.ACTION_MOVE){touching=true;moved=true;lastGesture=android.os.SystemClock.uptimeMillis();}
-    boolean handled=super.dispatchTouchEvent(event);
-    if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_CANCEL)touching=false;
-    return handled;
+    if(event.getActionMasked()==MotionEvent.ACTION_DOWN)flinging=false;
+    return super.dispatchTouchEvent(event);
+  }
+  @Override public boolean onTouchEvent(MotionEvent event) {
+    boolean previous=handlingUserScroll;
+    handlingUserScroll=event.getActionMasked()==MotionEvent.ACTION_MOVE;
+    try{return super.onTouchEvent(event);}finally{handlingUserScroll=previous;}
+  }
+  @Override public void fling(int velocityY) {
+    flinging=true;lastFlingMotion=android.os.SystemClock.uptimeMillis();super.fling(velocityY);
+  }
+  @Override public void computeScroll() {
+    int before=getScrollY();boolean previous=handlingUserScroll;
+    handlingUserScroll=flinging;
+    try{super.computeScroll();}finally{handlingUserScroll=previous;}
+    if(getScrollY()!=before)lastFlingMotion=android.os.SystemClock.uptimeMillis();
+    else if(android.os.SystemClock.uptimeMillis()-lastFlingMotion>100)flinging=false;
   }
   void holdHorizontalGesture(View owner) { horizontalGesture = owner; }
   void releaseHorizontalGesture(View owner) {

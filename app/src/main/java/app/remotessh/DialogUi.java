@@ -85,7 +85,6 @@ final class DialogUi {
     content.setTextSize(13);content.setTextColor(muted);content.setFontFeatureSettings("kern");
     content.setIncludeFontPadding(false);content.setGravity(Gravity.CENTER_VERTICAL);
     content.setBackground(rounded(panel,16));content.setPadding(dp(10),dp(4),dp(10),dp(4));
-    content.setSingleLine(true);content.setEllipsize(android.text.TextUtils.TruncateAt.END);
     return content;
   }
 

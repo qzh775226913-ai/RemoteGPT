@@ -16,6 +16,7 @@ public class IconView extends View {
   public String icon;
   public int color;
   public boolean alignBottomEnd;
+  float glyphScale=.48f;
   private Drawable glyph;
   private String renderedIcon;
   private int renderedColor;
@@ -68,7 +69,7 @@ public class IconView extends View {
     if(glyph==null || !icon.equals(renderedIcon) || color!=renderedColor) {
       glyph=AppIcons.drawable(getContext(),icon,color);renderedIcon=icon;renderedColor=color;
     }
-    float size=Math.min(getWidth(),getHeight())*.48f;
+    float size=Math.min(getWidth(),getHeight())*glyphScale;
     canvas.save();
     if (feedbackColor != null) {
       Rect bounds = copyFeedbackBounds();
