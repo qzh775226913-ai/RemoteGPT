@@ -26,6 +26,7 @@ final class CompactSummaryTextView extends TextView {
         getCompoundPaddingRight()-getWidth());
   }
 
+  @android.annotation.SuppressLint("ClickableViewAccessibility") // Normal taps delegate to TextView, which calls performClick.
   @Override public boolean onTouchEvent(MotionEvent event) {
     int action=event.getActionMasked();
     if(action==MotionEvent.ACTION_DOWN){

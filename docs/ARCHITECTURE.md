@@ -8,7 +8,7 @@
 | --- | --- |
 | 界面生命周期 | `MainActivity` 管理页面、消息渲染、系统选择器和 Activity 回调；`BubbleActivity` 管理绑定会话的气泡页面 |
 | 独立窗口 | `ProfileEditor` 管理连接草稿／凭据表单／私钥导入；`ModelPicker` 管理模型／强度／速度选择及监听器；`DialogUi` 保持聊天窗口的原有样式与触摸行为 |
-| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 负责折叠摘要的跨字体光学居中和横向阅读手势；`ToolActivityPresenter` 按同一回合和正文边界组合思考与相邻事件并标记运行状态，`DiffSummary` 从服务器 diff 计数，`ToolActivityGroupView` 在气泡内绘制二级折叠，`RollingChangeNumbers` 仅在实际数值改变时对旧值／新值做有界队列和缓动滚动，`ToolInlineDetailView` 按思考正文、命令和文件 diff 分别排版，`ToolDetailDialog` 展示完整彩色详情；`ConversationChromeController` 使用独立容器叠放收起提示与正常输入区，按阅读方向动画改变容器尺寸，提示和放大按钮不参与正常输入区测量；`ConversationScrollView` 仅在真实纵向拖动／惯性滚动调用期间标记阅读手势，布局或内容变化产生的位移不触发输入区切换；消息、问答、图像预览和缩略图各有独立组件 |
+| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 负责折叠摘要的跨字体光学居中和横向阅读手势；`ToolActivityPresenter` 按同一回合和正文边界组合思考与相邻事件并标记运行状态，`DiffSummary` 从服务器 diff 计数，`ToolActivityGroupView` 在气泡内绘制二级折叠，`RollingChangeNumbers` 仅在实际数值改变时对旧值／新值做有界队列和缓动滚动，`ToolInlineDetailView` 按思考正文、命令和文件 diff 分别排版，`ToolDetailDialog` 展示完整彩色详情；`ConversationChromeController` 使用独立容器叠放收起提示与正常输入区，按阅读方向动画改变容器尺寸，提示和放大按钮不参与正常输入区测量；`ConversationScrollView` 仅在真实纵向拖动／惯性滚动调用期间标记阅读手势，布局或内容变化产生的位移不触发输入区切换，并在排除按钮、链接和滑动后将阅读区域单击交给控制器展开；消息、问答、图像预览和缩略图各有独立组件 |
 | 公式排版 | `MathMarkup` 扫描正文显式公式标记并保护代码／货币；`MathRenderer` 在单 worker 中执行有界本地 TeX 排版与缓存；`MathSpan` 保持原文并提供行内基线；`MathContentView` 拥有正文块的异步 generation、可滚动独立公式和 detach／reattach 清理，不接触会话选择 |
 | 应用协调 | `RemoteApp` 维持连接、初始化、恢复、事件路由和当前选中状态的兼容接口；它不再实现窗口表单、完整发送流程或附件传输流程 |
 | 会话容器 | `ConversationStore` 是会话缓存和临时背景分发的唯一所有者；`ConversationState` 保存每条会话的消息、草稿、权限／速度和运行状态 |

@@ -1699,16 +1699,86 @@ public class MainActivityTest {
     for(boolean compact:new boolean[]{false,true}){
       chrome.setCompact(compact);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
       layoutContent();scroll.follow();scroll.pin();int before=scroll.getScrollY();
+      View header=summary.getChildAt(0);int[] headerPos=new int[2],scrollPos=new int[2];
+      header.getLocationOnScreen(headerPos);scroll.getLocationOnScreen(scrollPos);
+      float x=headerPos[0]-scrollPos[0]+header.getWidth()/2f,y=headerPos[1]-scrollPos[1]+header.getHeight()/2f;
+      assertTrue("summary header should be visible",y>=0 && y<scroll.getHeight());
       long time=android.os.SystemClock.uptimeMillis();
-      dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,2,2);
-      dispatchTouch(scroll,time,time+10,MotionEvent.ACTION_MOVE,3,3);
-      dispatchTouch(scroll,time,time+20,MotionEvent.ACTION_UP,3,3);
-      summary.getChildAt(0).performClick();layoutContent();scroll.pin();
+      dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,x,y);
+      dispatchTouch(scroll,time,time+10,MotionEvent.ACTION_MOVE,x+1,y+1);
+      dispatchTouch(scroll,time,time+20,MotionEvent.ACTION_UP,x+1,y+1);
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));layoutContent();scroll.pin();
       shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+      assertEquals(compact?View.GONE:View.VISIBLE,summary.getChildAt(1).getVisibility());
       assertEquals("summary must leave the composer state unchanged",compact?View.GONE:View.VISIBLE,composer.getVisibility());
       assertNotEquals("the expanded/collapsed summary must actually move the timeline",before,scroll.getScrollY());
     }
     captureLaidOutView(content(),"summary-independent-after");
+  }
+  @Test public void tappingPlainMessageAtBottomRestoresChromeWithoutOpeningKeyboard() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="tap";
+    for(int i=0;i<18;i++)app.items.add(new ChatItem("old-"+i,"agentMessage","Earlier message "+i));
+    String message="轻点这条消息以展开界面";app.items.add(new ChatItem("last","userMessage",message));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));capture("reading-tap-before");
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
+    ConversationChromeController chrome=(ConversationChromeController)field.get(activity);
+    field=MainActivity.class.getDeclaredField("scroll");field.setAccessible(true);
+    ConversationScrollView scroll=(ConversationScrollView)field.get(activity);
+    field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);
+    LinearLayout composer=(LinearLayout)field.get(activity);
+    field=MainActivity.class.getDeclaredField("headerDetails");field.setAccessible(true);
+    View details=(View)field.get(activity);
+    chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+    layoutContent();scroll.follow();scroll.pin();layoutContent();assertTrue(scroll.nearBottom());
+    View text=find(content(),message);assertNotNull(text);
+    int[] textPos=new int[2],scrollPos=new int[2];text.getLocationOnScreen(textPos);scroll.getLocationOnScreen(scrollPos);
+    float x=textPos[0]-scrollPos[0]+text.getWidth()/2f,y=textPos[1]-scrollPos[1]+text.getHeight()/2f;
+    assertTrue("the tapped message must be visible",y>=0 && y<scroll.getHeight());
+    long time=android.os.SystemClock.uptimeMillis();
+    dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,x,y);
+    dispatchTouch(scroll,time,time+30,MotionEvent.ACTION_UP,x,y);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    assertEquals(View.VISIBLE,details.getVisibility());assertEquals(View.VISIBLE,composer.getVisibility());
+    assertFalse(((EditText)find(content(),"消息输入框")).hasFocus());
+    captureLaidOutView(content(),"reading-tap-restored");
+  }
+
+  @Test public void readingTapDoesNotInterceptButtonsLinksDragsOrLongPress() {
+    ConversationScrollView scroll=new ConversationScrollView(activity);LinearLayout list=new LinearLayout(activity);
+    list.setOrientation(LinearLayout.VERTICAL);scroll.addView(list,new ScrollView.LayoutParams(-1,-2));
+    int[] wake={0},buttonClicks={0},linkClicks={0};scroll.setOnReadingTap(()->wake[0]++);
+    TextView plain=new TextView(activity);plain.setText("Plain selectable message");plain.setTextIsSelectable(true);
+    list.addView(plain,new LinearLayout.LayoutParams(-1,80));
+    TextView button=new TextView(activity);button.setText("Open details");button.setOnClickListener(v->buttonClicks[0]++);
+    list.addView(button,new LinearLayout.LayoutParams(-1,80));
+    TextView link=new TextView(activity);android.text.SpannableString linked=new android.text.SpannableString("visit link now");
+    linked.setSpan(new android.text.style.ClickableSpan(){@Override public void onClick(View view){linkClicks[0]++;}},
+        6,10,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    link.setText(linked);link.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+    list.addView(link,new LinearLayout.LayoutParams(-1,80));
+    ((ViewGroup)content()).addView(scroll,new FrameLayout.LayoutParams(-1,400));layoutContent();
+    long time=android.os.SystemClock.uptimeMillis();
+    dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,10,40);
+    dispatchTouch(scroll,time,time+20,MotionEvent.ACTION_UP,10,40);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(50));assertEquals(1,wake[0]);
+    time+=100;dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,100,320);
+    dispatchTouch(scroll,time,time+20,MotionEvent.ACTION_UP,100,320);assertEquals(2,wake[0]);
+    time+=100;dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,10,120);
+    dispatchTouch(scroll,time,time+20,MotionEvent.ACTION_UP,10,120);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(50));
+    assertEquals(1,buttonClicks[0]);assertEquals(2,wake[0]);
+    float linkX=link.getLayout().getPrimaryHorizontal(8)+link.getTotalPaddingLeft();
+    float linkY=160+link.getTotalPaddingTop()+link.getLayout().getLineBaseline(0)/2f;
+    time+=100;dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,linkX,linkY);
+    dispatchTouch(scroll,time,time+20,MotionEvent.ACTION_UP,linkX,linkY);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(50));
+    assertEquals(1,linkClicks[0]);assertEquals(2,wake[0]);
+    time+=100;dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,10,40);
+    dispatchTouch(scroll,time,time+20,MotionEvent.ACTION_MOVE,80,40);
+    dispatchTouch(scroll,time,time+40,MotionEvent.ACTION_UP,80,40);assertEquals(2,wake[0]);
+    time+=100;dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,10,40);
+    dispatchTouch(scroll,time,time+ViewConfiguration.getLongPressTimeout()+50,MotionEvent.ACTION_UP,10,40);
+    assertEquals(2,wake[0]);
   }
   @Test @Config(qualifiers="zh-rCN-w411dp-h891dp-night-xhdpi")
   public void conversationSpacingIsBalancedInDarkTheme() throws Exception {verifyConversationSpacing("conversation-spacing-dark");}

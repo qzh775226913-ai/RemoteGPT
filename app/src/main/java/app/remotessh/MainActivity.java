@@ -467,6 +467,7 @@ public final class MainActivity extends Activity {
     controls.addView(send, new LinearLayout.LayoutParams(dp(44), dp(44)));
     chrome=new ConversationChromeController(this,headerDetails,composer,input,
         fg,muted,panel,this::sizeComposer);
+    scroll.setOnReadingTap(()->chrome.setCompact(false));
     input.addTextChangedListener(
         new TextWatcher() {
           public void beforeTextChanged(CharSequence s, int st, int c, int a) {}

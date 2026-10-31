@@ -2,9 +2,15 @@ package app.remotessh;
 
 import android.content.Context;
 import android.graphics.Rect;
+import android.text.Layout;
+import android.text.Spanned;
+import android.text.style.ClickableSpan;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 import android.widget.ScrollView;
+import android.widget.TextView;
 
 /** Follow only while the reader is at the latest message, including delayed layout. */
 public final class ConversationScrollView extends ScrollView {
@@ -12,14 +18,63 @@ public final class ConversationScrollView extends ScrollView {
   private View horizontalGesture;
   private boolean handlingUserScroll, flinging;
   private long lastFlingMotion;
-  public ConversationScrollView(Context context) { super(context); }
+  private final int touchSlop;
+  private Runnable readingTap;
+  private float tapX,tapY;
+  private long tapTime;
+  private boolean tapCandidate;
+  public ConversationScrollView(Context context) {
+    super(context);touchSlop=ViewConfiguration.get(context).getScaledTouchSlop();
+  }
   public boolean isFollowing() { return following; }
   public void follow() { following = true; requestLayout(); }
   public void read() { following = false; }
   boolean userScrolling() {return handlingUserScroll;}
+  void setOnReadingTap(Runnable action){readingTap=action;}
   @Override public boolean dispatchTouchEvent(MotionEvent event) {
-    if(event.getActionMasked()==MotionEvent.ACTION_DOWN)flinging=false;
-    return super.dispatchTouchEvent(event);
+    int action=event.getActionMasked();
+    if(action==MotionEvent.ACTION_DOWN){
+      flinging=false;tapX=event.getX();tapY=event.getY();tapTime=event.getEventTime();
+      tapCandidate=readingTap!=null && !interactiveAt(this,tapX,tapY);
+    } else if(action==MotionEvent.ACTION_MOVE){
+      if(Math.abs(event.getX()-tapX)>touchSlop || Math.abs(event.getY()-tapY)>touchSlop)tapCandidate=false;
+    } else if(action==MotionEvent.ACTION_POINTER_DOWN || action==MotionEvent.ACTION_CANCEL)tapCandidate=false;
+    boolean tap=action==MotionEvent.ACTION_UP && tapCandidate &&
+        event.getEventTime()-tapTime<ViewConfiguration.getLongPressTimeout() &&
+        Math.abs(event.getX()-tapX)<=touchSlop && Math.abs(event.getY()-tapY)<=touchSlop &&
+        !interactiveAt(this,event.getX(),event.getY());
+    boolean handled=super.dispatchTouchEvent(event);
+    if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_CANCEL)tapCandidate=false;
+    if(tap && readingTap!=null)readingTap.run();
+    return handled;
+  }
+
+  private boolean interactiveAt(View view,float x,float y){
+    if(view!=this && view.hasOnClickListeners())return true;
+    if(view instanceof TextView){
+      TextView text=(TextView)view;CharSequence value=text.getText();Layout layout=text.getLayout();
+      if(value instanceof Spanned && layout!=null){
+        int px=(int)(x-text.getTotalPaddingLeft()+text.getScrollX());
+        int py=(int)(y-text.getTotalPaddingTop()+text.getScrollY());
+        if(py>=0 && py<layout.getHeight()){
+          int line=layout.getLineForVertical(py);
+          if(px>=layout.getLineLeft(line) && px<=layout.getLineRight(line)){
+            int offset=layout.getOffsetForHorizontal(line,px);
+            if(((Spanned)value).getSpans(offset,offset,ClickableSpan.class).length>0)return true;
+          }
+        }
+      }
+      return false;
+    }
+    if(view instanceof ViewGroup){
+      ViewGroup group=(ViewGroup)view;
+      for(int i=group.getChildCount()-1;i>=0;i--){
+        View child=group.getChildAt(i);if(child.getVisibility()!=View.VISIBLE)continue;
+        float cx=x+group.getScrollX()-child.getX(),cy=y+group.getScrollY()-child.getY();
+        if(cx>=0 && cy>=0 && cx<child.getWidth() && cy<child.getHeight() && interactiveAt(child,cx,cy))return true;
+      }
+    }
+    return view!=this && view.isClickable();
   }
   @android.annotation.SuppressLint("ClickableViewAccessibility") // ScrollView handles clicks; this observes its drag.
   @Override public boolean onTouchEvent(MotionEvent event) {
