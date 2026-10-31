@@ -558,6 +558,7 @@
     <string name="ui_ran_actions_count">%1$d Aktionen ausgeführt</string>
     <string name="ui_changed_files_count">%1$d Dateien geändert</string>
     <string name="ui_more_files_count">Weitere %1$d Dateien anzeigen</string>
+    <string name="ui_collapse_files">Dateiliste einklappen</string>
     <string name="ui_permission_inherit_description">Einstellung der Remote-Konversation verwenden</string>
     <string name="ui_permission_default_description">Befehle in der Sandbox ausführen; außerhalb nachfragen</string>
     <string name="ui_permission_auto_description">Genehmigungsanfragen automatisch prüfen</string>

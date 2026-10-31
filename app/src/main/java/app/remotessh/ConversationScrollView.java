@@ -10,16 +10,18 @@ import android.widget.ScrollView;
 public final class ConversationScrollView extends ScrollView {
   private boolean following = true, layingOut, pinning;
   private View horizontalGesture;
-  private long lastTouchScroll;
+  private boolean touching;
   public ConversationScrollView(Context context) { super(context); }
   public boolean isFollowing() { return following; }
   public void follow() { following = true; requestLayout(); }
   public void read() { following = false; }
-  boolean userScrolling() {return android.os.SystemClock.uptimeMillis()-lastTouchScroll<280;}
+  boolean userScrolling() {return touching;}
   @Override public boolean onTouchEvent(MotionEvent event) {
-    if(event.getActionMasked()==MotionEvent.ACTION_MOVE || event.getActionMasked()==MotionEvent.ACTION_UP)
-      lastTouchScroll=android.os.SystemClock.uptimeMillis();
-    return super.onTouchEvent(event);
+    int action=event.getActionMasked();
+    if(action==MotionEvent.ACTION_DOWN || action==MotionEvent.ACTION_MOVE)touching=true;
+    boolean handled=super.onTouchEvent(event);
+    if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_CANCEL)touching=false;
+    return handled;
   }
   void holdHorizontalGesture(View owner) { horizontalGesture = owner; }
   void releaseHorizontalGesture(View owner) {

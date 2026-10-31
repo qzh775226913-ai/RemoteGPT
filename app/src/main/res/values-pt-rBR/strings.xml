@@ -564,6 +564,7 @@
     <string name="ui_ran_actions_count">Ações executadas: %1$d</string>
     <string name="ui_changed_files_count">Arquivos alterados: %1$d</string>
     <string name="ui_more_files_count">Ver mais %1$d arquivos</string>
+    <string name="ui_collapse_files">Recolher lista de arquivos</string>
     <string name="ui_permission_inherit_description">Usar a configuração da conversa remota</string>
     <string name="ui_permission_default_description">Executar comandos na sandbox; pedir aprovação fora dela</string>
     <string name="ui_permission_auto_description">Revisar automaticamente pedidos de aprovação</string>

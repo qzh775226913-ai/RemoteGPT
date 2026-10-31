@@ -568,6 +568,7 @@
     <string name="ui_ran_actions_count">Ran %1$d actions</string>
     <string name="ui_changed_files_count">Changed %1$d files</string>
     <string name="ui_more_files_count">View %1$d more files</string>
+    <string name="ui_collapse_files">Collapse file list</string>
     <string name="ui_permission_inherit_description">Use the remote conversation setting</string>
     <string name="ui_permission_default_description">Run commands in the sandbox; ask before going beyond it</string>
     <string name="ui_permission_auto_description">Automatically review approval requests</string>

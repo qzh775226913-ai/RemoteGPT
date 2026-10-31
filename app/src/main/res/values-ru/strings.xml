@@ -570,6 +570,7 @@
     <string name="ui_ran_actions_count">Выполнено действий: %1$d</string>
     <string name="ui_changed_files_count">Изменено файлов: %1$d</string>
     <string name="ui_more_files_count">Другие файлы: %1$d</string>
+    <string name="ui_collapse_files">Свернуть список файлов</string>
     <string name="ui_permission_inherit_description">Использовать удалённые настройки беседы</string>
     <string name="ui_permission_default_description">Команды выполняются в песочнице; выход требует одобрения</string>
     <string name="ui_permission_auto_description">Автоматически проверять запросы разрешений</string>

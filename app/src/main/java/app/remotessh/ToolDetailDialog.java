@@ -25,9 +25,16 @@ final class ToolDetailDialog {
   static void show(Activity activity, DialogUi ui, boolean wide, ChatItem item, Supplier<ChatItem> latest,
       Consumer<String> copy) {
     LinearLayout layout=ui.column();layout.setPadding(ui.dp(20),ui.dp(12),ui.dp(20),ui.dp(20));
+    TextView heading=ui.text(UiPresentation.itemTitle(item),14,ui.fg);
+    heading.setSingleLine(true);heading.setEllipsize(android.text.TextUtils.TruncateAt.MIDDLE);
+    heading.setPadding(ui.dp(2),0,ui.dp(2),ui.dp(10));
+    layout.addView(heading);
     TextView detail=ui.text("",13,ui.fg);detail.setTypeface(Typeface.MONOSPACE);
     detail.setTextIsSelectable(true);detail.setHorizontallyScrolling(true);
+    detail.setLineSpacing(ui.dp(3),1);
+    detail.setPadding(ui.dp(12),ui.dp(12),ui.dp(12),ui.dp(12));
     HorizontalScrollView horizontal=new HorizontalScrollView(activity);horizontal.addView(detail);
+    horizontal.setBackground(ui.rounded(ui.panel,14));
     ScrollView scroll=new ScrollView(activity);scroll.addView(horizontal);
     layout.addView(scroll,new LinearLayout.LayoutParams(-1,ui.dp(380)));
     layout.addView(ui.action(UiText.get(R.string.ui_copy),()->{

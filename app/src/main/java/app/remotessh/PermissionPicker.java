@@ -35,10 +35,10 @@ final class PermissionPicker {
 
   static String icon(PermissionMode mode) {
     switch (mode) {
-      case DEFAULT: return "hand";
-      case AUTO_REVIEW: return "shieldCheck";
-      case READ_ONLY: return "shieldLock";
-      case FULL: return "warningTriangle";
+      case DEFAULT: return "shieldCheck";
+      case AUTO_REVIEW: return "hand";
+      case READ_ONLY: return "lock";
+      case FULL: return "bolt";
       default: return "shield";
     }
   }

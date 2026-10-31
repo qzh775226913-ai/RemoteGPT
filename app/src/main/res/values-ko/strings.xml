@@ -552,6 +552,7 @@
     <string name="ui_ran_actions_count">실행한 작업 %1$d개</string>
     <string name="ui_changed_files_count">변경한 파일 %1$d개</string>
     <string name="ui_more_files_count">다른 파일 %1$d개 보기</string>
+    <string name="ui_collapse_files">파일 목록 접기</string>
     <string name="ui_permission_inherit_description">원격 대화 설정 사용</string>
     <string name="ui_permission_default_description">샌드박스에서 명령을 실행하고 범위를 벗어나면 승인 요청</string>
     <string name="ui_permission_auto_description">권한 요청 자동 검토</string>

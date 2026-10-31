@@ -8,7 +8,7 @@
 | --- | --- |
 | 界面生命周期 | `MainActivity` 管理页面、消息渲染、系统选择器和 Activity 回调；`BubbleActivity` 管理绑定会话的气泡页面 |
 | 独立窗口 | `ProfileEditor` 管理连接草稿／凭据表单／私钥导入；`ModelPicker` 管理模型／强度／速度选择及监听器；`DialogUi` 保持聊天窗口的原有样式与触摸行为 |
-| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 负责折叠摘要的跨字体光学居中；`ToolActivityPresenter` 组合相邻事件，`DiffSummary` 从服务器 diff 计数，`ToolActivityGroupView`、`ToolDetailDialog` 分别绘制二级折叠与彩色详情；`ConversationChromeController` 负责顶部与输入区动画；消息、问答、图像预览、缩略图和滚动各有独立组件 |
+| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 负责折叠摘要的跨字体光学居中；`ToolActivityPresenter` 组合相邻事件并标记运行状态，`DiffSummary` 从服务器 diff 计数，`ToolActivityGroupView` 在气泡内绘制二级折叠、行内代码与有限时数字动画，`ToolDetailDialog` 展示完整彩色详情；`ConversationChromeController` 按阅读方向负责顶部与输入区动画，`ConversationScrollView` 在滚动回调之前标记用户触摸；消息、问答、图像预览和缩略图各有独立组件 |
 | 公式排版 | `MathMarkup` 扫描正文显式公式标记并保护代码／货币；`MathRenderer` 在单 worker 中执行有界本地 TeX 排版与缓存；`MathSpan` 保持原文并提供行内基线；`MathContentView` 拥有正文块的异步 generation、可滚动独立公式和 detach／reattach 清理，不接触会话选择 |
 | 应用协调 | `RemoteApp` 维持连接、初始化、恢复、事件路由和当前选中状态的兼容接口；它不再实现窗口表单、完整发送流程或附件传输流程 |
 | 会话容器 | `ConversationStore` 是会话缓存和临时背景分发的唯一所有者；`ConversationState` 保存每条会话的消息、草稿、权限／速度和运行状态 |

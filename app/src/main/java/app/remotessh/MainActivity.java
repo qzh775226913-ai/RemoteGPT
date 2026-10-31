@@ -67,8 +67,8 @@ public final class MainActivity extends Activity {
   private ImageDialog imageDialog;
   private DirectoryPicker directoryPicker;
   private LinearLayout readOnlyBar;
-  private TextView readOnlyLabel,resumeButton,reconnectButton,refreshButton,newChatButton;
-  private LoadingSpinner resumeSpinner,reconnectSpinner;
+  private TextView readOnlyLabel,resumeButton;
+  private LoadingSpinner resumeSpinner;
   private boolean visibleActivity;
   private String shownApproval = "";
   private QuestionForm questionForm;
@@ -198,7 +198,7 @@ public final class MainActivity extends Activity {
     app.observer = null;
     app.setForeground(false, pendingImageGeneration >= 0);
     app.main.removeCallbacks(ticker);
-    if(resumeSpinner!=null)resumeSpinner.stop();if(reconnectSpinner!=null)reconnectSpinner.stop();
+    if(resumeSpinner!=null)resumeSpinner.stop();
   }
 
   @Override
@@ -218,7 +218,7 @@ public final class MainActivity extends Activity {
 
   @Override
   protected void onDestroy() {
-    if(resumeSpinner!=null)resumeSpinner.stop();if(reconnectSpinner!=null)reconnectSpinner.stop();
+    if(resumeSpinner!=null)resumeSpinner.stop();
     app.main.removeCallbacks(refreshMedia);
     for(MessageImageTile tile:mediaTiles)tile.release();
     if (scroll != null) scroll.removeCallbacks(pinLatest);
@@ -327,20 +327,12 @@ public final class MainActivity extends Activity {
     readOnlyLabel = text(UiText.get(R.string.ui_read_only_history_write_access_not_acquired), 13, muted);
     readOnlyLabel.setPadding(dp(4), dp(6), dp(4), dp(6));
     readOnlyBar.addView(readOnlyLabel);
-    LinearLayout roActions = row();
-    refreshButton=action(UiText.get(R.string.ui_refresh),app::refreshReadOnly);resumeButton=action(UiText.get(R.string.ui_resume),()->app.resume(app.threadId));newChatButton=action(UiText.get(R.string.ui_new_conversation),this::startNewChat);
+    resumeButton=action(UiText.get(R.string.ui_resume),()->{
+      if(app.connected)app.resume(app.threadId);else app.reconnectAndResume();
+    });
     resumeButton.setContentDescription(UiText.get(R.string.ui_resume));resumeSpinner=new LoadingSpinner(fg,dp(16));
-    TextView[] readOnlyControls = {refreshButton,resumeButton,newChatButton};
-    for (int i=0;i<readOnlyControls.length;i++) {
-      readOnlyControls[i].setSingleLine(true); readOnlyControls[i].setEllipsize(TextUtils.TruncateAt.END);
-      readOnlyControls[i].setPadding(dp(8),dp(12),dp(8),dp(12));
-      LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1);
-      if (i<readOnlyControls.length-1) cp.setMarginEnd(dp(3)); roActions.addView(readOnlyControls[i],cp);
-    }
-    readOnlyBar.addView(roActions);
-    LinearLayout.LayoutParams reconnectParams=new LinearLayout.LayoutParams(-1,-2); reconnectParams.topMargin=dp(3);
-    reconnectButton=action(UiText.get(R.string.ui_reconnect_and_resume),app::reconnectAndResume);reconnectButton.setContentDescription(UiText.get(R.string.ui_reconnect_and_resume));reconnectSpinner=new LoadingSpinner(fg,dp(16));
-    readOnlyBar.addView(reconnectButton,reconnectParams);
+    resumeButton.setSingleLine(true);resumeButton.setEllipsize(TextUtils.TruncateAt.END);
+    readOnlyBar.addView(resumeButton,new LinearLayout.LayoutParams(-1,-2));
     readOnlyBar.setVisibility(View.GONE);
     error = text("", 13, isDark() ? Color.rgb(255, 151, 137) : Color.rgb(165, 47, 36));
     error.setContentDescription(UiText.get(R.string.ui_view_connection_errors));
@@ -396,7 +388,10 @@ public final class MainActivity extends Activity {
     busyLabel.setPadding(dp(16), 0, dp(16), dp(8));
     conversation.addView(
         busyLabel, new LinearLayout.LayoutParams(wide ? dp(Math.min(740, available)) : -1, -2));
-    jump = icon("arrow", UiText.get(R.string.ui_scroll_to_latest_message), () -> { historyLimit=60;scroll.follow(); render(); followLatest(); });
+    jump = icon("arrow", UiText.get(R.string.ui_scroll_to_latest_message), () -> {
+      historyLimit=60;scroll.follow();render();followLatest();
+      if(chrome!=null)chrome.setCompact(false);
+    });
     jump.setRotation(180);
     jump.setBackground(rounded(panel, 24));
     FrameLayout.LayoutParams jp =
@@ -413,7 +408,7 @@ public final class MainActivity extends Activity {
         });
     footer = column();
     footer.setGravity(Gravity.CENTER_HORIZONTAL);
-    footer.setPadding(dp(12), dp(4), dp(12), dp(6));
+    footer.setPadding(dp(18), dp(4), dp(18), dp(8));
     viewport.addView(footer,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));
     footer.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,oright,ob)->{
       int height=b-t;
@@ -425,10 +420,10 @@ public final class MainActivity extends Activity {
     queuedBar = row();
     footer.addView(queuedBar, new LinearLayout.LayoutParams(wide ? dp(Math.min(720, available - 32)) : -1, -2));
     composer = column();
-    composer.setBackground(rounded(panel, 28));
-    composer.setPadding(dp(8), dp(4), dp(8), dp(8));
+    composer.setBackground(rounded(panel, 26));
+    composer.setPadding(dp(4), dp(3), dp(4), dp(4));
     footer.addView(
-        composer, new LinearLayout.LayoutParams(wide ? dp(Math.min(720, available - 32)) : -1, -2));
+        composer, new LinearLayout.LayoutParams(wide ? dp(Math.min(720, available - 36)) : -1, -2));
     input = new EditText(this);
     input.setTextColor(fg);
     input.setHintTextColor(muted);
@@ -455,7 +450,7 @@ public final class MainActivity extends Activity {
     composer.addView(controls);
     controls.addView(
         icon("plus", UiText.get(R.string.ui_add_attachment), this::pickImage),
-        new LinearLayout.LayoutParams(dp(40), dp(40)));
+        new LinearLayout.LayoutParams(dp(44), dp(44)));
     modelButton = text(UiText.get(R.string.ui_default_model), 12, fg);
     modelButton.setPadding(dp(4), dp(6), dp(4), dp(6));
     modelButton.setMinHeight(dp(40));
@@ -469,7 +464,7 @@ public final class MainActivity extends Activity {
     permissionButton = icon("shield", UiText.get(R.string.ui_permissions_1_s, UiPresentation.permission(PermissionMode.INHERIT)), this::choosePermission);
     controls.addView(permissionButton, new LinearLayout.LayoutParams(dp(44), dp(44)));
     send = icon("arrow", UiText.get(R.string.ui_send_message), this::sendMessage);
-    controls.addView(send, new LinearLayout.LayoutParams(dp(40), dp(40)));
+    controls.addView(send, new LinearLayout.LayoutParams(dp(44), dp(44)));
     chrome=new ConversationChromeController(this,headerDetails,composer,input,attachmentScroll,controls,
         fg,muted,panel,this::sizeComposer);
     input.addTextChangedListener(
@@ -602,10 +597,11 @@ public final class MainActivity extends Activity {
     readOnlyBar.setVisibility(app.readOnly || app.connecting || recovering ? View.VISIBLE : View.GONE);
     readOnlyLabel.setText(app.connecting || recovering ? UiPresentation.status(app.recoveryStatus()) : UiText.get(R.string.ui_read_only_history_write_access_not_acquired));
     boolean available=app.connected && !app.connecting && !recovering;
-    refreshButton.setEnabled(available && !app.busy);newChatButton.setEnabled(available);
-    resumeButton.setEnabled(available && app.readOnly && !app.attaching);reconnectButton.setEnabled(!app.connecting && !recovering && !app.busy);
-    updateRecoveryButton(resumeButton,resumeSpinner,recovering,app.replaying?UiText.get(R.string.ui_synchronizing):UiText.get(R.string.ui_resuming),UiText.get(R.string.ui_resume));
-    updateRecoveryButton(reconnectButton,reconnectSpinner,app.connecting,UiText.get(R.string.ui_connecting),UiText.get(R.string.ui_reconnect_and_resume));
+    resumeButton.setEnabled((available && app.readOnly && !app.attaching) ||
+        (!app.connected && !app.connecting && !recovering && !app.busy));
+    updateRecoveryButton(resumeButton,resumeSpinner,recovering || app.connecting,
+        app.connecting?UiText.get(R.string.ui_connecting):app.replaying?UiText.get(R.string.ui_synchronizing):UiText.get(R.string.ui_resuming),
+        app.connected?UiText.get(R.string.ui_resume):UiText.get(R.string.ui_reconnect_and_resume));
     input.setEnabled(true);
     input.setHint(app.readOnly ? UiText.get(R.string.ui_prepare_a_message_resume_before_sending) : UiText.get(R.string.ui_send_message));
     status.setText(app.connected ? AppIcons.label(this,"●  " + app.profile.title() + "  ·  SSH","status",null,Color.rgb(48,148,112),dp(14)) : UiPresentation.status(app.state));

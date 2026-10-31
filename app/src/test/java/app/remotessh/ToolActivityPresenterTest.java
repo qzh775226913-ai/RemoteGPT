@@ -44,4 +44,20 @@ public class ToolActivityPresenterTest {
     assertEquals(2,DiffSummary.count(presented.get(2).children.get(0).detail)[0]);
     assertEquals(2,ToolActivityPresenter.present(Arrays.asList(edit,snapshot,finalText),"turn").size());
   }
+
+  @Test public void activeGroupShowsLiveFileCountsAndSettlesWhenTurnEnds() {
+    UiText.initialize(RuntimeEnvironment.getApplication());
+    ChatItem command=new ChatItem("cmd","commandExecution","pwd");command.turnId="turn";
+    ChatItem edit=ChatItem.from(Json.obj("id","edit","type","fileChange","changes",
+        new JSONArray().put(Json.obj("path","A.java","diff","@@ -1 +1,2 @@\n-old\n+new\n+more\n"))));
+    edit.turnId="turn";
+    List<ChatItem> source=Arrays.asList(command,edit);
+    ChatItem active=ToolActivityPresenter.present(source,"turn").get(0);
+    assertEquals("activityGroup",active.type);
+    assertEquals("inProgress",active.status);
+    assertTrue(active.text.contains("+2 −1"));
+    ChatItem finished=ToolActivityPresenter.present(source,"").get(0);
+    assertEquals("completed",finished.status);
+    assertEquals(active.text,finished.text);
+  }
 }
