@@ -2,7 +2,7 @@
 
 适用版本：1.1.1（开发测试版）；需求 R-01 至 R-32。最后核对：2026-10-31。
 
-[1.1.1 build 79 验证](verification/2026-10-31-1.1.1-build79.md) · [上一轮界面修复验证](verification/2026-10-31-1.1.1-build78.md) · [最近公开发布](verification/2026-10-30-1.0.67-release.md)
+[1.1.1 build 80 验证](verification/2026-10-31-1.1.1-build80.md) · [上一轮界面修复验证](verification/2026-10-31-1.1.1-build79.md) · [最近公开发布](verification/2026-10-30-1.0.67-release.md)
 
 ## 自动化合并门槛
 
