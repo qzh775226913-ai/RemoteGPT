@@ -120,7 +120,7 @@ public class ForcedApprovalUiTest {
     View row = find(menu.getWindow().getDecorView(), "权限选项：强制允许");
     assertNotNull(row);
     IconView bolt = (IconView) ((ViewGroup) row).getChildAt(0);
-    TextView label = (TextView) ((ViewGroup) row).getChildAt(1);
+    TextView label = (TextView) ((ViewGroup) ((ViewGroup) row).getChildAt(1)).getChildAt(0);
     assertEquals("bolt", bolt.icon); assertEquals(indicator.color, bolt.color);
     assertEquals(indicator.color, label.getCurrentTextColor());
     assertNotNull(find(menu.getWindow().getDecorView(), "发送消息以更新权限"));

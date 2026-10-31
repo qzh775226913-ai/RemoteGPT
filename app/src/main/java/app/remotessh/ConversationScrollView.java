@@ -3,16 +3,24 @@ package app.remotessh;
 import android.content.Context;
 import android.graphics.Rect;
 import android.view.View;
+import android.view.MotionEvent;
 import android.widget.ScrollView;
 
 /** Follow only while the reader is at the latest message, including delayed layout. */
 public final class ConversationScrollView extends ScrollView {
   private boolean following = true, layingOut, pinning;
   private View horizontalGesture;
+  private long lastTouchScroll;
   public ConversationScrollView(Context context) { super(context); }
   public boolean isFollowing() { return following; }
   public void follow() { following = true; requestLayout(); }
   public void read() { following = false; }
+  boolean userScrolling() {return android.os.SystemClock.uptimeMillis()-lastTouchScroll<280;}
+  @Override public boolean onTouchEvent(MotionEvent event) {
+    if(event.getActionMasked()==MotionEvent.ACTION_MOVE || event.getActionMasked()==MotionEvent.ACTION_UP)
+      lastTouchScroll=android.os.SystemClock.uptimeMillis();
+    return super.onTouchEvent(event);
+  }
   void holdHorizontalGesture(View owner) { horizontalGesture = owner; }
   void releaseHorizontalGesture(View owner) {
     if (horizontalGesture == owner) horizontalGesture = null;

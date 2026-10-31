@@ -559,4 +559,18 @@
     <string name="ui_mcp_capabilities">Capabilities</string>
     <string name="ui_compact_resume_confirmation">Resume this conversation and compress its context now? The server will start a new compaction turn.</string>
     <string name="ui_group_count">%1$s (%2$d)</string>
+    <string name="ui_auto_review">Auto review</string>
+    <string name="ui_context_compacting">Context is being compacted</string>
+    <string name="ui_expand_composer">Expand composer</string>
+    <string name="ui_collapse_composer">Collapse composer</string>
+    <string name="ui_edited_files_count">Edited %1$d files</string>
+    <string name="ui_viewed_files_count">Viewed %1$d files</string>
+    <string name="ui_ran_actions_count">Ran %1$d actions</string>
+    <string name="ui_changed_files_count">Changed %1$d files</string>
+    <string name="ui_more_files_count">View %1$d more files</string>
+    <string name="ui_permission_inherit_description">Use the remote conversation setting</string>
+    <string name="ui_permission_default_description">Run commands in the sandbox; ask before going beyond it</string>
+    <string name="ui_permission_auto_description">Automatically review approval requests</string>
+    <string name="ui_permission_read_description">Editing files or running commands requires approval</string>
+    <string name="ui_permission_full_description">Full access to the computer (higher risk)</string>
 </resources>

@@ -336,7 +336,7 @@ public final class RemoteApp extends Application {
                   && (records==null || records.length()==0))return;
               reader.apply(result,id);
               long historyRevision=interactions.revision;interactions.archive(result,id);
-              PermissionMode mode=reader.context==null ? null : PermissionMode.fromRemote(reader.context.opt("approval_policy"),reader.context.optJSONObject("sandbox_policy"));
+              PermissionMode mode=reader.context==null ? null : PermissionMode.fromRemote(reader.context.opt("approval_policy"),reader.context.optJSONObject("sandbox_policy"),reader.context.optString("approvals_reviewer"));
               if(mode!=null)effectivePermissionMode=mode;
               if(result.optLong("offset")>=result.optLong("size"))syncJournalQuestions();
               if(interactions.revision!=historyRevision)saveInteractions();
@@ -1280,7 +1280,7 @@ public final class RemoteApp extends Application {
       }
     }
     if (!readonly && r.has("reasoningEffort")) reasoningEffort = r.isNull("reasoningEffort") ? "" : r.optString("reasoningEffort");
-    PermissionMode remotePermission=PermissionMode.fromRemote(r.opt("approvalPolicy"),r.optJSONObject("sandbox"));
+    PermissionMode remotePermission=PermissionMode.fromRemote(r.opt("approvalPolicy"),r.optJSONObject("sandbox"),r.optString("approvalsReviewer"));
     if(remotePermission!=null && (!r.optBoolean("remoteReplay") || journal.context==null))effectivePermissionMode=remotePermission;
     String path=thread.optString("path");
     if(path.startsWith("/") && !path.equals(journalPath)){journalPath=path;journal=new ConversationJournal();}
@@ -1734,6 +1734,7 @@ public final class RemoteApp extends Application {
         d = new ChatItem("diff-" + p.optString("turnId"), "fileChange", "查看本轮更改");
         items.add(d);
       }
+      d.turnId = p.optString("turnId");
       d.detail = p.optString("diff");
     } else if ((method.equals("warning") || method.equals("configWarning")) && !historical) {
       error = p.optString("message", p.optString("summary"));

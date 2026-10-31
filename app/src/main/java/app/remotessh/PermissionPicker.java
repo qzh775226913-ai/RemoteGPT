@@ -25,8 +25,9 @@ final class PermissionPicker {
 
   int color(PermissionMode mode) {
     switch (mode) {
-      case DEFAULT: return Color.rgb(40, 151, 110);
-      case READ_ONLY: return Color.rgb(62, 133, 225);
+      case DEFAULT: return ui.fg;
+      case AUTO_REVIEW: return ui.fg;
+      case READ_ONLY: return ui.fg;
       case FULL: return Color.rgb(221, 133, 37);
       default: return ui.muted;
     }
@@ -34,9 +35,10 @@ final class PermissionPicker {
 
   static String icon(PermissionMode mode) {
     switch (mode) {
-      case DEFAULT: return "shieldCheck";
-      case READ_ONLY: return "lock";
-      case FULL: return "bolt";
+      case DEFAULT: return "hand";
+      case AUTO_REVIEW: return "shieldCheck";
+      case READ_ONLY: return "shieldLock";
+      case FULL: return "warningTriangle";
       default: return "shield";
     }
   }
@@ -62,7 +64,8 @@ final class PermissionPicker {
     for (PermissionMode mode : PermissionMode.values()) {
       boolean selected = mode == app.permissionMode && !app.forcedApprovals.active();
       LinearLayout option = option(choices, icon(mode), color(mode),
-          mode == PermissionMode.INHERIT ? UiText.get(R.string.ui_use_current_conversation) : UiPresentation.permission(mode), ui.fg, selected);
+          mode == PermissionMode.INHERIT ? UiText.get(R.string.ui_use_current_conversation) : UiPresentation.permission(mode),
+          UiText.get(description(mode)), ui.fg, selected);
       option.setContentDescription(UiText.get(R.string.ui_permission_option_1_s, UiPresentation.permission(mode)));
       ui.clickable(option, () -> {
         if (app.profile == profile && app.threadId.equals(thread) && generation == app.connectionGeneration()) app.choosePermission(mode);
@@ -70,7 +73,8 @@ final class PermissionPicker {
       });
     }
     if (forcedAtOpen) {
-      LinearLayout force = option(choices, "bolt", red(), UiText.get(R.string.ui_force_allow), red(), true);
+      LinearLayout force = option(choices, "bolt", red(), UiText.get(R.string.ui_force_allow),
+          UiText.get(R.string.ui_force_allow_automatically_approve_until_new_permissions_take_effe), red(), true);
       force.setContentDescription(UiText.get(R.string.ui_permission_option_1_s, UiText.get(R.string.ui_force_allow)));
       ui.clickable(force, () -> {
         if (app.profile == profile && app.threadId.equals(thread) && generation == app.connectionGeneration()) app.forcedApprovals.disable();
@@ -80,7 +84,15 @@ final class PermissionPicker {
     TextView note = ui.text(UiText.get(R.string.ui_send_a_message_to_update_permissions), 12, ui.muted);
     note.setPadding(ui.dp(16), ui.dp(12), ui.dp(8), 0);
     choices.addView(note);
-    dialog = ui.sheet(UiText.get(R.string.ui_permissions_342), choices, wide);
+    ScrollView scroll=new ScrollView(activity){
+      @Override protected void onMeasure(int width,int height){
+        int limit=MeasureSpec.getMode(height)==MeasureSpec.UNSPECIFIED?ui.dp(560):
+            Math.min(MeasureSpec.getSize(height),ui.dp(560));
+        super.onMeasure(width,MeasureSpec.makeMeasureSpec(limit,MeasureSpec.AT_MOST));
+      }
+    };
+    scroll.setFillViewport(false);scroll.addView(choices);
+    dialog = ui.sheet(UiText.get(R.string.ui_permissions_342), scroll, wide);
     Runnable ownedListener = () -> {
       if (app.profile != profile || !app.threadId.equals(thread) || generation != app.connectionGeneration()
           || forcedAtOpen != app.forcedApprovals.active() || selectedAtOpen != app.permissionMode) dismiss();
@@ -93,16 +105,26 @@ final class PermissionPicker {
     });
   }
 
-  private LinearLayout option(LinearLayout choices, String icon, int iconColor, String name, int textColor, boolean selected) {
+  private int description(PermissionMode mode) {
+    switch(mode){
+      case DEFAULT:return R.string.ui_permission_default_description;
+      case AUTO_REVIEW:return R.string.ui_permission_auto_description;
+      case READ_ONLY:return R.string.ui_permission_read_description;
+      case FULL:return R.string.ui_permission_full_description;
+      default:return R.string.ui_permission_inherit_description;
+    }
+  }
+
+  private LinearLayout option(LinearLayout choices, String icon, int iconColor, String name,
+      String description, int textColor, boolean selected) {
     LinearLayout option = ui.row();
     option.setPadding(ui.dp(8), 0, ui.dp(12), 0);
     option.setBackground(ui.rounded(selected ? ui.panel : ui.bg, 16));
     option.addView(new IconView(activity, icon, iconColor), new LinearLayout.LayoutParams(ui.dp(44), ui.dp(52)));
-    TextView label = ui.text(name, 15, textColor);
-    label.setGravity(Gravity.CENTER_VERTICAL);
-    label.setMinHeight(ui.dp(52));
-    label.setPadding(0, ui.dp(8), 0, ui.dp(8));
-    option.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
+    LinearLayout labels=ui.column();labels.setPadding(0,ui.dp(6),0,ui.dp(6));
+    TextView label=ui.text(name,15,textColor);labels.addView(label);
+    TextView hint=ui.text(description,12,ui.muted);labels.addView(hint);
+    option.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
     if (selected) option.addView(new IconView(activity, "check", textColor), new LinearLayout.LayoutParams(ui.dp(28), ui.dp(28)));
     choices.addView(option);
     return option;

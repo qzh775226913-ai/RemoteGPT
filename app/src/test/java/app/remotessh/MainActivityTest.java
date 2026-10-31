@@ -228,7 +228,7 @@ public class MainActivityTest {
     ScrollView sc = (ScrollView) find(content(), "对话消息");
     ViewGroup conversation = (ViewGroup) sc.getChildAt(0);
     assertTrue(sc.getScrollY() > 0);
-    assertEquals(conversation.getHeight() - sc.getHeight(), sc.getScrollY());
+    assertEquals(conversation.getHeight() - sc.getHeight() + sc.getPaddingBottom(), sc.getScrollY());
     sc.scrollTo(0, 0);
     ChatItem latest = new ChatItem("latest", "agentMessage", "最新回复\n".repeat(50));
     app.items.add(latest); app.changed();
@@ -248,11 +248,11 @@ public class MainActivityTest {
     assertEquals(0, sc.getScrollY());
     find(content(), "滚动到最新消息").performClick();
     capture("scroll-jump"); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
-    assertEquals(conversation.getHeight() - sc.getHeight(), sc.getScrollY());
+    assertEquals(conversation.getHeight() - sc.getHeight() + sc.getPaddingBottom(), sc.getScrollY());
     latest.text += "跟随输出\n".repeat(20); app.changed();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     capture("scroll-follow-stream"); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
-    assertEquals(conversation.getHeight() - sc.getHeight(), sc.getScrollY());
+    assertEquals(conversation.getHeight() - sc.getHeight() + sc.getPaddingBottom(), sc.getScrollY());
     sc.scrollTo(0, 200);
     app.items.add(new ChatItem("last2", "agentMessage", "另一个工具结果\n".repeat(10))); app.changed();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
@@ -292,7 +292,7 @@ public class MainActivityTest {
     capture("freeze-resumed"); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     assertTrue(sc.isFollowing()); assertTrue(bodies.containsKey("freeze-new"));
     assertTrue(original.getText().toString().contains("上方内容流式变长"));
-    assertEquals(conversation.getHeight() - sc.getHeight(), sc.getScrollY());
+    assertEquals(conversation.getHeight() - sc.getHeight() + sc.getPaddingBottom(), sc.getScrollY());
   }
 
   @Test public void browserStatusShowsVersionsAndOffersManualUpdateEntry() throws Exception {
@@ -561,7 +561,7 @@ public class MainActivityTest {
     captureView(dialog.getWindow().getDecorView(), "permission-icons");
     find(dialog.getWindow().getDecorView(), "权限选项：完全访问").performClick();
     app.changed(); shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
-    assertEquals("bolt", ((IconView) permission).icon);
+    assertEquals("warningTriangle", ((IconView) permission).icon);
     capture("inline-model-permission");
   }
 
@@ -624,7 +624,7 @@ public class MainActivityTest {
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     captureView(content(), "compact-folded-details");
     for (ChatItem item : app.items) {
-      TextView bubble = (TextView) find(content(), "›  " + UiPresentation.itemTitle(item) + "  ›");
+      TextView bubble = (TextView) find(content(), "›  " + (item.type.equals("fileChange") ? item.text : UiPresentation.itemTitle(item)) + "  ›");
       assertNotNull(bubble);
       assertTrue(bubble instanceof CompactSummaryTextView);
       assertFalse(bubble.getIncludeFontPadding());
@@ -632,7 +632,7 @@ public class MainActivityTest {
       assertTrue((bubble.getGravity() & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.CENTER_VERTICAL);
       assertTrue(bubble.getHeight() <= Math.round(32 * activity.getResources().getDisplayMetrics().density));
       android.graphics.Rect ink=new android.graphics.Rect();
-      String label=UiPresentation.itemTitle(item).replaceAll("\\s+"," ");
+      String label=(item.type.equals("fileChange") ? item.text : UiPresentation.itemTitle(item)).replaceAll("\\s+"," ");
       bubble.getPaint().getTextBounds(label,0,label.length(),ink);
       float inkCenter=bubble.getBaseline()+((CompactSummaryTextView)bubble).opticalShift()
           +(ink.top+ink.bottom)/2f;
@@ -740,6 +740,7 @@ public class MainActivityTest {
     View permission = find(content(), "权限：沿用远端权限");
     View send = find(content(), "发送消息");
     assertEquals(0, plus.getLeft());
+    assertEquals(Math.round(4 * activity.getResources().getDisplayMetrics().density), ((View)plus.getParent()).getLeft());
     assertTrue(plus.getRight() <= model.getLeft());
     assertTrue(model.getRight() <= permission.getLeft());
     assertTrue(permission.getRight() <= send.getLeft());
@@ -989,7 +990,8 @@ public class MainActivityTest {
     assertNotNull(find(root, "remotesshapp"));
     captureView(root, "remote-projects");
     ((View) find(root, "remotesshapp").getParent()).performClick();
-    assertNotNull(find(root, "聊天"));
+    assertNotNull(find(root, "在此项目新建对话"));
+    assertNotNull(find(root, "开发极简 SSH 远程对话"));
     captureView(root, "remote-project-threads");
     browser.dismiss();
     DirectoryPicker picker = new DirectoryPicker(activity, app, true, path -> {});
@@ -1145,8 +1147,7 @@ public class MainActivityTest {
     });
     assertArrayEquals(new String[]{"添加连接","编辑当前连接","刷新项目与对话","设置"},browser.menuLabels());
     browser.openProject("/work/project");
-    assertEquals("在此项目新建对话", browser.menuLabels()[0]);
-    assertEquals(3, browser.menuLabels().length);
+    assertArrayEquals(new String[]{"添加连接","编辑当前连接","刷新项目与对话","设置"},browser.menuLabels());
   }
 
   @Test public void readOnlyHistoryAcceptsDraftAndAttachmentSelectionWithoutSending() throws Exception {
@@ -1315,20 +1316,63 @@ public class MainActivityTest {
     app.items.add(third);app.items.add(progress);app.items.add(fourth);app.items.add(reply);app.items.add(user);
     app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));capture(screenshot);
     ConversationScrollView scroll=(ConversationScrollView)find(content(),"对话消息");scroll.scrollTo(0,0);captureLaidOutView(content(),screenshot);
-    assertGap("first","second",2);assertGap("second","interaction-call:spacing-q",8);assertGap("interaction-call:spacing-q","third",8);
+    assertGap("activity-q-turn-first","interaction-call:spacing-q",8);assertGap("interaction-call:spacing-q","third",8);
     assertGap("third","paragraph",6);assertGap("paragraph","fourth",6);assertGap("fourth","reply",8);assertGap("reply","user",8);
-    android.graphics.Rect history=new android.graphics.Rect(),firstRect=new android.graphics.Rect();find(content(),"加载更早的消息").getGlobalVisibleRect(history);messageWrap("first").getGlobalVisibleRect(firstRect);
+    android.graphics.Rect history=new android.graphics.Rect(),firstRect=new android.graphics.Rect();find(content(),"加载更早的消息").getGlobalVisibleRect(history);messageWrap("activity-q-turn-first").getGlobalVisibleRect(firstRect);
     assertEquals("History button has the same compact gap as cards",Math.round(8*activity.getResources().getDisplayMetrics().density),firstRect.top-history.bottom);
     assertEquals("History button aligns with the messages",firstRect.left,history.left);assertEquals(firstRect.right,history.right);
     java.lang.reflect.Field field=MainActivity.class.getDeclaredField("projectLabel");field.setAccessible(true);TextView path=(TextView)field.get(activity);
     field=MainActivity.class.getDeclaredField("usageLabel");field.setAccessible(true);TextView usage=(TextView)field.get(activity);
-    assertEquals(Math.round(4*activity.getResources().getDisplayMetrics().density),path.getPaddingBottom()+usage.getPaddingTop());
+    assertEquals(0,path.getPaddingBottom()+usage.getPaddingTop());
     assertNotNull(find(content(),"交互提问 · 已回答"));assertNotNull(find(content(),"复制消息"));assertNotNull(find(content(),"复制回复"));
     scroll.follow();app.items.get(10).status="inProgress";app.items.get(10).detail="读取上下文";app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));capture(screenshot+"-reasoning-update");
-    assertEquals(View.VISIBLE,messageWrap("hidden10").getVisibility());assertGap("hidden10","first",2);
-    assertGap("second","interaction-call:spacing-q",8);assertGap("interaction-call:spacing-q","third",8);
+    assertEquals(View.VISIBLE,messageWrap("hidden10").getVisibility());assertGap("hidden10","activity-q-turn-first",2);
+    assertGap("activity-q-turn-first","interaction-call:spacing-q",8);assertGap("interaction-call:spacing-q","third",8);
   }
   @Test public void conversationSpacingIsBalancedAcrossCardsParagraphsAndHistory() throws Exception {verifyConversationSpacing("conversation-spacing-light");}
+  @Test public void activityGroupAndFinalDiffCardExpandWithoutLosingFileCounts() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="timeline";
+    ChatItem command=ChatItem.from(Json.obj("id","cmd","type","commandExecution","command","git diff --check"));command.turnId="turn";
+    ChatItem edit=ChatItem.from(Json.obj("id","edit","type","fileChange","changes",
+        new org.json.JSONArray().put(Json.obj("path","src/Main.java","diff","@@ -1 +1,2 @@\n-old\n+new\n+more\n"))));edit.turnId="turn";
+    ChatItem reply=new ChatItem("reply","agentMessage","完成修改。");reply.turnId="turn";reply.phase="final_answer";
+    app.items.add(command);app.items.add(edit);app.items.add(reply);app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("activityViews");field.setAccessible(true);
+    java.util.Map<?,?> groups=(java.util.Map<?,?>)field.get(activity);
+    ToolActivityGroupView actions=(ToolActivityGroupView)groups.get("activity-turn-cmd");
+    ToolActivityGroupView files=(ToolActivityGroupView)groups.get("files-turn");
+    assertNotNull(actions);assertNotNull(files);
+    assertEquals(View.GONE,actions.getChildAt(1).getVisibility());
+    actions.getChildAt(0).performClick();files.getChildAt(0).performClick();
+    assertEquals(View.VISIBLE,actions.getChildAt(1).getVisibility());
+    LinearLayout fileRow=(LinearLayout)((LinearLayout)files.getChildAt(1)).getChildAt(0);
+    assertTrue(((TextView)fileRow.getChildAt(1)).getText().toString().contains("src/Main.java"));
+    assertTrue(((TextView)files.getChildAt(0)).getText().toString().contains("+2 −1"));
+    android.text.Spanned rolling=(android.text.Spanned)((TextView)files.getChildAt(0)).getText();
+    assertEquals(2,rolling.getSpans(0,rolling.length(),android.text.style.ReplacementSpan.class).length);
+    capture("nested-tool-actions-and-final-diff");
+  }
+  @Test public void readingBubbleRestoresDraftAndReadOnlyControlsStayBehindComposer() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;
+    app.readOnly=true;app.threadId="history";app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    EditText draft=(EditText)find(content(),"消息输入框");draft.setText("未发送草稿");draft.clearFocus();
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
+    ConversationChromeController chrome=(ConversationChromeController)field.get(activity);
+    field=MainActivity.class.getDeclaredField("readOnlyBar");field.setAccessible(true);
+    View readOnly=(View)field.get(activity);
+    assertTrue(readOnly.getParent() instanceof FrameLayout);
+    chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
+    field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);
+    LinearLayout composer=(LinearLayout)field.get(activity);
+    TextView compact=(TextView)composer.getChildAt(0);
+    assertEquals("发送消息",compact.getText().toString());
+    compact.performClick();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
+    assertEquals("未发送草稿",draft.getText().toString());
+    assertEquals(View.VISIBLE,draft.getVisibility());
+  }
   @Test @Config(qualifiers="zh-rCN-w411dp-h891dp-night-xhdpi")
   public void conversationSpacingIsBalancedInDarkTheme() throws Exception {verifyConversationSpacing("conversation-spacing-dark");}
   @Test @Config(qualifiers="zh-rCN-w360dp-h720dp-night-xhdpi")

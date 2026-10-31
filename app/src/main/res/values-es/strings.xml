@@ -555,4 +555,18 @@
     <string name="ui_mcp_capabilities">Capacidades</string>
     <string name="ui_compact_resume_confirmation">¿Reanudar esta conversación y comprimir su contexto ahora? El servidor iniciará un nuevo turno de compresión.</string>
     <string name="ui_group_count">%1$s (%2$d)</string>
+    <string name="ui_auto_review">Revisión automática</string>
+    <string name="ui_context_compacting">Comprimiendo el contexto</string>
+    <string name="ui_expand_composer">Ampliar entrada</string>
+    <string name="ui_collapse_composer">Reducir entrada</string>
+    <string name="ui_edited_files_count">Archivos editados: %1$d</string>
+    <string name="ui_viewed_files_count">Archivos vistos: %1$d</string>
+    <string name="ui_ran_actions_count">Acciones ejecutadas: %1$d</string>
+    <string name="ui_changed_files_count">Archivos cambiados: %1$d</string>
+    <string name="ui_more_files_count">Ver otros %1$d archivos</string>
+    <string name="ui_permission_inherit_description">Usar la configuración de la conversación remota</string>
+    <string name="ui_permission_default_description">Ejecutar comandos en el entorno aislado; pedir permiso fuera de él</string>
+    <string name="ui_permission_auto_description">Revisar automáticamente las solicitudes de aprobación</string>
+    <string name="ui_permission_read_description">Editar archivos o ejecutar comandos requiere aprobación</string>
+    <string name="ui_permission_full_description">Acceso completo al ordenador (mayor riesgo)</string>
 </resources>

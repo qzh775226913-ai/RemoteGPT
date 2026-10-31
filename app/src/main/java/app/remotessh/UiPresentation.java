@@ -49,6 +49,7 @@ final class UiPresentation {
     switch (mode) {
       case INHERIT: return UiText.get(R.string.ui_use_remote_permissions);
       case DEFAULT: return UiText.get(R.string.ui_ask_for_approval);
+      case AUTO_REVIEW: return UiText.get(R.string.ui_auto_review);
       case READ_ONLY: return UiText.get(R.string.ui_read_only);
       case FULL: return UiText.get(R.string.ui_full_access);
       default: throw new AssertionError(mode);

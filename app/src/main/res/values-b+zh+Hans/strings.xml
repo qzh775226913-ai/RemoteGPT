@@ -543,4 +543,18 @@
     <string name="ui_mcp_capabilities">能力</string>
     <string name="ui_compact_resume_confirmation">接续这个对话并立即压缩上下文吗？服务器将开始新的压缩轮次。</string>
     <string name="ui_group_count">%1$s（%2$d）</string>
+    <string name="ui_auto_review">自动审查</string>
+    <string name="ui_context_compacting">上下文正在压缩</string>
+    <string name="ui_expand_composer">放大输入框</string>
+    <string name="ui_collapse_composer">收起输入框</string>
+    <string name="ui_edited_files_count">已编辑 %1$d 个文件</string>
+    <string name="ui_viewed_files_count">已浏览 %1$d 个文件</string>
+    <string name="ui_ran_actions_count">已执行 %1$d 项操作</string>
+    <string name="ui_changed_files_count">已更改 %1$d 个文件</string>
+    <string name="ui_more_files_count">查看另外 %1$d 个文件</string>
+    <string name="ui_permission_inherit_description">沿用远端对话的设置</string>
+    <string name="ui_permission_default_description">在沙盒中运行命令，超出边界时请求批准</string>
+    <string name="ui_permission_auto_description">自动审查提权请求</string>
+    <string name="ui_permission_read_description">编辑文件或运行命令需要审批</string>
+    <string name="ui_permission_full_description">电脑完全访问权限（风险较高）</string>
 </resources>

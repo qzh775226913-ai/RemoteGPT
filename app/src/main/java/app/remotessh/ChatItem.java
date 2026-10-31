@@ -7,6 +7,8 @@ public final class ChatItem {
   public String id, type, text = "", detail = "", status = "";
   public String phase = "", turnId = "";
   public JSONObject interaction;
+  public JSONArray changes, commandActions;
+  public final java.util.List<ChatItem> children = new java.util.ArrayList<>();
 
   public ChatItem(String id, String type, String text) {
     this.id = id;
@@ -72,10 +74,12 @@ public final class ChatItem {
       case "commandExecution":
         m.text = j.optString("command", "运行命令");
         m.detail = j.optString("aggregatedOutput");
+        m.commandActions = j.optJSONArray("commandActions");
         break;
       case "fileChange":
         m.text = "文件更改";
         JSONArray changes = j.optJSONArray("changes");
+        m.changes = changes;
         StringBuilder d = new StringBuilder();
         if (changes != null)
           for (int i = 0; i < changes.length(); i++) {

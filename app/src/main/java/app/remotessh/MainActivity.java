@@ -20,7 +20,8 @@ import org.json.*;
 public final class MainActivity extends Activity {
   private RemoteApp app;
   private int bg, fg, muted, panel, line;
-  private LinearLayout root, body, conversation, messages, empty, sidebar, composer;
+  private LinearLayout root, body, conversation, messages, empty, sidebar, composer, headerDetails, footer;
+  private ConversationChromeController chrome;
   private ConversationScrollView scroll;
   private String renderedThread = "";
   private TextView status, title, error, busyLabel, modelButton, projectLabel, usageLabel;
@@ -46,6 +47,8 @@ public final class MainActivity extends Activity {
 
   private View jump;
   private final Map<String, TextView> texts = new HashMap<>();
+  private final Map<String, ToolActivityGroupView> activityViews = new HashMap<>();
+  private final Set<String> expandedActivity = new HashSet<>();
   private final Map<String, MessageBodyView> messageBodies = new HashMap<>();
   private final Map<String, ChatItem> rendered = new HashMap<>();
   private final Map<String, QuestionHistoryView> questionCards = new HashMap<>();
@@ -130,10 +133,10 @@ public final class MainActivity extends Activity {
     setTheme(isDark() ? R.style.AppThemeDark : R.style.AppTheme);
     super.onCreate(saved);
     app = (RemoteApp) getApplication();
-    contextMenuPanel = new ContextMenuPanel(this, app, this::startNewChat, this::showConnectionError);
     conversationHub = new ConversationHub(this, app);
     openNotificationConversation(getIntent());
     colors();
+    contextMenuPanel = new ContextMenuPanel(this, app, ui, this::startNewChat, this::showConnectionError);
     build();
     if (saved != null) {
       app.draftText=saved.getString("draft", "");
@@ -281,7 +284,7 @@ public final class MainActivity extends Activity {
     body.addView(center, new LinearLayout.LayoutParams(0, -1, 1));
     LinearLayout bar = row();
     bar.setPadding(dp(12), dp(4), dp(12), dp(4));
-    center.addView(bar, new LinearLayout.LayoutParams(-1, dp(64)));
+    center.addView(bar, new LinearLayout.LayoutParams(-1, dp(56)));
     bar.addView(
         icon("menu", UiText.get(R.string.ui_open_connection_and_chat_history), this::showDrawer), new LinearLayout.LayoutParams(dp(48), dp(48)));
     LinearLayout heading = column();
@@ -306,17 +309,19 @@ public final class MainActivity extends Activity {
     clickable(contextRing, this::chatMenu);
     bar.addView(contextRing, new LinearLayout.LayoutParams(dp(48), dp(48)));
     projectLabel = text("", 12, muted);
-    projectLabel.setPadding(dp(20), 0, dp(20), dp(2));
+    projectLabel.setPadding(dp(20), 0, dp(20), 0);
     projectLabel.setMaxLines(1);
     projectLabel.setEllipsize(TextUtils.TruncateAt.MIDDLE);
     clickable(projectLabel, conversationHub::show);
-    center.addView(projectLabel);
+    headerDetails=column();
+    center.addView(headerDetails);
+    headerDetails.addView(projectLabel);
     usageLabel = text("", 12, muted);
-    usageLabel.setPadding(dp(20), dp(2), dp(20), dp(8));
+    usageLabel.setPadding(dp(20), 0, dp(20), dp(4));
     usageLabel.setMaxLines(2);
     usageLabel.setEllipsize(TextUtils.TruncateAt.END);
     clickable(usageLabel, this::usageInfo);
-    center.addView(usageLabel);
+    headerDetails.addView(usageLabel);
     readOnlyBar = column();
     readOnlyBar.setPadding(dp(16), dp(2), dp(16), dp(6));
     readOnlyLabel = text(UiText.get(R.string.ui_read_only_history_write_access_not_acquired), 13, muted);
@@ -337,7 +342,6 @@ public final class MainActivity extends Activity {
     reconnectButton=action(UiText.get(R.string.ui_reconnect_and_resume),app::reconnectAndResume);reconnectButton.setContentDescription(UiText.get(R.string.ui_reconnect_and_resume));reconnectSpinner=new LoadingSpinner(fg,dp(16));
     readOnlyBar.addView(reconnectButton,reconnectParams);
     readOnlyBar.setVisibility(View.GONE);
-    center.addView(readOnlyBar);
     error = text("", 13, isDark() ? Color.rgb(255, 151, 137) : Color.rgb(165, 47, 36));
     error.setContentDescription(UiText.get(R.string.ui_view_connection_errors));
     error.setPadding(dp(20), dp(12), dp(20), dp(12));
@@ -361,6 +365,11 @@ public final class MainActivity extends Activity {
       return true;
     });
     viewport.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
+    View headerFade=new View(this);
+    headerFade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+        new int[]{bg,Color.argb(0,Color.red(bg),Color.green(bg),Color.blue(bg))}));
+    viewport.addView(headerFade,new FrameLayout.LayoutParams(-1,dp(18),Gravity.TOP));
+    viewport.addView(readOnlyBar,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));
     conversation = column();
     conversation.setGravity(Gravity.CENTER_HORIZONTAL);
     scroll.addView(conversation, new ScrollView.LayoutParams(-1, -2));
@@ -399,12 +408,20 @@ public final class MainActivity extends Activity {
         (v, x, y, ox, oy) -> {
           jump.setVisibility(scroll.isFollowing() ? View.GONE : View.VISIBLE);
           if (scroll.isFollowing() && messageUpdatesPaused) scheduleRender();
+          if(chrome!=null)chrome.onScroll(y,oy,scroll.userScrolling());
           scheduleMedia();
         });
-    LinearLayout footer = column();
+    footer = column();
     footer.setGravity(Gravity.CENTER_HORIZONTAL);
-    footer.setPadding(dp(16), dp(8), dp(16), dp(8));
-    center.addView(footer);
+    footer.setPadding(dp(12), dp(4), dp(12), dp(6));
+    viewport.addView(footer,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));
+    footer.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,oright,ob)->{
+      int height=b-t;
+      if(height==ob-ot)return;
+      scroll.setPadding(0,0,0,height+dp(8));
+      jp.bottomMargin=height+dp(12);jump.setLayoutParams(jp);
+      positionReadOnlyBar();
+    });
     queuedBar = row();
     footer.addView(queuedBar, new LinearLayout.LayoutParams(wide ? dp(Math.min(720, available - 32)) : -1, -2));
     composer = column();
@@ -453,6 +470,8 @@ public final class MainActivity extends Activity {
     controls.addView(permissionButton, new LinearLayout.LayoutParams(dp(44), dp(44)));
     send = icon("arrow", UiText.get(R.string.ui_send_message), this::sendMessage);
     controls.addView(send, new LinearLayout.LayoutParams(dp(40), dp(40)));
+    chrome=new ConversationChromeController(this,headerDetails,composer,input,attachmentScroll,controls,
+        fg,muted,panel,this::sizeComposer);
     input.addTextChangedListener(
         new TextWatcher() {
           public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
@@ -480,6 +499,7 @@ public final class MainActivity extends Activity {
 
   private void collapseComposer() {
     root.requestFocus();
+    if(chrome!=null)chrome.restore();
     input.setMaxLines(1);
     root.requestApplyInsets();
   }
@@ -504,7 +524,18 @@ public final class MainActivity extends Activity {
   }
 
   private void sizeComposer(boolean keyboardVisible) {
-    input.setMaxLines(input.length() == 0 ? 1 : input.hasFocus() && keyboardVisible ? 4 : 3);
+    input.setMinLines(chrome!=null && chrome.large()?8:1);
+    input.setMaxLines(chrome!=null && chrome.large()?8:input.length() == 0 ? 1 : input.hasFocus() && keyboardVisible ? 4 : 3);
+    positionReadOnlyBar();
+  }
+
+  private void positionReadOnlyBar() {
+    if(readOnlyBar==null || footer==null || !(readOnlyBar.getLayoutParams() instanceof FrameLayout.LayoutParams))return;
+    WindowInsets insets=root.getRootWindowInsets();
+    boolean keyboard=Build.VERSION.SDK_INT>=30 && insets!=null && insets.isVisible(WindowInsets.Type.ime());
+    FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)readOnlyBar.getLayoutParams();
+    int bottom=keyboard?0:footer.getHeight()+dp(4);
+    if(lp.bottomMargin!=bottom){lp.bottomMargin=bottom;readOnlyBar.setLayoutParams(lp);}
   }
 
   private void scheduleRender() {
@@ -531,7 +562,15 @@ public final class MainActivity extends Activity {
   private static boolean sameContent(ChatItem a,ChatItem b) {
     return b!=null && a.text.equals(b.text) && a.detail.equals(b.detail) && a.status.equals(b.status)
         && a.phase.equals(b.phase) && a.type.equals(b.type) && a.images.equals(b.images)
+        && sameChildren(a,b)
         && Objects.equals(a.interaction==null?null:a.interaction.toString(),b.interaction==null?null:b.interaction.toString());
+  }
+
+  private static boolean sameChildren(ChatItem a,ChatItem b) {
+    if(a.children.size()!=b.children.size())return false;
+    for(int i=0;i<a.children.size();i++)if(!a.children.get(i).detail.equals(b.children.get(i).detail)
+        || !a.children.get(i).text.equals(b.children.get(i).text))return false;
+    return true;
   }
 
   private void render() {
@@ -539,6 +578,7 @@ public final class MainActivity extends Activity {
     if (!renderedThread.equals(app.threadId)) {
       if(imageDialog!=null)imageDialog.dismiss();
       renderedThread = app.threadId;
+      expandedActivity.clear();
       collapseComposer();
       if (input != null) {
         input.setText(app.draftText);
@@ -591,7 +631,7 @@ public final class MainActivity extends Activity {
       messageUpdatesPaused = false;
       jump.setTooltipText(UiText.get(R.string.ui_scroll_to_latest_message));
       List<ChatItem> visibleItems = new ArrayList<>();
-      List<ChatItem> presentation=app.displayItems();
+      List<ChatItem> presentation=ToolActivityPresenter.present(app.displayItems(),app.turnId);
       int start=Math.max(0,presentation.size()-historyLimit);
       historyButton.setVisibility(start>0?View.VISIBLE:View.GONE);
       historyButton.setText(UiText.quantity(R.plurals.ui_earlier_messages, start));
@@ -601,6 +641,8 @@ public final class MainActivity extends Activity {
         snapshot.phase=source.phase;snapshot.turnId=source.turnId;
         if(source.interaction!=null)try{snapshot.interaction=new JSONObject(source.interaction.toString());}catch(JSONException ignored){}
         snapshot.images.addAll(source.images);
+        snapshot.changes=source.changes;snapshot.commandActions=source.commandActions;
+        snapshot.children.addAll(source.children);
         visibleItems.add(snapshot);
       }
       empty.setVisibility(visibleItems.isEmpty() && !app.busy ? View.VISIBLE : View.GONE);
@@ -621,6 +663,7 @@ public final class MainActivity extends Activity {
           texts.clear();
           messageBodies.clear();
           mediaRows.clear();
+          activityViews.clear();
           mediaSources.clear();
           for(MessageImageTile tile:mediaTiles)tile.release();
           mediaTiles.clear();questionCards.clear();
@@ -635,6 +678,8 @@ public final class MainActivity extends Activity {
         currentItems.put(item.id, item);
         if (!sameContent(item,rendered.get(item.id))) {
           rendered.put(item.id, item);
+          ToolActivityGroupView activityView=activityViews.get(item.id);
+          if(activityView!=null)activityView.bind(item);
           QuestionHistoryView questionCard=questionCards.get(item.id);
           if(questionCard!=null && item.interaction!=null)questionCard.bind(item.interaction);
           MessageBodyView messageBody = messageBodies.get(item.id);
@@ -677,7 +722,10 @@ public final class MainActivity extends Activity {
   private CharSequence toolTitle(ChatItem m) {
     String symbol = m.status.equals("completed") ? "✓" : m.status.equals("failed") ? "!" : "›";
     String icon=m.status.equals("completed")?"check":m.status.equals("failed")?"error":"chevron";
-    return AppIcons.label(this,symbol + "  " + UiPresentation.itemTitle(m).replaceAll("\\s+", " ") + "  ›",icon,"chevron",muted,dp(15));
+    String title=UiPresentation.itemTitle(m);
+    if(m.type.equals("fileChange"))title=ToolActivityGroupView.fileLabel(m);
+    CharSequence label=AppIcons.label(this,symbol + "  " + title.replaceAll("\\s+", " ") + "  ›",icon,"chevron",muted,dp(15));
+    return m.type.equals("fileChange")?ToolActivityGroupView.tintStats(label,isDark()):label;
   }
 
   private void renderEmpty() {
@@ -731,6 +779,12 @@ public final class MainActivity extends Activity {
     wrap.setGravity(item.user() ? Gravity.END : Gravity.START);
     LinearLayout.LayoutParams wp = new LinearLayout.LayoutParams(-1, -2);
     messages.addView(wrap, wp);
+    if(item.type.equals("activityGroup") || item.type.equals("fileSummary")) {
+      ToolActivityGroupView activityView=new ToolActivityGroupView(this,ui,item,expandedActivity,this::showDetails);
+      activityViews.put(item.id,activityView);currentItems.put(item.id,item);
+      wrap.addView(activityView,new LinearLayout.LayoutParams(-1,-2));
+      return;
+    }
     if(item.type.equals("question")) {
       QuestionHistoryView card=new QuestionHistoryView(this,fg,muted,
           Color.parseColor(isDark()?"#1C1C1C":"#FFFFFF"),
@@ -1125,41 +1179,8 @@ public final class MainActivity extends Activity {
     permissionPicker.show();
   }
 
-  private String detailText(ChatItem item) {
-    if (item.type.equals("reasoning")) return item.detail.trim().isEmpty()
-        ? (item.status.equals("inProgress") ? UiText.get(R.string.ui_waiting_for_reasoning_summary) : UiText.get(R.string.ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso)) : item.detail;
-    return UiPresentation.itemTitle(item) + (item.detail.isEmpty() ? "" : "\n\n" + item.detail);
-  }
-
-  private void showDetails(ChatItem m) {
-    LinearLayout layout = column();
-    layout.setPadding(dp(20), dp(12), dp(20), dp(20));
-    TextView detail = text(detailText(m), 13, fg);
-    detail.setTypeface(Typeface.MONOSPACE);
-    detail.setTextIsSelectable(true);
-    ScrollView s = new ScrollView(this);
-    s.addView(detail);
-    layout.addView(s, new LinearLayout.LayoutParams(-1, dp(380)));
-    layout.addView(action(UiText.get(R.string.ui_copy), () -> {
-      ChatItem latest = currentItems.get(m.id);
-      ChatItem source = latest == null ? m : latest;
-      copy(source.type.equals("reasoning") ? detailText(source)
-          : source.text + (source.detail.isEmpty() ? "" : "\n\n" + source.detail));
-    }));
-    Dialog dialog = sheet(m.type.equals("reasoning") ? UiText.get(R.string.ui_reasoning) : UiText.get(R.string.ui_execution_details), layout);
-    Runnable update = new Runnable() {
-      public void run() {
-        if (!dialog.isShowing()) return;
-        ChatItem latest = currentItems.get(m.id);
-        if (latest != null) {
-          String value = detailText(latest);
-          if (!value.contentEquals(detail.getText())) detail.setText(value);
-        }
-        app.main.postDelayed(this, 150);
-      }
-    };
-    dialog.setOnDismissListener(d -> app.main.removeCallbacks(update));
-    update.run();
+  private void showDetails(ChatItem item) {
+    ToolDetailDialog.show(this,ui,wide,item,()->currentItems.get(item.id),this::copy);
   }
 
   private Dialog sheet(String heading, View content) { return ui.sheet(heading, content, wide); }

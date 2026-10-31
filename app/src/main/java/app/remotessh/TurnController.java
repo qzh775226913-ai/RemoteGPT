@@ -54,7 +54,7 @@ final class TurnController {
             }
             app.threadCwd = Json.object(r, "thread").optString("cwd", r.optString("cwd", app.profile.cwd));
             app.journalPath=Json.object(r,"thread").optString("path");app.journal=new ConversationJournal();app.savePermission();
-            PermissionMode remotePermission=PermissionMode.fromRemote(r.opt("approvalPolicy"),r.optJSONObject("sandbox"));
+            PermissionMode remotePermission=PermissionMode.fromRemote(r.opt("approvalPolicy"),r.optJSONObject("sandbox"),r.optString("approvalsReviewer"));
             if(remotePermission!=null)app.effectivePermissionMode=remotePermission;
             app.effectiveModel = r.optString("model", app.model);
             if (r.has("serviceTier")) {

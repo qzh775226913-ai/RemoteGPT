@@ -549,4 +549,18 @@
     <string name="ui_mcp_capabilities">Funktionen</string>
     <string name="ui_compact_resume_confirmation">Diese Unterhaltung fortsetzen und ihren Kontext jetzt komprimieren? Der Server startet einen neuen Komprimierungsvorgang.</string>
     <string name="ui_group_count">%1$s (%2$d)</string>
+    <string name="ui_auto_review">Automatische Prüfung</string>
+    <string name="ui_context_compacting">Kontext wird komprimiert</string>
+    <string name="ui_expand_composer">Eingabe vergrößern</string>
+    <string name="ui_collapse_composer">Eingabe verkleinern</string>
+    <string name="ui_edited_files_count">%1$d Dateien bearbeitet</string>
+    <string name="ui_viewed_files_count">%1$d Dateien angesehen</string>
+    <string name="ui_ran_actions_count">%1$d Aktionen ausgeführt</string>
+    <string name="ui_changed_files_count">%1$d Dateien geändert</string>
+    <string name="ui_more_files_count">Weitere %1$d Dateien anzeigen</string>
+    <string name="ui_permission_inherit_description">Einstellung der Remote-Konversation verwenden</string>
+    <string name="ui_permission_default_description">Befehle in der Sandbox ausführen; außerhalb nachfragen</string>
+    <string name="ui_permission_auto_description">Genehmigungsanfragen automatisch prüfen</string>
+    <string name="ui_permission_read_description">Dateien bearbeiten oder Befehle ausführen erfordert Genehmigung</string>
+    <string name="ui_permission_full_description">Voller Computerzugriff (höheres Risiko)</string>
 </resources>

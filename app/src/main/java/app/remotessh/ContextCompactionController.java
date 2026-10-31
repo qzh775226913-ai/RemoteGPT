@@ -6,13 +6,33 @@ final class ContextCompactionController {
   private String pendingThread = "";
   private int pendingGeneration;
   private boolean awaitingResume;
-  private final Runnable observer = this::advance;
+  private String requestedThread = "";
+  private boolean observedRunning;
+  private final Runnable observer = () -> { updateRequested(); advance(); };
 
   ContextCompactionController(RemoteApp app) { this.app = app; }
 
   boolean canStart() {
     return app.connected && !app.threadId.isEmpty() && app.canSwitchConversation()
-        && !app.busy && !app.remoteRunning && !app.replaying && !app.attaching;
+        && !app.busy && !app.remoteRunning && !app.replaying && !app.attaching && !isCompressing();
+  }
+
+  boolean isCompressing() {
+    if (app.threadId.equals(pendingThread) && !pendingThread.isEmpty()
+        || app.threadId.equals(requestedThread) && !requestedThread.isEmpty()) return true;
+    if (!app.currentThreadRunning()) return false;
+    for (ChatItem item : app.items)
+      if (item.type.equals("contextCompaction") && item.turnId.equals(app.turnId)) return true;
+    return false;
+  }
+
+  private void updateRequested() {
+    if (requestedThread.isEmpty()) return;
+    if (!app.connected || pendingGeneration != app.connectionGeneration() || !requestedThread.equals(app.threadId)
+        || observedRunning && !app.currentThreadRunning()) {
+      requestedThread = ""; observedRunning = false;
+      if (pendingThread.isEmpty()) app.stateListeners.remove(observer);
+    } else if (app.currentThreadRunning()) observedRunning = true;
   }
 
   boolean start(String id) {
@@ -49,12 +69,29 @@ final class ContextCompactionController {
   private void compact(String id) {
     if (!app.connected || app.readOnly || app.busy || app.remoteRunning || app.replaying
         || !id.equals(app.threadId) || app.conversationStore.isScoped()) return;
-    app.request("thread/compact/start", Json.obj("threadId", id), result -> {});
+    requestedThread = id;
+    pendingGeneration = app.connectionGeneration();
+    observedRunning = false;
+    app.stateListeners.add(observer);
+    app.changed();
+    app.request("thread/compact/start", Json.obj("threadId", id), result -> {
+      app.main.postDelayed(() -> {
+        if (requestedThread.equals(id) && !observedRunning && !app.currentThreadRunning()) {
+          requestedThread="";
+          if (pendingThread.isEmpty()) app.stateListeners.remove(observer);
+          app.changed();
+        }
+      }, 3000);
+    }, error -> {
+      requestedThread = ""; observedRunning = false;
+      if (pendingThread.isEmpty()) app.stateListeners.remove(observer);
+      app.changed();
+    });
   }
 
   private void cancel() {
     pendingThread = "";
     awaitingResume = false;
-    app.stateListeners.remove(observer);
+    if (requestedThread.isEmpty()) app.stateListeners.remove(observer);
   }
 }

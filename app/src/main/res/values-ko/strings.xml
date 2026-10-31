@@ -543,4 +543,18 @@
     <string name="ui_mcp_capabilities">기능</string>
     <string name="ui_compact_resume_confirmation">이 대화를 다시 시작하고 컨텍스트를 압축할까요? 서버에서 새 압축 턴이 시작됩니다.</string>
     <string name="ui_group_count">%1$s（%2$d）</string>
+    <string name="ui_auto_review">자동 검토</string>
+    <string name="ui_context_compacting">컨텍스트 압축 중</string>
+    <string name="ui_expand_composer">입력창 확대</string>
+    <string name="ui_collapse_composer">입력창 축소</string>
+    <string name="ui_edited_files_count">편집한 파일 %1$d개</string>
+    <string name="ui_viewed_files_count">열어 본 파일 %1$d개</string>
+    <string name="ui_ran_actions_count">실행한 작업 %1$d개</string>
+    <string name="ui_changed_files_count">변경한 파일 %1$d개</string>
+    <string name="ui_more_files_count">다른 파일 %1$d개 보기</string>
+    <string name="ui_permission_inherit_description">원격 대화 설정 사용</string>
+    <string name="ui_permission_default_description">샌드박스에서 명령을 실행하고 범위를 벗어나면 승인 요청</string>
+    <string name="ui_permission_auto_description">권한 요청 자동 검토</string>
+    <string name="ui_permission_read_description">파일 편집이나 명령 실행에 승인 필요</string>
+    <string name="ui_permission_full_description">컴퓨터 전체 접근 권한(위험 높음)</string>
 </resources>

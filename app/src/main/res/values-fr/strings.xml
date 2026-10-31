@@ -555,4 +555,18 @@
     <string name="ui_mcp_capabilities">Fonctionnalités</string>
     <string name="ui_compact_resume_confirmation">Reprendre cette conversation et compacter son contexte maintenant ? Le serveur lancera un nouveau tour de compactage.</string>
     <string name="ui_group_count">%1$s (%2$d)</string>
+    <string name="ui_auto_review">Révision automatique</string>
+    <string name="ui_context_compacting">Compression du contexte en cours</string>
+    <string name="ui_expand_composer">Agrandir la saisie</string>
+    <string name="ui_collapse_composer">Réduire la saisie</string>
+    <string name="ui_edited_files_count">%1$d fichiers modifiés</string>
+    <string name="ui_viewed_files_count">%1$d fichiers consultés</string>
+    <string name="ui_ran_actions_count">%1$d actions exécutées</string>
+    <string name="ui_changed_files_count">%1$d fichiers modifiés</string>
+    <string name="ui_more_files_count">Voir %1$d autres fichiers</string>
+    <string name="ui_permission_inherit_description">Utiliser les réglages de la conversation distante</string>
+    <string name="ui_permission_default_description">Exécuter les commandes dans le bac à sable ; demander au-delà</string>
+    <string name="ui_permission_auto_description">Examiner automatiquement les demandes d’autorisation</string>
+    <string name="ui_permission_read_description">Modifier des fichiers ou exécuter des commandes nécessite une autorisation</string>
+    <string name="ui_permission_full_description">Accès complet à l’ordinateur (risque accru)</string>
 </resources>

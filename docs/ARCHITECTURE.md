@@ -8,7 +8,7 @@
 | --- | --- |
 | 界面生命周期 | `MainActivity` 管理页面、消息渲染、系统选择器和 Activity 回调；`BubbleActivity` 管理绑定会话的气泡页面 |
 | 独立窗口 | `ProfileEditor` 管理连接草稿／凭据表单／私钥导入；`ModelPicker` 管理模型／强度／速度选择及监听器；`DialogUi` 保持聊天窗口的原有样式与触摸行为 |
-| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 负责折叠摘要的跨字体光学居中；消息、问答、图像预览、缩略图和滚动各有独立组件 |
+| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 负责折叠摘要的跨字体光学居中；`ToolActivityPresenter` 组合相邻事件，`DiffSummary` 从服务器 diff 计数，`ToolActivityGroupView`、`ToolDetailDialog` 分别绘制二级折叠与彩色详情；`ConversationChromeController` 负责顶部与输入区动画；消息、问答、图像预览、缩略图和滚动各有独立组件 |
 | 公式排版 | `MathMarkup` 扫描正文显式公式标记并保护代码／货币；`MathRenderer` 在单 worker 中执行有界本地 TeX 排版与缓存；`MathSpan` 保持原文并提供行内基线；`MathContentView` 拥有正文块的异步 generation、可滚动独立公式和 detach／reattach 清理，不接触会话选择 |
 | 应用协调 | `RemoteApp` 维持连接、初始化、恢复、事件路由和当前选中状态的兼容接口；它不再实现窗口表单、完整发送流程或附件传输流程 |
 | 会话容器 | `ConversationStore` 是会话缓存和临时背景分发的唯一所有者；`ConversationState` 保存每条会话的消息、草稿、权限／速度和运行状态 |
@@ -17,7 +17,7 @@
 | 消息图片 | `MessageImageTile` 拥有可见缩略图、读取任务与有界重试；同服务器／会话的连接 generation 变化时释放旧任务并重新绑定，主线程核对作用域后才显示结果。消息区暂停更新仍刷新图片连接状态；`ThumbnailLoader`／`ThumbnailCache` 分别提供任务调度和共享有界缓存；`ImageDialog` 拥有本次预览的对话图片快照、当前位置、加载 generation 与原图释放；`ZoomImageView` 负责适配／缩放拖动与边缘翻页手势 |
 | 目录／会话偏好 | `DirectoryController` 管理目录操作的 worker 和迟到结果；`ConversationPreferences` 管理稳定存储键及权限／速度／问答历史快照 |
 | 会话列表与标题 | `ThreadDirectory` 管理远端标题搜索、分页、重命名和连接范围内的本机置顶偏好；远端标题仅在成功响应后写入缓存 |
-| 上下文 | `ContextUsage` 保存单会话最近一次服务器 token 用量及窗口；`ContextRingView` 仅绘制本会话的估算比例；`ContextMenuPanel` 拥有上下文详情和手动压缩确认窗口；`ContextCompactionController` 在已确认的只读历史中等待接续及重放完成，并按会话／连接取消待发压缩 |
+| 上下文 | `ContextUsage` 保存单会话最近一次服务器 token 用量及窗口；`ContextRingView` 仅绘制本会话的估算比例；`ContextUsagePanel` 绘制精简的使用量图形；`ContextMenuPanel` 拥有上下文详情和手动压缩确认窗口；`ContextCompactionController` 在已确认的只读历史中等待接续及重放完成，并按会话／连接取消待发压缩 |
 | 对话信息 | `ConversationHub` 拥有顶部标题的信息入口、项目／会话详情及远端 Skills、MCP 只读查询；`CapabilityDirectoryDialog` 拥有分组名称列表、搜索和条目详情窗口；`McpServerDetail` 格式化单个服务的完整关键目录 |
 | 传输／协议 | `SshTransport` 管理 SSH、SFTP 和辅助通道；`RpcClient` 管理 JSON-RPC framing、请求匹配和事件分发，不操作 Android View |
 | 连接诊断 | `ConnectionPreflight` 生成无凭据输出的环境探测并解析分类失败、检查公开账户状态；`ConnectionSetupUi` 拥有用户显式关闭持久模式的确认窗口。探测有超时／输出上限，关闭或连接 generation 变化使后续初始化无效 |

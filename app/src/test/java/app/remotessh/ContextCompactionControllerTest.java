@@ -61,6 +61,15 @@ public class ContextCompactionControllerTest {
     assertNull(find("thread/resume"));
   }
 
+  @Test public void pendingCompactionHasItsOwnStatusAndDoesNotLeakToAnotherThread() throws Exception {
+    app.readOnly=false;
+    assertTrue(app.contextCompaction.start("A"));
+    assertTrue(app.contextCompaction.isCompressing());
+    assertFalse(app.contextCompaction.canStart());
+    app.threadId="B";app.changed();
+    assertFalse(app.contextCompaction.isCompressing());
+  }
+
   private JSONObject snapshot() {
     return Json.obj("approvalPolicy","never","sandbox",Json.obj("type","dangerFullAccess"),
         "thread",Json.obj("id","A","status",Json.obj("type","idle"),"turns",new JSONArray()));

@@ -1,0 +1,47 @@
+package app.remotessh;
+
+import static org.junit.Assert.*;
+import java.util.*;
+import org.json.JSONArray;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
+
+@RunWith(RobolectricTestRunner.class)
+public class ToolActivityPresenterTest {
+  @Test public void groupsConsecutiveActionsAndKeepsProseAsBoundary() {
+    UiText.initialize(RuntimeEnvironment.getApplication());
+    ChatItem read=ChatItem.from(Json.obj("id","read","type","commandExecution","command","cat A.java",
+        "commandActions",new JSONArray().put(Json.obj("type","read","path","A.java","command","cat A.java","name","A.java"))));
+    read.turnId="turn";
+    ChatItem edit=ChatItem.from(Json.obj("id","edit","type","fileChange","changes",
+        new JSONArray().put(Json.obj("path","A.java","diff","@@ -1 +1 @@\n-old\n+new\n"))));
+    edit.turnId="turn";
+    ChatItem prose=new ChatItem("reply","agentMessage","Done");prose.turnId="turn";prose.phase="commentary";
+    ChatItem command=new ChatItem("next","commandExecution","pwd");command.turnId="turn";
+    List<ChatItem> presented=ToolActivityPresenter.present(Arrays.asList(read,edit,prose,command),"");
+    assertEquals(3,presented.size());
+    assertEquals("activityGroup",presented.get(0).type);
+    assertEquals(2,presented.get(0).children.size());
+    assertTrue(presented.get(0).text.contains("1"));
+    assertSame(prose,presented.get(1));
+    assertSame(command,presented.get(2));
+  }
+
+  @Test public void finalSummaryUsesLatestAggregatedDiffOnce() {
+    UiText.initialize(RuntimeEnvironment.getApplication());
+    ChatItem edit=ChatItem.from(Json.obj("id","edit","type","fileChange","changes",
+        new JSONArray().put(Json.obj("path","A.java","diff","+old\n"))));edit.turnId="turn";
+    ChatItem snapshot=new ChatItem("diff-turn","fileChange","查看本轮更改");snapshot.turnId="turn";
+    snapshot.detail="diff --git a/A.java b/A.java\n--- a/A.java\n+++ b/A.java\n@@ -1 +1,2 @@\n-old\n+new\n+more\n";
+    ChatItem finalText=new ChatItem("answer","agentMessage","Done");finalText.turnId="turn";finalText.phase="final_answer";
+    List<ChatItem> presented=ToolActivityPresenter.present(Arrays.asList(edit,snapshot,finalText),"");
+    assertEquals(3,presented.size());
+    assertEquals("fileSummary",presented.get(2).type);
+    assertEquals(1,presented.get(2).children.size());
+    assertEquals("+2 −1",presented.get(2).detail);
+    assertEquals(2,DiffSummary.count(presented.get(2).children.get(0).detail)[0]);
+    assertEquals(2,ToolActivityPresenter.present(Arrays.asList(edit,snapshot,finalText),"turn").size());
+  }
+}

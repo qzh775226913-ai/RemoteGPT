@@ -543,4 +543,18 @@
     <string name="ui_mcp_capabilities">機能</string>
     <string name="ui_compact_resume_confirmation">この会話を再開してコンテキストを圧縮しますか？サーバーは新しい圧縮ターンを開始します。</string>
     <string name="ui_group_count">%1$s（%2$d）</string>
+    <string name="ui_auto_review">自動審査</string>
+    <string name="ui_context_compacting">コンテキストを圧縮中</string>
+    <string name="ui_expand_composer">入力欄を拡大</string>
+    <string name="ui_collapse_composer">入力欄を縮小</string>
+    <string name="ui_edited_files_count">%1$d 件のファイルを編集</string>
+    <string name="ui_viewed_files_count">%1$d 件のファイルを閲覧</string>
+    <string name="ui_ran_actions_count">%1$d 件の操作を実行</string>
+    <string name="ui_changed_files_count">%1$d 件のファイルを変更</string>
+    <string name="ui_more_files_count">残り %1$d 件のファイルを見る</string>
+    <string name="ui_permission_inherit_description">リモートの会話設定を使用</string>
+    <string name="ui_permission_default_description">サンドボックス内で実行し、範囲外では承認を要求</string>
+    <string name="ui_permission_auto_description">権限昇格の要求を自動審査</string>
+    <string name="ui_permission_read_description">ファイル編集やコマンド実行には承認が必要</string>
+    <string name="ui_permission_full_description">コンピューターへの完全アクセス（高リスク）</string>
 </resources>

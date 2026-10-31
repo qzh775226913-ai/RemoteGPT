@@ -35,6 +35,7 @@ final class RemoteBrowser {
   private final TextView heading, subtitle, primary;
   private final EditText search;
   private String filter = "", project = "";
+  private final Set<String> expandedProjects = new HashSet<>();
   private String renderedSignature = "";
   private final Runnable remoteSearch;
 
@@ -55,14 +56,7 @@ final class RemoteBrowser {
             "back",
             UiText.get(R.string.ui_back),
             () -> {
-              if (project.isEmpty()) dialog.dismiss();
-              else {
-                project = "";
-                app.historyProject = "";
-                app.threadDirectory.invalidate();
-                if (app.connected) app.refreshThreads(false);
-                refresh();
-              }
+              dialog.dismiss();
             }),
         new LinearLayout.LayoutParams(ui.dp(48), ui.dp(48)));
     heading = ui.heading(header, UiText.get(R.string.ui_remote_control));
@@ -173,6 +167,7 @@ final class RemoteBrowser {
   void show() {
     ui.show(dialog);
     renderedSignature = "";
+    project = "";
     if (!app.historyProject.isEmpty()) {
       app.historyProject = "";
       app.threadDirectory.invalidate();
@@ -192,12 +187,9 @@ final class RemoteBrowser {
   }
 
   void openProject(String path) {
-    project = path;
+    expandedProjects.add(path);
     filter = app.profile == null ? "" : app.profile.id;
-    app.historyProject = path;
-    app.threadDirectory.invalidate();
-    if (app.connected) app.refreshThreads(false);
-    refresh();
+    refreshList();
   }
 
   void refresh() {
@@ -285,123 +277,116 @@ final class RemoteBrowser {
 
   private void refreshList() {
     list.removeAllViews();
-    if (project.isEmpty()) {
-      section(UiText.get(R.string.ui_project_273));
-      int count = 0;
-      for (Profile p : app.vault.profiles) {
-        if (!filter.equals(p.id)) continue;
-        LinkedHashSet<String> paths = new LinkedHashSet<>(p.projects);
-        if (!p.cwd.isEmpty()) paths.add(p.cwd);
-        for (String path : paths) {
-          if (!matches(path)) continue;
-          count++;
-          LinearLayout row = ui.row();
-          row.setPadding(0, ui.dp(4), 0, ui.dp(4));
-          IconView folder = new IconView(ui.activity, "folder", ui.fg);
-          row.addView(folder, new LinearLayout.LayoutParams(ui.dp(34), ui.dp(48)));
-          TextView name = ui.text(RemoteDirectory.name(path), 20);
-          name.setPadding(ui.dp(8), 0, 0, 0);
-          name.setMaxLines(1);
-          name.setEllipsize(TextUtils.TruncateAt.END);
-          row.addView(name, new LinearLayout.LayoutParams(0, ui.dp(52), 1));
-          name.setGravity(Gravity.CENTER_VERTICAL);
-          ui.clickable(
-              row,
-              () -> {
-                if (app.connected && app.profile.id.equals(p.id)) {
-                  openProject(path);
-                } else {
-                  actions.connect(p);
-                  Toast.makeText(ui.activity, UiText.get(R.string.ui_connect_to_this_computer_before_opening_the_project), Toast.LENGTH_SHORT).show();
-                }
-              });
-          list.addView(row);
-        }
-        if (paths.isEmpty())
-          list.addView(ui.button(UiText.get(R.string.ui_connect_280) + p.title(), false, () -> actions.connect(p)));
+    List<JSONObject> visible = new ArrayList<>();
+    if (app.connected && app.profile != null && filter.equals(app.profile.id)) {
+      for (int i=0;i<app.threads.length();i++) {
+        JSONObject thread=app.threads.optJSONObject(i);
+        if(thread!=null)visible.add(thread);
       }
-      if (count == 0) {
-        TextView note = ui.text(UiText.get(R.string.ui_select_a_remote_folder_or_create_a_project), 14);
-        note.setTextColor(ui.muted);
-        note.setPadding(0, 0, 0, ui.dp(12));
-        list.addView(note);
-        list.addView(ui.button(UiText.get(R.string.ui_choose_path_new_project), false, actions::directories));
-      }
-      section(UiText.get(R.string.ui_recent));
+      visible.sort((a,b)->Boolean.compare(app.threadDirectory.pinned(b.optString("id")),
+          app.threadDirectory.pinned(a.optString("id"))));
     }
-    int count = 0;
-    if (app.connected && filter.equals(app.profile.id)) {
-      List<JSONObject> visible = new ArrayList<>();
-      for (int i = 0; i < app.threads.length(); i++) {
-        JSONObject thread = app.threads.optJSONObject(i);
-        if (thread != null) visible.add(thread);
-      }
-      visible.sort((a,b) -> Boolean.compare(app.threadDirectory.pinned(b.optString("id")), app.threadDirectory.pinned(a.optString("id"))));
-      for (JSONObject thread : visible) {
-        if (thread == null) continue;
-        if (!project.isEmpty() && !thread.optString("cwd").equals(project)) continue;
-        String name = thread.isNull("name") ? "" : thread.optString("name");
-        if (name.trim().isEmpty()) name = thread.optString("preview", UiText.get(R.string.ui_new_conversation));
-        if (!matches(name)) continue;
-        final String displayName = name;
-        count++;
-        LinearLayout row = ui.row();
-        TextView text = ui.text((app.threadDirectory.pinned(thread.optString("id")) ? "★  " : "")
-            + (name.isEmpty() ? UiText.get(R.string.ui_new_conversation) : name), 18);
-        text.setMaxLines(1);
-        text.setEllipsize(TextUtils.TruncateAt.END);
-        text.setPadding(0, ui.dp(16), ui.dp(12), ui.dp(16));
-        row.addView(text, new LinearLayout.LayoutParams(0, -2, 1));
-        long age =
-            Math.max(
-                0,
-                System.currentTimeMillis() / 1000
-                    - thread.optLong("updatedAt", System.currentTimeMillis() / 1000));
-        TextView time =
-            ui.text(
-                age < 3600 ? UiText.get(R.string.ui_just_now) : age < 86400 ? UiText.quantity(R.plurals.ui_hours, (int) Math.min(Integer.MAX_VALUE, age / 3600)) : UiText.quantity(R.plurals.ui_days, (int) Math.min(Integer.MAX_VALUE, age / 86400)), 13);
-        time.setTextColor(ui.muted);
-        if (app.threadRunning(thread)) {
-          ProgressBar running = new ProgressBar(ui.activity);
-          running.setIndeterminate(true);
-          running.setContentDescription(UiText.get(R.string.ui_conversation_is_running));
-          LinearLayout.LayoutParams progress = new LinearLayout.LayoutParams(ui.dp(20), ui.dp(20));
-          progress.setMargins(0, 0, ui.dp(10), 0);
-          row.addView(running, progress);
-        }
-        row.addView(time);
-        String id = thread.optString("id");
-        ui.clickable(
-            row,
-            () -> {
-              if (!app.canSwitchConversation()) {
-                app.openConversation(id);
-                Toast.makeText(ui.activity, UiText.get(R.string.ui_restoring_the_conversation_it_will_open_automatically), Toast.LENGTH_SHORT).show();
-                dialog.dismiss();
-                return;
-              }
-              app.viewConversation(id);
-              dialog.dismiss();
-            });
-        row.setOnLongClickListener(v -> { showThreadActions(thread, displayName); return true; });
+    section(UiText.get(R.string.ui_project_273));
+    int projectCount=0;
+    for(Profile profile:app.vault.profiles) {
+      if(!filter.equals(profile.id))continue;
+      LinkedHashSet<String> paths=new LinkedHashSet<>(profile.projects);
+      if(!profile.cwd.isEmpty())paths.add(profile.cwd);
+      for(JSONObject thread:visible)if(!thread.optString("cwd").isEmpty())paths.add(thread.optString("cwd"));
+      for(String path:paths) {
+        List<JSONObject> children=new ArrayList<>();
+        for(JSONObject thread:visible)if(path.equals(thread.optString("cwd")) && matches(threadName(thread)))children.add(thread);
+        if(!matches(path) && children.isEmpty())continue;
+        projectCount++;
+        boolean expanded=expandedProjects.contains(path) || !search.getText().toString().trim().isEmpty();
+        LinearLayout row=ui.row();
+        row.setPadding(0,ui.dp(4),0,ui.dp(4));
+        row.addView(new IconView(ui.activity,expanded?"folderOpen":"folder",ui.fg),
+            new LinearLayout.LayoutParams(ui.dp(34),ui.dp(48)));
+        TextView name=ui.text(RemoteDirectory.name(path),20);
+        name.setMaxLines(1);name.setEllipsize(TextUtils.TruncateAt.END);
+        name.setGravity(Gravity.CENTER_VERTICAL);name.setPadding(ui.dp(8),0,0,0);
+        row.addView(name,new LinearLayout.LayoutParams(0,ui.dp(52),1));
+        IconView create=new IconView(ui.activity,"new",ui.muted);
+        create.setContentDescription(UiText.get(R.string.ui_new_conversation_in_this_project));
+        ui.clickable(create,()->newProjectChat(path,profile));
+        row.addView(create,new LinearLayout.LayoutParams(ui.dp(44),ui.dp(48)));
+        ui.clickable(row,()->toggleProject(path));
         list.addView(row);
+        if(expanded)for(JSONObject thread:children)addThreadRow(thread,true);
       }
     }
-    if (count == 0) {
-      TextView note = ui.text(project.isEmpty() ? UiText.get(R.string.ui_no_conversations) : UiText.get(R.string.ui_no_more_conversations), 16);
-      note.setTextColor(ui.muted);
-      note.setGravity(Gravity.CENTER);
-      note.setPadding(0, ui.dp(24), 0, ui.dp(24));
-      list.addView(note);
+    if(projectCount==0) {
+      TextView note=ui.text(UiText.get(R.string.ui_select_a_remote_folder_or_create_a_project),14);
+      note.setTextColor(ui.muted);note.setPadding(0,0,0,ui.dp(12));list.addView(note);
+      list.addView(ui.button(UiText.get(R.string.ui_choose_path_new_project),false,actions::directories));
     }
-    if (app.connected)
-      list.addView(
-          ui.button(
-              app.nextCursor.isEmpty() ? UiText.get(R.string.ui_refresh) : UiText.get(R.string.ui_load_more),
-              false,
-              () -> app.refreshThreads(!app.nextCursor.isEmpty())));
-    if (!app.connected && app.vault.profiles.isEmpty())
-      list.addView(ui.button(UiText.get(R.string.ui_add_ssh_connection_211), true, actions::add));
+    section(UiText.get(R.string.ui_recent));
+    int recent=0;
+    for(JSONObject thread:visible)if(matches(threadName(thread))) {addThreadRow(thread,false);recent++;}
+    if(recent==0) {
+      TextView note=ui.text(UiText.get(R.string.ui_no_conversations),16);
+      note.setTextColor(ui.muted);note.setGravity(Gravity.CENTER);
+      note.setPadding(0,ui.dp(24),0,ui.dp(24));list.addView(note);
+    }
+    if(app.connected && !app.nextCursor.isEmpty())
+      list.addView(ui.button(UiText.get(R.string.ui_load_more),false,()->app.refreshThreads(true)));
+    if(!app.connected && app.vault.profiles.isEmpty())
+      list.addView(ui.button(UiText.get(R.string.ui_add_ssh_connection_211),true,actions::add));
+  }
+
+  private String threadName(JSONObject thread) {
+    String name=thread.isNull("name")?"":thread.optString("name");
+    if(name.trim().isEmpty())name=thread.optString("preview",UiText.get(R.string.ui_new_conversation));
+    return name.trim().isEmpty()?UiText.get(R.string.ui_new_conversation):name;
+  }
+
+  private void toggleProject(String path) {
+    if(!expandedProjects.add(path))expandedProjects.remove(path);
+    refreshList();
+  }
+
+  private void newProjectChat(String path,Profile profile) {
+    if(!app.connected || app.profile!=profile) {
+      actions.connect(profile);
+      Toast.makeText(ui.activity,UiText.get(R.string.ui_connect_to_this_computer_before_opening_the_project),Toast.LENGTH_SHORT).show();
+      return;
+    }
+    if(!app.canSwitchConversation()) {
+      Toast.makeText(ui.activity,UiText.get(R.string.ui_resuming_session_or_uploading_attachment_please_wait),Toast.LENGTH_SHORT).show();return;
+    }
+    if(app.useProject(path)){dialog.dismiss();actions.chat();}
+  }
+
+  private void addThreadRow(JSONObject thread,boolean nested) {
+    String name=threadName(thread), id=thread.optString("id");
+    LinearLayout row=ui.row();
+    if(nested)row.setPadding(ui.dp(42),0,0,0);
+    TextView text=ui.text((app.threadDirectory.pinned(id)?"★  ":"")+name,nested?16:18);
+    text.setMaxLines(1);text.setEllipsize(TextUtils.TruncateAt.END);
+    text.setPadding(0,ui.dp(nested?10:16),ui.dp(12),ui.dp(nested?10:16));
+    row.addView(text,new LinearLayout.LayoutParams(0,-2,1));
+    long age=Math.max(0,System.currentTimeMillis()/1000-thread.optLong("updatedAt",System.currentTimeMillis()/1000));
+    TextView time=ui.text(age<3600?UiText.get(R.string.ui_just_now):age<86400?
+        UiText.quantity(R.plurals.ui_hours,(int)Math.min(Integer.MAX_VALUE,age/3600)):
+        UiText.quantity(R.plurals.ui_days,(int)Math.min(Integer.MAX_VALUE,age/86400)),12);
+    time.setTextColor(ui.muted);
+    if(app.threadRunning(thread)) {
+      ProgressBar running=new ProgressBar(ui.activity);running.setIndeterminate(true);
+      running.setContentDescription(UiText.get(R.string.ui_conversation_is_running));
+      LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(ui.dp(20),ui.dp(20));
+      lp.setMargins(0,0,ui.dp(10),0);row.addView(running,lp);
+    }
+    row.addView(time);
+    ui.clickable(row,()->{
+      if(!app.canSwitchConversation()) {
+        app.openConversation(id);
+        Toast.makeText(ui.activity,UiText.get(R.string.ui_restoring_the_conversation_it_will_open_automatically),Toast.LENGTH_SHORT).show();
+      } else app.viewConversation(id);
+      dialog.dismiss();
+    });
+    row.setOnLongClickListener(v->{showThreadActions(thread,name);return true;});
+    list.addView(row);
   }
 
   private void showThreadActions(JSONObject thread, String name) {
