@@ -1378,6 +1378,9 @@ public class MainActivityTest {
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
     assertEquals("未发送草稿",draft.getText().toString());
     assertEquals(View.VISIBLE,draft.getVisibility());
+    IconView enlarge=(IconView)((FrameLayout)composer.getChildAt(2)).getChildAt(2);
+    enlarge.performClick();assertEquals("收起输入框",enlarge.getContentDescription());
+    chrome.restore();assertEquals("放大输入框",enlarge.getContentDescription());
   }
   @Test public void fileSummaryCanRepeatedlyExpandAndShowInlineColoredDiff() {
     UiText.initialize(activity.getApplication());

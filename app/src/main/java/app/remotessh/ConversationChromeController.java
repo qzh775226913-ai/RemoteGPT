@@ -69,7 +69,8 @@ final class ConversationChromeController {
   }
 
   boolean large() {return large;}
-  void restore() {if(compact)setCompact(false);large=false;enlarge.icon="expand";enlarge.invalidate();resizeInput.run();}
+  void restore() {if(compact)setCompact(false);large=false;enlarge.icon="expand";
+    enlarge.setContentDescription(UiText.get(R.string.ui_expand_composer));enlarge.invalidate();resizeInput.run();}
 
   void onScroll(int y,int oldY,boolean userScroll) {
     if(!userScroll || input.hasFocus() || headerAnimator!=null && headerAnimator.isRunning()
