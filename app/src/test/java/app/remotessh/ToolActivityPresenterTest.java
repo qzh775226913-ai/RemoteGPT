@@ -93,4 +93,26 @@ public class ToolActivityPresenterTest {
     assertEquals("Checking the result",group.text);
     assertEquals(2,group.children.size());
   }
+
+  @Test public void chineseGroupAndFinalSummaryUseConsistentCompactCounts() {
+    android.content.Context app=RuntimeEnvironment.getApplication();
+    android.content.res.Configuration config=new android.content.res.Configuration(app.getResources().getConfiguration());
+    config.setLocales(new android.os.LocaleList(java.util.Locale.forLanguageTag("zh-Hans")));
+    UiText.initialize(app.createConfigurationContext(config));
+    try{
+      ChatItem read=ChatItem.from(Json.obj("id","read","type","commandExecution","command","cat A.java",
+          "commandActions",new JSONArray().put(Json.obj("type","read","path","A.java"))));
+      read.turnId="turn";
+      ChatItem edit=ChatItem.from(Json.obj("id","edit","type","fileChange","changes",
+          new JSONArray().put(Json.obj("path","A.java","diff","@@ -1 +1 @@\n-old\n+new\n"))));
+      edit.turnId="turn";
+      ChatItem answer=new ChatItem("answer","agentMessage","Done");answer.turnId="turn";answer.phase="final_answer";
+      List<ChatItem> presentation=ToolActivityPresenter.present(Arrays.asList(read,edit,answer),"");
+      assertEquals(3,presentation.size());
+      assertTrue(presentation.get(0).text.contains("已编辑1个文件"));
+      assertTrue(presentation.get(0).text.contains("已浏览1个文件"));
+      assertTrue(presentation.get(0).text.contains("已执行1项操作"));
+      assertEquals("已更改1个文件",presentation.get(2).text);
+    } finally {UiText.initialize(app);}
+  }
 }
