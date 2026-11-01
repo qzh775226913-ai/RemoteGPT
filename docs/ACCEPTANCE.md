@@ -1,8 +1,8 @@
 # 验收标准与证据边界
 
-适用版本：1.1.1（开发测试版）；需求 R-01 至 R-32。最后核对：2026-10-31。
+适用版本：1.1.1（开发测试版）；需求 R-01 至 R-32。最后核对：2026-11-02。
 
-[1.1.1 build 81 验证](verification/2026-11-01-1.1.1-build81.md) · [上一轮界面修复验证](verification/2026-10-31-1.1.1-build80.md) · [最近公开发布](verification/2026-10-30-1.0.67-release.md)
+[输入气泡与图片修复验证](verification/2026-11-02-composer-and-media.md) · [1.1.1 build 81 验证](verification/2026-11-01-1.1.1-build81.md) · [最近公开发布](verification/2026-10-30-1.0.67-release.md)
 
 ## 自动化合并门槛
 
