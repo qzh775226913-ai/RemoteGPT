@@ -42,9 +42,12 @@ public class ConversationChromeVisualTest {
         Outline outline=new Outline();surface.getOutline(outline);assertTrue("rounded clipping must remain available",outline.canClip());
         assertEquals(0,Color.alpha(bitmap.getPixel(0,0)));
         int top=bitmap.getPixel(width/2,0),middle=bitmap.getPixel(width/2,height/2);
+        int inset=bitmap.getPixel(width/2,4),bottom=bitmap.getPixel(width/2,height-4);
         assertEquals(255,Color.alpha(top));assertEquals(panel,middle);
-        assertTrue("top edge should suggest a shallow recess",Color.red(top)<Color.red(middle));
-        assertTrue("edge contrast should remain subtle",Color.red(middle)-Color.red(top)<=20);
+        assertTrue("the inner shadow must be visibly darker than the center",Color.red(middle)-Color.red(inset)>=6);
+        assertTrue("the inner shadow must remain restrained",Color.red(middle)-Color.red(inset)<=24);
+        assertTrue("the bottom inner edge must retain a visible highlight",Color.red(bottom)-Color.red(middle)>=3);
+        assertTrue("the edge highlight must remain restrained",Color.red(top)-Color.red(middle)<=32);
         File directory=new File("build/screenshots");assertTrue(directory.isDirectory() || directory.mkdirs());
         try(FileOutputStream out=new FileOutputStream(new File(directory,
             panel==0xff303030?"composer-edge-dark.png":"composer-edge-light.png"))){

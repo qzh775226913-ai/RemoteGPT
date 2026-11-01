@@ -21,7 +21,7 @@ final class ConversationChromeController {
   private final TextView prompt;
   private final IconView enlarge;
   private final FrameLayout inputLayer, composerHost;
-  private final Runnable resizeInput;
+  private final Runnable resizeInput,beginMotion,endMotion;
   private boolean compact, large;
   private int accumulated, direction;
   private ValueAnimator headerAnimator, composerAnimator;
@@ -30,9 +30,9 @@ final class ConversationChromeController {
 
   ConversationChromeController(Activity activity, LinearLayout header, LinearLayout composer,
       EditText input, int foreground, int muted,
-      int panel, Runnable resizeInput) {
+      int panel, Runnable resizeInput,Runnable beginMotion,Runnable endMotion) {
     this.activity=activity;this.header=header;this.composer=composer;this.input=input;
-    this.resizeInput=resizeInput;
+    this.resizeInput=resizeInput;this.beginMotion=beginMotion;this.endMotion=endMotion;
     LinearLayout parent=(LinearLayout)composer.getParent();
     int index=parent.indexOfChild(composer);
     LinearLayout.LayoutParams hostParams=(LinearLayout.LayoutParams)composer.getLayoutParams();
@@ -88,6 +88,11 @@ final class ConversationChromeController {
     enlarge.setContentDescription(UiText.get(R.string.ui_expand_composer));enlarge.invalidate();resizeInput.run();
     if(compact)setCompact(false);}
 
+  void dispose(){
+    if(headerAnimator!=null){ValueAnimator old=headerAnimator;headerAnimator=null;old.cancel();}
+    if(composerAnimator!=null){ValueAnimator old=composerAnimator;composerAnimator=null;old.cancel();}
+  }
+
   void onScroll(int y,int oldY,boolean userScroll,boolean atLatest) {
     if(!userScroll || editingWithKeyboard())return;
     int delta=y-oldY;
@@ -121,7 +126,7 @@ final class ConversationChromeController {
     int to=hide?0:header.getMeasuredHeight();
     header.getLayoutParams().height=from;header.setAlpha(fromAlpha);header.requestLayout();
     headerAnimator=ValueAnimator.ofInt(from,to);headerAnimator.setDuration(260);
-    headerAnimator.setInterpolator(new android.view.animation.DecelerateInterpolator());
+    headerAnimator.setInterpolator(new android.view.animation.PathInterpolator(.22f,0f,.2f,1f));
     headerAnimator.addUpdateListener(a->{header.getLayoutParams().height=(int)a.getAnimatedValue();
       header.requestLayout();header.setAlpha(fromAlpha+((hide?0:1)-fromAlpha)*a.getAnimatedFraction());});
     headerAnimator.addListener(new android.animation.AnimatorListenerAdapter(){
@@ -136,6 +141,7 @@ final class ConversationChromeController {
 
   private void animateComposer(boolean hide) {
     if(composerAnimator!=null){ValueAnimator old=composerAnimator;composerAnimator=null;old.cancel();}
+    beginMotion.run();
     int from=currentHeight(composerHost),fromWidth=currentWidth(composerHost);
     float fromNormal=composer.getVisibility()==View.GONE?0:composer.getAlpha();
     float fromPrompt=prompt.getVisibility()==View.GONE?0:prompt.getAlpha();
@@ -151,8 +157,8 @@ final class ConversationChromeController {
     prompt.setText(UiText.get(R.string.ui_send_message));prompt.setVisibility(View.VISIBLE);
     lp.height=from;lp.width=fromWidth;composerHost.setLayoutParams(lp);
     composer.setAlpha(fromNormal);prompt.setAlpha(fromPrompt);
-    composerAnimator=ValueAnimator.ofFloat(0,1);composerAnimator.setDuration(230);
-    composerAnimator.setInterpolator(new android.view.animation.DecelerateInterpolator());
+    composerAnimator=ValueAnimator.ofFloat(0,1);composerAnimator.setDuration(260);
+    composerAnimator.setInterpolator(new android.view.animation.PathInterpolator(.22f,0f,.2f,1f));
     composerAnimator.addUpdateListener(a->{float fraction=a.getAnimatedFraction();
       lp.height=from+Math.round((to-from)*fraction);
       lp.width=fromWidth+Math.round((targetWidth-fromWidth)*a.getAnimatedFraction());
@@ -168,6 +174,7 @@ final class ConversationChromeController {
           composer.setLayoutParams(contentParams);
           lp.width=regularWidth;lp.height=ViewGroup.LayoutParams.WRAP_CONTENT;}
         lp.gravity=Gravity.CENTER_HORIZONTAL;composerHost.setLayoutParams(lp);
+        endMotion.run();
       }
     });composerAnimator.start();
   }

@@ -23,6 +23,7 @@ public final class MainActivity extends Activity {
   private LinearLayout root, body, conversation, messages, empty, sidebar, composer, headerDetails, footer;
   private ConversationChromeController chrome;
   private ConversationScrollView scroll;
+  private ConversationFooterMotion footerMotion;
   private String renderedThread = "";
   private TextView status, title, error, busyLabel, modelButton, projectLabel, usageLabel;
   private EditText input;
@@ -47,6 +48,7 @@ public final class MainActivity extends Activity {
 
   private View jump;
   private final Map<String, TextView> texts = new HashMap<>();
+  private final ComposerRenderCache composerRender=new ComposerRenderCache();
   private final Map<String, ToolActivityGroupView> activityViews = new HashMap<>();
   private final Set<String> expandedActivity = new HashSet<>();
   private final Map<String, MessageBodyView> messageBodies = new HashMap<>();
@@ -219,6 +221,8 @@ public final class MainActivity extends Activity {
   @Override
   protected void onDestroy() {
     if(resumeSpinner!=null)resumeSpinner.stop();
+    if(chrome!=null)chrome.dispose();
+    if(footerMotion!=null)footerMotion.dispose();
     app.main.removeCallbacks(refreshMedia);
     for(MessageImageTile tile:mediaTiles)tile.release();
     if (scroll != null) scroll.removeCallbacks(pinLatest);
@@ -405,13 +409,7 @@ public final class MainActivity extends Activity {
     footer.setGravity(Gravity.CENTER_HORIZONTAL);
     footer.setPadding(dp(18), dp(4), dp(18), dp(8));
     viewport.addView(footer,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));
-    footer.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,oright,ob)->{
-      int height=b-t;
-      if(height==ob-ot)return;
-      scroll.setPadding(0,0,0,height+dp(8));
-      jp.bottomMargin=height+dp(12);jump.setLayoutParams(jp);
-      positionReadOnlyBar();
-    });
+    footerMotion=new ConversationFooterMotion(footer,scroll,jump,this::positionReadOnlyBar);
     queuedBar = row();
     footer.addView(queuedBar, new LinearLayout.LayoutParams(wide ? dp(Math.min(720, available - 32)) : -1, -2));
     composer = column();
@@ -462,7 +460,7 @@ public final class MainActivity extends Activity {
     send = icon("arrow", UiText.get(R.string.ui_send_message), this::sendMessage);send.glyphScale=.36f;
     controls.addView(send, new LinearLayout.LayoutParams(dp(44), dp(44)));
     chrome=new ConversationChromeController(this,headerDetails,composer,input,
-        fg,muted,panel,this::sizeComposer);
+        fg,muted,panel,this::sizeComposer,footerMotion::begin,footerMotion::end);
     scroll.setOnReadingTap(()->chrome.setCompact(false));
     input.addTextChangedListener(
         new TextWatcher() {
@@ -582,14 +580,14 @@ public final class MainActivity extends Activity {
       historyLimit=60;firstRender=true;
       messageUpdatesPaused = false;
     }
-    title.setText(app.threadTitle.isEmpty() ? (app.threadId.isEmpty() ? getString(R.string.app_name) : UiText.get(R.string.ui_unnamed_conversation)) : app.threadTitle);
+    ComposerRenderCache.text(title,app.threadTitle.isEmpty() ? (app.threadId.isEmpty() ? getString(R.string.app_name) : UiText.get(R.string.ui_unnamed_conversation)) : app.threadTitle);
     contextRing.show(app.contextUsage);
     contextRing.setContentDescription(UiText.get(R.string.ui_context_ring_description,
         app.contextUsage.known ? java.text.NumberFormat.getPercentInstance(UiText.locale()).format(app.contextUsage.fraction()) : UiText.get(R.string.ui_unknown)));
     String project = app.currentProject();
-    projectLabel.setText(UiText.get(R.string.ui_project_1_s, project.isEmpty() ? UiText.get(R.string.ui_remote_default_directory) : project));
+    ComposerRenderCache.text(projectLabel,UiText.get(R.string.ui_project_1_s, project.isEmpty() ? UiText.get(R.string.ui_remote_default_directory) : project));
     projectLabel.setVisibility(app.profile == null ? View.GONE : View.VISIBLE);
-    usageLabel.setText(app.usage.summary());
+    ComposerRenderCache.text(usageLabel,app.usage.summary());
     usageLabel.setVisibility(app.connected ? View.VISIBLE : View.GONE);
     boolean recovering=app.recoveryInProgress();
     positionReadOnlyBar();
@@ -600,13 +598,14 @@ public final class MainActivity extends Activity {
         app.connecting?UiText.get(R.string.ui_connecting):app.replaying?UiText.get(R.string.ui_synchronizing):UiText.get(R.string.ui_resuming),
         app.connected?UiText.get(R.string.ui_resume):UiText.get(R.string.ui_reconnect_and_resume));
     input.setEnabled(true);
-    input.setHint(app.readOnly ? UiText.get(R.string.ui_prepare_a_message_resume_before_sending) : UiText.get(R.string.ui_send_message));
+    CharSequence hint=app.readOnly ? UiText.get(R.string.ui_prepare_a_message_resume_before_sending) : UiText.get(R.string.ui_send_message);
+    if(!TextUtils.equals(input.getHint(),hint))input.setHint(hint);
     status.setText(app.connected ? AppIcons.label(this,"●  " + app.profile.title() + "  ·  SSH","status",null,Color.rgb(48,148,112),dp(14)) : UiPresentation.status(app.state));
     status.setTextColor(app.connected ? Color.parseColor(isDark()?"#309470":"#247A5B") : muted);
-    error.setText(app.error.isEmpty() ? "" : DiagnosticText.display(app.error, app.errorDiagnostic).split("\n", 2)[0] + UiText.get(R.string.ui_tap_for_the_cause_and_diagnostic_details));
+    ComposerRenderCache.text(error,app.error.isEmpty() ? "" : DiagnosticText.display(app.error, app.errorDiagnostic).split("\n", 2)[0] + UiText.get(R.string.ui_tap_for_the_cause_and_diagnostic_details));
     error.setVisibility(app.error.isEmpty() ? View.GONE : View.VISIBLE);
-    renderAttachments();
-    renderQueuedMessage();
+    composerRender.attachments(app,this::renderAttachments);
+    composerRender.queue(app,this::renderQueuedMessage);
     updateSend();
     PermissionMode displayedPermission=app.displayedPermission();
     boolean forced = app.forcedApprovals.active();
@@ -615,7 +614,7 @@ public final class MainActivity extends Activity {
     permissionButton.setContentDescription(UiText.get(R.string.ui_permissions_1_s, forced ? UiText.get(R.string.ui_force_allow) : UiPresentation.permission(displayedPermission)));
     permissionButton.setTooltipText(forced ? UiText.get(R.string.ui_force_allow_automatically_approve_until_new_permissions_take_effe) : UiPresentation.permission(displayedPermission) + (app.permissionMode==PermissionMode.INHERIT && displayedPermission!=PermissionMode.INHERIT ? UiText.get(R.string.ui_current_remote_status) : ""));
     permissionButton.invalidate();
-    modelButton.setText(ModelOptions.composerName(app.models, app.model)
+    ComposerRenderCache.text(modelButton,ModelOptions.composerName(app.models, app.model)
         + (app.reasoningEffort.isEmpty() ? "" : " · " + ModelOptions.label(app.reasoningEffort))
         + (app.serviceTierSummary().isEmpty() ? "" : " · " + app.serviceTierSummary()));
     modelButton.setTooltipText(modelButton.getText());
@@ -627,7 +626,7 @@ public final class MainActivity extends Activity {
       List<ChatItem> presentation=ToolActivityPresenter.present(app.displayItems(),app.turnId);
       int start=Math.max(0,presentation.size()-historyLimit);
       historyButton.setVisibility(start>0?View.VISIBLE:View.GONE);
-      historyButton.setText(UiText.quantity(R.plurals.ui_earlier_messages, start));
+      ComposerRenderCache.text(historyButton,UiText.quantity(R.plurals.ui_earlier_messages, start));
       for (ChatItem source : presentation.subList(start,presentation.size())) {
         ChatItem snapshot = new ChatItem(source.id, source.type, source.text);
         snapshot.detail = source.detail; snapshot.status = source.status;
@@ -707,8 +706,9 @@ public final class MainActivity extends Activity {
   }
 
   private void updateRecoveryButton(TextView button,LoadingSpinner spinner,boolean active,String busyText,String idleText) {
-    button.setText(active?busyText:idleText);button.setTooltipText(active?UiPresentation.status(app.recoveryStatus()):idleText);
-    button.setCompoundDrawablePadding(dp(4));button.setCompoundDrawables(active?spinner:null,null,null,null);
+    ComposerRenderCache.text(button,active?busyText:idleText);button.setTooltipText(active?UiPresentation.status(app.recoveryStatus()):idleText);
+    if(button.getCompoundDrawablePadding()!=dp(4))button.setCompoundDrawablePadding(dp(4));
+    if(button.getCompoundDrawables()[0]!=(active?spinner:null))button.setCompoundDrawables(active?spinner:null,null,null,null);
     if(active && visibleActivity)spinner.start();else spinner.stop();
   }
 

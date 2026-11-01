@@ -1721,6 +1721,66 @@ public class MainActivityTest {
     assertEquals("changing input size while expanding retargets the animation",attachmentHeight,host.getHeight());
   }
 
+  @Test public void streamingUpdatesPreserveComposerControlsAndTheirThreadOwnership() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;
+    app.threadId="live";app.turnId="turn";app.busy=true;
+    FileAttachment original=new FileAttachment("report.txt","/remote/report.txt",42);
+    app.draftFiles.add(original);assertTrue(app.queueMessage("later"));
+    ChatItem reply=new ChatItem("reply","agentMessage","A");app.items.add(reply);app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(120));layoutContent();
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("attachmentStrip");field.setAccessible(true);
+    LinearLayout attachments=(LinearLayout)field.get(activity);View attachment=attachments.getChildAt(0);
+    field=MainActivity.class.getDeclaredField("queuedBar");field.setAccessible(true);
+    LinearLayout queue=(LinearLayout)field.get(activity);View queued=queue.getChildAt(0);
+    field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
+    ConversationChromeController chrome=(ConversationChromeController)field.get(activity);chrome.setCompact(true);
+    field=ConversationChromeController.class.getDeclaredField("composerAnimator");field.setAccessible(true);
+    Object animator=field.get(chrome);
+    for(int i=0;i<3;i++){
+      reply.text+=" more";app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(45));
+      layoutContent();
+      assertSame("unchanged attachments must survive streaming updates",attachment,attachments.getChildAt(0));
+      assertSame("unchanged queued controls must survive streaming updates",queued,queue.getChildAt(0));
+      assertSame("streaming must not restart the composer animation",animator,field.get(chrome));
+    }
+    FileAttachment replacement=new FileAttachment("report.txt","/remote/report.txt",42);
+    app.threadId="other";app.draftFiles.clear();app.draftFiles.add(replacement);app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(120));layoutContent();
+    assertNotSame("switching conversation must rebind attachment actions",attachment,attachments.getChildAt(0));
+    find(content(),"移除文件 report.txt").performClick();assertTrue(app.draftFiles.isEmpty());
+  }
+
+  @Test public void readingDuringLiveMotionKeepsTimelineStableAndJumpAboveComposer() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;
+    app.threadId="live-motion";app.turnId="turn";app.busy=true;
+    for(int i=0;i<30;i++)app.items.add(new ChatItem("line-"+i,"agentMessage","Message "+i+"\nAnother line"));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(120));layoutContent();
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("scroll");field.setAccessible(true);
+    ConversationScrollView scroll=(ConversationScrollView)field.get(activity);
+    scroll.scrollTo(0,Math.max(0,scroll.getScrollY()-500));assertFalse(scroll.isFollowing());
+    field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
+    ConversationChromeController chrome=(ConversationChromeController)field.get(activity);
+    field=MainActivity.class.getDeclaredField("footer");field.setAccessible(true);View footer=(View)field.get(activity);
+    field=MainActivity.class.getDeclaredField("jump");field.setAccessible(true);View jump=(View)field.get(activity);
+    int initialPadding=scroll.getPaddingBottom(),initialHeight=footer.getHeight();chrome.setCompact(true);
+    field=ConversationChromeController.class.getDeclaredField("composerAnimator");field.setAccessible(true);
+    android.animation.ValueAnimator motion=(android.animation.ValueAnimator)field.get(chrome);
+    assertTrue("the test must exercise a running animation",motion.isRunning());
+    java.lang.reflect.Method render=MainActivity.class.getDeclaredMethod("render");render.setAccessible(true);
+    for(int i=0;i<20;i++){
+      if(i%5==0){app.items.get(0).text+=" updated";render.invoke(activity);}
+      motion.setCurrentPlayTime(i*8L);layoutContent();
+      assertEquals("timeline padding changed at frame "+i,initialPadding,scroll.getPaddingBottom());
+      assertTrue("jump must remain above the moving composer",jump.getBottom()+jump.getTranslationY()<=footer.getTop()+2);
+    }
+    assertTrue("composer must actually shrink during the animation",footer.getHeight()<initialHeight);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    shadowOf(android.os.Looper.getMainLooper()).idle();layoutContent();
+    int expected=footer.getHeight()+Math.round(8*activity.getResources().getDisplayMetrics().density);
+    assertEquals("timeline padding must match the settled composer",expected,scroll.getPaddingBottom());
+    assertEquals(0f,jump.getTranslationY(),.01f);
+  }
+
   private void layoutContent() {
     View view=content();int width=activity.getResources().getDisplayMetrics().widthPixels;
     int height=activity.getResources().getDisplayMetrics().heightPixels;
