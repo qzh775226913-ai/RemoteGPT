@@ -62,4 +62,24 @@ public class MediaSourceTest {
     assertTrue(MediaFiles.images(snapshot.turns.get(0).get(0)).isEmpty());
     assertEquals(Collections.singletonList("/work/photo.png"),MediaFiles.imageGallery(snapshot.turns.get(0),"/work"));
   }
+
+  @Test public void groupedToolImagesRemainAvailableInLiveAndRestoredTurns() {
+    UiText.initialize(RuntimeEnvironment.getApplication());
+    JSONObject command=Json.obj("id","command","type","commandExecution","command",README_COMMAND);
+    JSONObject tool=Json.obj("id","tool","type","mcpToolCall","server","sample","tool","image",
+        "result",Json.obj("content",new JSONArray().put(Json.obj("type","image","mimeType","image/png","data","abc"))));
+    JSONObject generation=Json.obj("id","generated","type","imageGeneration","savedPath","/work/generated.png");
+    JSONObject view=Json.obj("id","view","type","imageView","path","/work/view.png");
+    ThreadSnapshot snapshot=new ThreadSnapshot(Json.obj("thread",Json.obj("turns",new JSONArray()
+        .put(Json.obj("id","turn","items",new JSONArray().put(command).put(tool).put(generation).put(view))))));
+    assertNull(snapshot.failure);List<ChatItem> children=snapshot.turns.get(0);
+    List<String> expected=Arrays.asList("data:image/png;base64,abc","/work/generated.png","/work/view.png");
+    for(String runningTurn:Arrays.asList("turn","")){
+      List<ChatItem> presented=ToolActivityPresenter.present(children,runningTurn);
+      assertEquals(1,presented.size());assertEquals("activityGroup",presented.get(0).type);
+      assertEquals("grouping must keep explicit images in event order",expected,MediaFiles.images(presented.get(0)));
+      assertEquals(expected,MediaFiles.imageGallery(children,"/work"));
+    }
+    assertFalse("a command's literal badge must stay hidden",MediaFiles.images(children.get(0)).contains("https://example.test/verify/badge.svg"));
+  }
 }

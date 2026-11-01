@@ -776,6 +776,9 @@ public final class MainActivity extends Activity {
       ToolActivityGroupView activityView=new ToolActivityGroupView(this,ui,item,expandedActivity,this::showDetails);
       activityViews.put(item.id,activityView);currentItems.put(item.id,item);
       wrap.addView(activityView,new LinearLayout.LayoutParams(-1,-2));
+      if(item.type.equals("activityGroup")){
+        LinearLayout media=column();mediaRows.put(item.id,media);wrap.addView(media,new LinearLayout.LayoutParams(-1,-2));
+      }
       return;
     }
     if(item.type.equals("question")) {
