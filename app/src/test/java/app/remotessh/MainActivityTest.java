@@ -1371,7 +1371,7 @@ public class MainActivityTest {
     ConversationChromeController chrome=(ConversationChromeController)field.get(activity);
     field=MainActivity.class.getDeclaredField("readOnlyBar");field.setAccessible(true);
     View readOnly=(View)field.get(activity);
-    assertTrue(readOnly.getParent() instanceof FrameLayout);
+    assertTrue(readOnly.getParent() instanceof LinearLayout);
     chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
     field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);
     LinearLayout composer=(LinearLayout)field.get(activity);
@@ -1419,6 +1419,35 @@ public class MainActivityTest {
     enlarge.performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));
     assertEquals(View.VISIBLE,readOnly.getVisibility());
     input.requestFocus();assertEquals(View.GONE,readOnly.getVisibility());
+  }
+  @Test public void resumeStaysNearHeaderAndSeparateFromJumpAcrossRecoveryStates() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;
+    app.readOnly=true;app.threadId="history";
+    for(int i=0;i<30;i++)app.items.add(new ChatItem("old-"+i,"agentMessage","Message "+i+"\nMore history"));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));capture("resume-at-top");
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("scroll");field.setAccessible(true);
+    ConversationScrollView scroll=(ConversationScrollView)field.get(activity);scroll.follow();scroll.pin();
+    scroll.scrollBy(0,-Math.round(300*activity.getResources().getDisplayMetrics().density));layoutContent();
+    field=MainActivity.class.getDeclaredField("readOnlyBar");field.setAccessible(true);
+    View bar=(View)field.get(activity);
+    field=MainActivity.class.getDeclaredField("resumeButton");field.setAccessible(true);
+    TextView resume=(TextView)field.get(activity);
+    field=MainActivity.class.getDeclaredField("jump");field.setAccessible(true);View jump=(View)field.get(activity);
+    field=MainActivity.class.getDeclaredField("headerDetails");field.setAccessible(true);View details=(View)field.get(activity);
+    assertEquals(View.VISIBLE,bar.getVisibility());assertEquals(View.VISIBLE,jump.getVisibility());
+    Rect resumeBounds=new Rect(),jumpBounds=new Rect(),headerBounds=new Rect();
+    assertTrue(resume.getGlobalVisibleRect(resumeBounds));assertTrue(jump.getGlobalVisibleRect(jumpBounds));
+    assertTrue(details.getGlobalVisibleRect(headerBounds));
+    assertFalse("resume and jump must not overlap",Rect.intersects(resumeBounds,jumpBounds));
+    assertTrue("resume follows the top information",resumeBounds.top>=headerBounds.bottom);
+    assertTrue("resume stays close to the header",resumeBounds.top-headerBounds.bottom<=
+        Math.round(10*activity.getResources().getDisplayMetrics().density));
+    int width=resume.getWidth(),height=resume.getHeight();
+    app.replaying=true;app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));layoutContent();
+    assertEquals("resume shape stays stable while synchronizing",width,resume.getWidth());assertEquals(height,resume.getHeight());
+    app.replaying=false;app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));layoutContent();
+    assertEquals(width,resume.getWidth());assertEquals(height,resume.getHeight());
+    captureLaidOutView(content(),"resume-and-jump-separated");
   }
   @Test public void fileSummaryCanRepeatedlyExpandAndShowInlineColoredDiff() {
     UiText.initialize(activity.getApplication());
@@ -1580,6 +1609,48 @@ public class MainActivityTest {
     ((View)field.get(activity)).performClick();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
     assertEquals(View.VISIBLE,details.getVisibility());
+  }
+  @Test public void flingBounceAndLayoutDoNotCountAsReverseReading() {
+    ConversationScrollView scroll=new ConversationScrollView(activity);
+    java.util.List<Boolean> observed=new java.util.ArrayList<>();
+    scroll.setOnScrollChangeListener((v,x,y,ox,oy)->observed.add(scroll.userScrolling()));
+    scroll.fling(5000);
+    org.robolectric.util.ReflectionHelpers.setField(scroll,"handlingUserScroll",true);
+    scroll.onScrollChanged(0,120,0,0);
+    scroll.onScrollChanged(0,90,0,120);
+    org.robolectric.util.ReflectionHelpers.setField(scroll,"pinning",true);
+    scroll.onScrollChanged(0,130,0,90);
+    org.robolectric.util.ReflectionHelpers.setField(scroll,"pinning",false);
+    org.robolectric.util.ReflectionHelpers.setField(scroll,"layingOut",true);
+    scroll.onScrollChanged(0,150,0,130);
+    assertEquals(java.util.Arrays.asList(true,false,false,false),observed);
+  }
+  @Test public void quickFlingToLatestExpandsChromeWithoutOscillation() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="fling";
+    for(int i=0;i<60;i++)app.items.add(new ChatItem("line-"+i,"agentMessage","Message "+i+"\nSecond line"));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));capture("fling-before");
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("scroll");field.setAccessible(true);
+    ConversationScrollView scroll=(ConversationScrollView)field.get(activity);
+    field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
+    ConversationChromeController chrome=(ConversationChromeController)field.get(activity);
+    field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);
+    LinearLayout composer=(LinearLayout)field.get(activity);View host=(View)composer.getParent();
+    chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    scroll.follow();scroll.pin();int bottom=scroll.getScrollY();
+    scroll.scrollTo(0,Math.max(0,bottom-Math.round(250*activity.getResources().getDisplayMetrics().density)));
+    assertFalse(scroll.nearBottom());int previous=host.getWidth();
+    long time=android.os.SystemClock.uptimeMillis();
+    dispatchTouch(scroll,time,time,MotionEvent.ACTION_DOWN,20,650);
+    dispatchTouch(scroll,time,time+10,MotionEvent.ACTION_MOVE,20,570);
+    dispatchTouch(scroll,time,time+20,MotionEvent.ACTION_MOVE,20,80);
+    dispatchTouch(scroll,time,time+30,MotionEvent.ACTION_UP,20,60);
+    for(int i=0;i<40;i++){
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(16));scroll.computeScroll();layoutContent();
+      assertTrue("composer must not shrink during return to latest",host.getWidth()>=previous-2);
+      previous=host.getWidth();
+    }
+    assertTrue("the fling reaches the latest messages",scroll.nearBottom());
+    assertEquals(View.VISIBLE,composer.getVisibility());captureLaidOutView(content(),"fling-at-latest");
   }
   @Test public void composerExpansionNeverOvershootsAndKeepsAttachmentVisibility() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="motion";

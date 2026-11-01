@@ -323,16 +323,13 @@ public final class MainActivity extends Activity {
     clickable(usageLabel, this::usageInfo);
     headerDetails.addView(usageLabel);
     readOnlyBar = column();
-    readOnlyBar.setGravity(Gravity.CENTER_HORIZONTAL);
     resumeButton=action(UiText.get(R.string.ui_resume),()->{
       if(app.connected)app.resume(app.threadId);else app.reconnectAndResume();
     });
     resumeButton.setContentDescription(UiText.get(R.string.ui_resume));resumeSpinner=new LoadingSpinner(fg,dp(16));
-    resumeButton.setSingleLine(true);resumeButton.setEllipsize(TextUtils.TruncateAt.END);
-    resumeButton.setMinWidth(dp(112));resumeButton.setMaxWidth(dp(220));
-    resumeButton.setMinHeight(dp(44));resumeButton.setPadding(dp(22),dp(10),dp(22),dp(10));
-    readOnlyBar.addView(resumeButton,new LinearLayout.LayoutParams(-2,-2));
+    ConversationOverlayLayout.addResume(readOnlyBar,resumeButton);
     readOnlyBar.setVisibility(View.GONE);
+    center.addView(readOnlyBar,new LinearLayout.LayoutParams(-1,-2));
     error = text("", 13, isDark() ? Color.rgb(255, 151, 137) : Color.rgb(165, 47, 36));
     error.setContentDescription(UiText.get(R.string.ui_view_connection_errors));
     error.setPadding(dp(20), dp(12), dp(20), dp(12));
@@ -360,7 +357,6 @@ public final class MainActivity extends Activity {
     headerFade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
         new int[]{bg,Color.argb(0,Color.red(bg),Color.green(bg),Color.blue(bg))}));
     viewport.addView(headerFade,new FrameLayout.LayoutParams(-1,dp(18),Gravity.TOP));
-    viewport.addView(readOnlyBar,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));
     conversation = column();
     conversation.setGravity(Gravity.CENTER_HORIZONTAL);
     scroll.addView(conversation, new ScrollView.LayoutParams(-1, -2));
@@ -402,7 +398,7 @@ public final class MainActivity extends Activity {
         (v, x, y, ox, oy) -> {
           jump.setVisibility(scroll.isFollowing() ? View.GONE : View.VISIBLE);
           if (scroll.isFollowing() && messageUpdatesPaused) scheduleRender();
-          if(chrome!=null)chrome.onScroll(y,oy,scroll.userScrolling());
+          if(chrome!=null)chrome.onScroll(y,oy,scroll.userScrolling(),scroll.nearBottom());
           scheduleMedia();
         });
     footer = column();
@@ -527,15 +523,12 @@ public final class MainActivity extends Activity {
   }
 
   private void positionReadOnlyBar() {
-    if(readOnlyBar==null || footer==null || !(readOnlyBar.getLayoutParams() instanceof FrameLayout.LayoutParams))return;
+    if(readOnlyBar==null || footer==null)return;
     WindowInsets insets=root.getRootWindowInsets();
     boolean keyboard=Build.VERSION.SDK_INT>=30 && insets!=null && insets.isVisible(WindowInsets.Type.ime());
-    FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)readOnlyBar.getLayoutParams();
     boolean editorActive=keyboard || input!=null && input.hasFocus() || chrome!=null && chrome.large();
     readOnlyBar.setVisibility((app.readOnly || app.connecting || app.recoveryInProgress()) && !editorActive?
         View.VISIBLE:View.GONE);
-    int bottom=footer.getHeight()+dp(10);
-    if(lp.bottomMargin!=bottom){lp.bottomMargin=bottom;readOnlyBar.setLayoutParams(lp);}
   }
 
   private void scheduleRender() {

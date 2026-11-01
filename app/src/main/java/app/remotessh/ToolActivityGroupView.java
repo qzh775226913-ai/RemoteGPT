@@ -36,9 +36,10 @@ final class ToolActivityGroupView extends LinearLayout {
     numbers=new RollingChangeNumbers(ui.bg==Color.BLACK,this::invalidateNumbers,
         ()->post(()->{if(getWindowToken()!=null)bind(this.item);}));
     setOrientation(VERTICAL);
-    if(summary){setBackground(ui.rounded(ui.panel,18));setPadding(ui.dp(12),ui.dp(6),ui.dp(12),ui.dp(6));}
+    if(summary){setBackground(ui.rounded(ui.panel,18));setPadding(ui.dp(12),ui.dp(3),ui.dp(12),ui.dp(3));}
     header=ui.compactSummary();
-    if(summary){header.setTextSize(14);header.setTextColor(ui.fg);header.setBackgroundColor(Color.TRANSPARENT);}
+    if(summary){header.setTextSize(14);header.setTextColor(ui.fg);header.setBackgroundColor(Color.TRANSPARENT);
+      header.setPadding(ui.dp(8),ui.dp(2),ui.dp(8),ui.dp(2));}
     addView(header,new LayoutParams(-1,-2));
     ui.clickable(header,()->{if(!expanded.add(item.id))expanded.remove(item.id);bind(this.item);});
     content=ui.column();addView(content,new LayoutParams(-1,-2));
@@ -81,6 +82,7 @@ final class ToolActivityGroupView extends LinearLayout {
       TextView more=ui.compactSummary();more.setText(all?UiText.get(R.string.ui_collapse_files)+"  ⌃":
           UiText.get(R.string.ui_more_files_count,item.children.size()-count)+"  ›");
       more.setTextColor(ui.fg);more.setBackgroundColor(Color.TRANSPARENT);
+      more.setPadding(ui.dp(8),ui.dp(2),ui.dp(8),ui.dp(2));
       ui.clickable(more,()->{if(!expanded.add(item.id+"-all"))expanded.remove(item.id+"-all");bind(this.item);});
       content.addView(more,new LayoutParams(-1,-2));
     }
@@ -92,7 +94,8 @@ final class ToolActivityGroupView extends LinearLayout {
     String icon=child.type.equals("fileChange")?"pencil":child.type.equals("commandExecution")?"terminal":
         child.type.equals("webSearch")?"search":child.type.equals("reasoning")?"book":
             child.type.equals("imageView")?"book":"computer";
-    row.addView(new IconView(getContext(),icon,ui.muted),new LayoutParams(ui.dp(30),ui.dp(32)));
+    int iconHeight=ui.dp(summary?28:32);
+    row.addView(new IconView(getContext(),icon,ui.muted),new LayoutParams(ui.dp(30),iconHeight));
     TextView text=ui.text("",13,ui.fg);text.setSingleLine(true);text.setEllipsize(TextUtils.TruncateAt.MIDDLE);
     String label=child.type.equals("fileChange")?fileLabel(child):child.type.equals("reasoning")?
         ToolActivityPresenter.reasoningPreview(child):UiPresentation.itemTitle(child);
@@ -101,10 +104,12 @@ final class ToolActivityGroupView extends LinearLayout {
     if(file)rollingRows.add(text);
     row.addView(text,new LayoutParams(0,-2,1));
     row.addView(new IconView(getContext(),expanded.contains(child.id)?"chevronDown":"chevron",ui.muted),
-        new LayoutParams(ui.dp(22),ui.dp(32)));
+        new LayoutParams(ui.dp(22),iconHeight));
     row.setContentDescription(label);
     ui.clickable(row,()->{if(!expanded.add(child.id))expanded.remove(child.id);bind(this.item);});
-    disclosure.addView(row,new LayoutParams(-1,ui.dp(34)));
+    int rowHeight=summary?Math.max(ui.dp(30),(int)Math.ceil(text.getPaint().getFontMetrics().bottom-
+        text.getPaint().getFontMetrics().top)+ui.dp(6)):ui.dp(34);
+    disclosure.addView(row,new LayoutParams(-1,rowHeight));
     if(expanded.contains(child.id)){
       ToolInlineDetailView detail=new ToolInlineDetailView(getContext(),ui,child);
       LayoutParams codeParams=new LayoutParams(-1,-2);codeParams.setMargins(ui.dp(30),ui.dp(3),ui.dp(4),0);

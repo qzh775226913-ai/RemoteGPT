@@ -63,6 +63,8 @@
       "ContextRingView",
       "ContextUsagePanel",
       "ConversationChromeController",
+      "ConversationOverlayLayout",
+      "ComposerSurface",
       "ToolDetailDialog",
       "ToolActivityGroupView",
       "RollingChangeNumbers",

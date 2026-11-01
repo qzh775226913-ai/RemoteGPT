@@ -39,7 +39,7 @@ final class ConversationChromeController {
     regularWidth=hostParams.width;
     parent.removeView(composer);
     composerHost=new FrameLayout(activity);
-    composerHost.setBackground(rounded(panel,26));
+    composerHost.setBackground(ComposerSurface.create(activity,panel));
     composerHost.setClipToOutline(true);
     parent.addView(composerHost,index,hostParams);
     composer.setBackgroundColor(Color.TRANSPARENT);
@@ -88,10 +88,11 @@ final class ConversationChromeController {
     enlarge.setContentDescription(UiText.get(R.string.ui_expand_composer));enlarge.invalidate();resizeInput.run();
     if(compact)setCompact(false);}
 
-  void onScroll(int y,int oldY,boolean userScroll) {
+  void onScroll(int y,int oldY,boolean userScroll,boolean atLatest) {
     if(!userScroll || editingWithKeyboard())return;
     int delta=y-oldY;
     if(delta==0)return;
+    if(atLatest && delta>0){accumulated=0;direction=0;setCompact(false);return;}
     int sign=delta<0?1:-1;
     if(sign!=direction){direction=sign;accumulated=0;}
     accumulated+=Math.min(Math.abs(delta),dp(60));
@@ -171,8 +172,6 @@ final class ConversationChromeController {
     });composerAnimator.start();
   }
 
-  private GradientDrawable rounded(int color,int radius) {GradientDrawable d=new GradientDrawable();
-    d.setColor(color);d.setCornerRadius(dp(radius));return d;}
   private boolean editingWithKeyboard(){
     if(!input.hasFocus() || android.os.Build.VERSION.SDK_INT<30)return false;
     WindowInsets insets=activity.getWindow().getDecorView().getRootWindowInsets();

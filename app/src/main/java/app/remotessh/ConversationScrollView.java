@@ -16,7 +16,9 @@ import android.widget.TextView;
 public final class ConversationScrollView extends ScrollView {
   private boolean following = true, layingOut, pinning;
   private View horizontalGesture;
-  private boolean handlingUserScroll, flinging;
+  private boolean handlingUserScroll, flinging, userScrollCallback;
+  private int touchDirection,flingDirection;
+  private float lastRawY;
   private long lastFlingMotion;
   private final int touchSlop;
   private Runnable readingTap;
@@ -29,14 +31,15 @@ public final class ConversationScrollView extends ScrollView {
   public boolean isFollowing() { return following; }
   public void follow() { following = true; requestLayout(); }
   public void read() { following = false; }
-  boolean userScrolling() {return handlingUserScroll;}
+  boolean userScrolling() {return userScrollCallback;}
   void setOnReadingTap(Runnable action){readingTap=action;}
   @Override public boolean dispatchTouchEvent(MotionEvent event) {
     int action=event.getActionMasked();
     if(action==MotionEvent.ACTION_DOWN){
-      flinging=false;tapX=event.getX();tapY=event.getY();tapTime=event.getEventTime();
+      flinging=false;touchDirection=0;lastRawY=event.getRawY();tapX=event.getX();tapY=event.getY();tapTime=event.getEventTime();
       tapCandidate=readingTap!=null && !interactiveAt(this,tapX,tapY);
     } else if(action==MotionEvent.ACTION_MOVE){
+      touchDirection=Float.compare(lastRawY,event.getRawY());lastRawY=event.getRawY();
       if(Math.abs(event.getX()-tapX)>touchSlop || Math.abs(event.getY()-tapY)>touchSlop)tapCandidate=false;
     } else if(action==MotionEvent.ACTION_POINTER_DOWN || action==MotionEvent.ACTION_CANCEL)tapCandidate=false;
     boolean tap=action==MotionEvent.ACTION_UP && tapCandidate &&
@@ -83,7 +86,8 @@ public final class ConversationScrollView extends ScrollView {
     try{return super.onTouchEvent(event);}finally{handlingUserScroll=previous;}
   }
   @Override public void fling(int velocityY) {
-    flinging=true;lastFlingMotion=android.os.SystemClock.uptimeMillis();super.fling(velocityY);
+    flinging=true;flingDirection=Integer.signum(velocityY);
+    lastFlingMotion=android.os.SystemClock.uptimeMillis();super.fling(velocityY);
   }
   @Override public void computeScroll() {
     int before=getScrollY();boolean previous=handlingUserScroll;
@@ -121,6 +125,10 @@ public final class ConversationScrollView extends ScrollView {
   }
   @Override protected void onScrollChanged(int x, int y, int oldX, int oldY) {
     if (!layingOut && !pinning) following = nearBottom();
-    super.onScrollChanged(x, y, oldX, oldY);
+    boolean previous=userScrollCallback;
+    int direction=flinging?flingDirection:touchDirection;
+    userScrollCallback=handlingUserScroll && !layingOut && !pinning && direction!=0 &&
+        Integer.signum(y-oldY)==direction;
+    try{super.onScrollChanged(x, y, oldX, oldY);}finally{userScrollCallback=previous;}
   }
 }
