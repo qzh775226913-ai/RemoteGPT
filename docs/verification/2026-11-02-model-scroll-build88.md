@@ -11,3 +11,5 @@
 APK 包名 `app.remotessh`，versionName `1.1.1`、versionCode 88；签名校验通过，证书 SHA-256 `43ef05b33d4e9505eff7370a3a830af59dbc0b256c9925a12f76273e353f020a` 与既有包一致。制品为 4,870,714 字节，SHA-256 `c5d9f5bfd3ae7e75472dd934bb69970170c27f61889aec32ba3bee20a69ae91a`。
 
 Tailnet 地址 `http://100.109.221.115:8025/RemoteGPT-1.1.1-build88-Android-universal-debug.apk`；仅开放本包所在目录。本机无代理完整下载返回 HTTP 200，大小、SHA-256 及逐字节比较一致；未验证另一台设备的网络路径、覆盖安装或动画效果。
+
+按用户后续要求，将同一 APK 额外开放至局域网 `http://192.168.1.74:8025/RemoteGPT-1.1.1-build88-Android-universal-debug.apk`，服务仅绑定该局域网地址和本包目录。本机绕过代理完整下载返回 HTTP 200，4,870,714 字节，逐字节及 SHA-256 与原包一致；尚未从手机或其他设备验证局域网路径和安装。
