@@ -50,6 +50,18 @@ public class MediaTest {
     assertEquals("data:image/png;base64,abc", mcp.images.get(0));
   }
 
+  @Test public void generatedHistoryUsesInlineImageWhenItsSavedPathIsLaterRemoved() {
+    String png="iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB";
+    JSONObject event=Json.obj("id","generated","type","imageGeneration","savedPath","/gone/photo.png","result",png);
+    ChatItem item=ChatItem.from(event);
+    assertEquals("data:image/png;base64,"+png,item.images.get(0));
+    ThreadSnapshot snapshot=new ThreadSnapshot(Json.obj("thread",Json.obj("turns",new JSONArray()
+        .put(Json.obj("id","turn","items",new JSONArray().put(event))))));
+    assertNull(snapshot.failure);assertEquals(item.images,snapshot.turns.get(0).get(0).images);
+    ChatItem pathOnly=ChatItem.from(Json.obj("type","imageGeneration","savedPath","/gone/photo.png"));
+    assertEquals("/gone/photo.png",pathOnly.images.get(0));
+  }
+
   @Test public void resolvesRemoteDownloadsWithoutUsingAndroidFilesystem() {
     assertEquals("/mnt/data/report.pdf", MediaFiles.remotePath("sandbox:/mnt/data/report.pdf", "/work"));
     assertEquals("/work/中文 图.png", MediaFiles.remotePath("%E4%B8%AD%E6%96%87%20%E5%9B%BE.png", "/work"));

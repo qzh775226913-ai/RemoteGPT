@@ -77,8 +77,13 @@ public final class ChatItem {
         m.text = "生成图片";
         String saved = j.isNull("savedPath") ? "" : j.optString("savedPath");
         String result = j.optString("result");
-        if (!saved.isEmpty()) m.images.add(saved);
-        else if (!result.isEmpty()) m.images.add(result.startsWith("data:") || result.startsWith("https://") ? result : "data:image/png;base64," + result);
+        // Some servers return the exact image as well as a path that may later disappear.
+        boolean inline=result.startsWith("data:image/") || result.startsWith("iVBORw0KGgo") ||
+            result.startsWith("/9j/") || result.startsWith("UklGR");
+        if(inline || saved.isEmpty() && !result.isEmpty()) {
+          String mime=result.startsWith("/9j/")?"image/jpeg":result.startsWith("UklGR")?"image/webp":"image/png";
+          m.images.add(result.startsWith("data:") || result.startsWith("https://") ? result : "data:"+mime+";base64,"+result);
+        }else if(!saved.isEmpty())m.images.add(saved);
         break;
       case "commandExecution":
         m.text = j.optString("command", "运行命令");

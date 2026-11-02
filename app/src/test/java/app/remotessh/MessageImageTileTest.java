@@ -86,6 +86,15 @@ public class MessageImageTileTest {
     app.profile.host="another-host";assertNull(tile.cachedPreview());assertFalse(cached.isRecycled());
   }
 
+  @Test public void previouslyViewedImageSurvivesTheRemoteFileBeingRemoved() throws Exception {
+    AtomicInteger reads=new AtomicInteger();read((source,out,active)->{reads.incrementAndGet();out.write(png);});
+    tile.load();await(()->tile.loaded);assertNotNull(tile.preview.getDrawable());
+    tile.release();app.thumbnails.images.evictAll();
+    read((source,out,active)->{reads.incrementAndGet();throw new com.jcraft.jsch.SftpException(com.jcraft.jsch.ChannelSftp.SSH_FX_NO_SUCH_FILE,"No such file");});
+    tile.visible=true;tile.load();await(()->tile.loaded);
+    assertEquals(2,reads.get());assertNotNull("an exact cached image should still display",tile.preview.getDrawable());
+  }
+
   @Test public void reconnectRejectsLateImageAndLoadsUsingTheNewConnection() throws Exception {
     CountDownLatch started=new CountDownLatch(1),release=new CountDownLatch(1);AtomicInteger reads=new AtomicInteger();
     read((source,out,active)->{

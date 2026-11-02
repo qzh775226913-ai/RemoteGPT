@@ -128,6 +128,17 @@ final class MediaFiles {
     while (matcher.find() && result.size() < 12) if (!result.contains(matcher.group(2))) result.add(matcher.group(2));
     return result;
   }
+  static Map<String,String> imageScopes(List<ChatItem> items,String cwd,Profile profile,String thread) {
+    Map<String,String> scopes=new LinkedHashMap<>();
+    for(ChatItem item:items)for(String original:images(item)){
+      if(original==null || original.isEmpty())continue;
+      String source=original;
+      try{if(!source.startsWith("data:") && !source.startsWith("https://"))source=remotePath(source,cwd);}
+      catch(IllegalArgumentException ignored){}
+      if(source.startsWith("/"))scopes.put(source,scopes.containsKey(source)?"":ImageDiskCache.scope(profile,thread,item.id));
+    }
+    return scopes;
+  }
   static List<String> imageGallery(List<ChatItem> items,String cwd) {
     Set<String> sources=new LinkedHashSet<>();
     for(ChatItem item:items)for(String original:images(item)) {

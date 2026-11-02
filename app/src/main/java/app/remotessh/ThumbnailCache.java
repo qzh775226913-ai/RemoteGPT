@@ -6,6 +6,11 @@ import java.nio.charset.StandardCharsets;
 
 /** Bounded thumbnails shared across activity recreation; originals are loaded on demand. */
 final class ThumbnailCache {
+  private ImageDiskCache disk;
+  synchronized ImageDiskCache disk(android.content.Context context){
+    if(disk==null)disk=new ImageDiskCache(new java.io.File(context.getCacheDir(),"conversation-images"));
+    return disk;
+  }
   final LruCache<String,Bitmap> images=new LruCache<String,Bitmap>(8*1024*1024) {
     @Override protected int sizeOf(String key,Bitmap bitmap){return bitmap.getAllocationByteCount();}
     // A view may still display an evicted bitmap, so never recycle it here.

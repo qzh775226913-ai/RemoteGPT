@@ -23,6 +23,7 @@ final class MessageImageTile {
   private final ImageDialog.Reader reader;
   private final BooleanSupplier owner;
   private final String host, thread, cacheHost;
+  private String imageScope;
   private volatile int generation;
   volatile boolean visible;
   boolean loading, loaded;
@@ -46,7 +47,7 @@ final class MessageImageTile {
     this.reader=reader;
     this.itemId=itemId;this.source=source;this.row=row;
     host=app.profile==null?"":app.profile.id;thread=app.threadId;generation=app.connectionGeneration();
-    cacheHost=contextKey();
+    cacheHost=contextKey();imageScope=ImageDiskCache.scope(app.profile,thread,itemId);
     tile=ui.column();
     LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(multiple?0:-1,-2,multiple?1:0);
     tp.setMargins(0,ui.dp(6),ui.dp(multiple?6:0),ui.dp(6));tile.setLayoutParams(tp);
@@ -60,6 +61,8 @@ final class MessageImageTile {
     label.setOnClickListener(v->{app.main.removeCallbacks(retry);retryAt=0;attempts=0;load();});
     PressFeedback.apply(preview,ui.bg==android.graphics.Color.BLACK);PressFeedback.apply(label,ui.bg==android.graphics.Color.BLACK);
   }
+
+  void disableDiskCache(){imageScope="";}
 
   private String contextKey() {
     return app.profile==null?"":app.profile.id+":"+app.profile.host+":"+app.profile.port+":"+app.profile.user+":"+app.threadId+":"+itemId;
@@ -92,8 +95,11 @@ final class MessageImageTile {
         MediaFiles.check(active);
         String key=ThumbnailCache.key(cacheHost,source);Bitmap bitmap=app.thumbnails.images.get(key);
         if(bitmap==null) {
-          ByteArrayOutputStream bytes=new ByteArrayOutputStream();reader.read(source,bytes,active);
-          MediaFiles.check(active);bitmap=MediaFiles.decode(bytes.toByteArray(),640);
+          ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+          ImageDiskCache disk=app.thumbnails.disk(activity);
+          ImageSourceReader.read(reader,disk,imageScope,source,bytes,MediaFiles.IMAGE_LIMIT,active);
+          MediaFiles.check(active);byte[] original=bytes.toByteArray();bitmap=MediaFiles.decode(original,640);
+          disk.put(imageScope,source,original,active);
           if(!active.getAsBoolean()){bitmap.recycle();MediaFiles.check(active);}
           app.thumbnails.images.put(key,bitmap);
         }

@@ -86,6 +86,8 @@
       "ModelListScrollView",
       "ImageDialog",
       "ZoomImageView",
+      "ImageDiskCache",
+      "ImageSourceReader",
       "LoadingSpinner",
       "LiveProgressTextView",
       "FilePicker",

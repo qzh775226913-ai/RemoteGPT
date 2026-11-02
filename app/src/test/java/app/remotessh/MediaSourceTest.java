@@ -53,6 +53,28 @@ public class MediaSourceTest {
         MediaFiles.imageGallery(Arrays.asList(tool,view,user),"/work"));
   }
 
+  @Test public void imageCacheIdentityIncludesTheItemAndRejectsAmbiguousPaths(){
+    Profile profile=new Profile();profile.host="host";profile.user="user";
+    ChatItem first=new ChatItem("first","imageView","");first.images.add("file:///work/photo.png");
+    ChatItem unique=new ChatItem("unique","imageView","");unique.images.add("/work/other.png");
+    Map<String,String> single=MediaFiles.imageScopes(Arrays.asList(first,unique),"/work",profile,"thread");
+    assertEquals(ImageDiskCache.scope(profile,"thread","first"),single.get("/work/photo.png"));
+    assertEquals(ImageDiskCache.scope(profile,"thread","unique"),single.get("/work/other.png"));
+    ChatItem duplicate=new ChatItem("second","imageView","");duplicate.images.add("/work/photo.png");
+    Map<String,String> multiple=MediaFiles.imageScopes(Arrays.asList(first,duplicate,unique),"/work",profile,"thread");
+    assertEquals("",multiple.get("/work/photo.png"));assertFalse(multiple.get("/work/other.png").isEmpty());
+  }
+
+  @Test public void groupedImageCacheUsesTheSameIdentityAsTheVisibleTile(){
+    UiText.initialize(RuntimeEnvironment.getApplication());Profile profile=new Profile();profile.host="host";
+    ChatItem command=new ChatItem("cmd","commandExecution","ls");command.turnId="turn";
+    ChatItem image=new ChatItem("img","imageView","");image.turnId="turn";image.images.add("/work/photo.png");
+    List<ChatItem> shown=ToolActivityPresenter.present(Arrays.asList(command,image),"");
+    assertEquals(1,shown.size());assertEquals("activityGroup",shown.get(0).type);
+    Map<String,String> scopes=MediaFiles.imageScopes(shown,"/work",profile,"thread");
+    assertEquals(ImageDiskCache.scope(profile,"thread",shown.get(0).id),scopes.get("/work/photo.png"));
+  }
+
   @Test public void historyConversionUsesTheSameMediaRulesAsLiveItems() {
     JSONObject command=Json.obj("id","cmd","type","commandExecution","command",README_COMMAND);
     JSONObject photo=Json.obj("id","photo","type","agentMessage","text","![photo](/work/photo.png)");

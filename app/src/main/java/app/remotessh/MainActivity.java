@@ -43,7 +43,7 @@ public final class MainActivity extends Activity {
   private final Map<String, List<String>> mediaSources = new HashMap<>();
   private static final java.util.concurrent.ExecutorService mediaWorker = java.util.concurrent.Executors.newFixedThreadPool(2);
   private static final ThumbnailLoader thumbnailWorker = new ThumbnailLoader(2);
-  private String pendingDownload = "", pendingDownloadHost = "";
+  private String pendingDownload = "", pendingDownloadHost = "", pendingDownloadScope = "";
   private int pendingImageGeneration = -1;
   private String pendingImageHost = "", pendingImageThread = "", pendingImageProject = "";
 
@@ -143,6 +143,7 @@ public final class MainActivity extends Activity {
       input.setText(app.draftText);
       pendingDownload = saved.getString("download", "");
       pendingDownloadHost = saved.getString("downloadHost", "");
+      pendingDownloadScope = saved.getString("downloadScope", "");
       pendingImageGeneration = saved.getInt("imageGeneration", -1);
       pendingImageHost = saved.getString("imageHost", "");
       pendingImageThread = saved.getString("imageThread", "");
@@ -205,6 +206,7 @@ public final class MainActivity extends Activity {
     out.putString("draft", input.getText().toString());
     out.putString("download", pendingDownload);
     out.putString("downloadHost", pendingDownloadHost);
+    out.putString("downloadScope", pendingDownloadScope);
     out.putInt("imageGeneration", pendingImageGeneration);
     out.putString("imageHost", pendingImageHost);
     out.putString("imageThread", pendingImageThread);
@@ -1087,11 +1089,14 @@ public final class MainActivity extends Activity {
   private void showImage(String source,android.graphics.Bitmap preview,List<String> gallery) {
     if(imageDialog!=null)imageDialog.dismiss();
     int generation=app.connectionGeneration();String host=app.profile==null?"":app.profile.id,thread=app.threadId;
+    Map<String,String> scopes=MediaFiles.imageScopes(ToolActivityPresenter.present(app.displayItems(),app.turnId),
+        app.currentProject(),app.profile,thread);ImageDiskCache disk=app.thumbnails.disk(this);
     imageDialog=new ImageDialog(this,isDark(),source,preview,gallery,this::imagePreview,
-        (path,out,active)->app.readMedia(path,out,MediaFiles.IMAGE_LIMIT,active),
+        (path,out,active)->ImageSourceReader.read((name,destination,valid)->app.readMedia(name,destination,MediaFiles.IMAGE_LIMIT,valid),
+            disk,scopes.getOrDefault(path,""),path,out,MediaFiles.IMAGE_LIMIT,active),
         ()->!isDestroyed() && generation==app.connectionGeneration() && host.equals(app.profile==null?"":app.profile.id)
             && (Looper.myLooper()!=Looper.getMainLooper() || thread.equals(app.threadId)),
-        this::saveMedia);
+        path->saveMedia(path,scopes.getOrDefault(path,"")));
   }
 
   private void renderMedia(ChatItem item) {
@@ -1102,12 +1107,14 @@ public final class MainActivity extends Activity {
     mediaSources.put(item.id, sources);
     mediaTiles.removeIf(tile->{if(!tile.itemId.equals(item.id))return false;tile.release();return true;});
     row.removeAllViews();
+    Map<String,String> cacheScopes=MediaFiles.imageScopes(Collections.singletonList(item),app.currentProject(),app.profile,app.threadId);
     LinearLayout grid=null;int index=0;
     for(String original:sources) {
       String source=original;
       try{if(!source.startsWith("data:") && !source.startsWith("https://"))source=MediaFiles.remotePath(source,app.currentProject());}catch(Exception ignored){}
       if(index%2==0 || sources.size()==1){grid=row();row.addView(grid,new LinearLayout.LayoutParams(-1,-2));}
-      MessageImageTile tile=new MessageImageTile(this,app,ui,thumbnailWorker,item.id,source,row,sources.size()>1,()->mediaRows.get(item.id)==row,this::openConversationImage);mediaTiles.add(tile);grid.addView(tile.tile);index++;
+      MessageImageTile tile=new MessageImageTile(this,app,ui,thumbnailWorker,item.id,source,row,sources.size()>1,()->mediaRows.get(item.id)==row,this::openConversationImage);
+      if(cacheScopes.getOrDefault(source,"").isEmpty())tile.disableDiskCache();mediaTiles.add(tile);grid.addView(tile.tile);index++;
     }
     scheduleMedia();
   }
@@ -1119,13 +1126,15 @@ public final class MainActivity extends Activity {
     } else saveMedia(source);
   }
 
-  private void saveMedia(String source) {
+  private void saveMedia(String source) {saveMedia(source,"");}
+  private void saveMedia(String source,String scope) {
     try {
       String resolved = source.startsWith("data:") || source.startsWith("https://") ? source
           : MediaFiles.remotePath(source, app.profile == null ? "" : app.profile.cwd);
       if (pendingDownload.length() > 0) { toast(UiText.get(R.string.ui_please_complete_the_current_save_operation_first)); return; }
       pendingDownload = resolved;
       pendingDownloadHost = app.profile == null ? "" : app.profile.id;
+      pendingDownloadScope = scope;
       startActivityForResult(MediaFiles.saveIntent(resolved), 44);
     } catch (Exception e) { pendingDownload = ""; toast(ConnectionFailure.reason(e)); }
   }
@@ -1516,16 +1525,18 @@ public final class MainActivity extends Activity {
       return;
     }
     if (request == 44) {
-      String source = pendingDownload, host = pendingDownloadHost;
-      pendingDownload = "";
+      String source = pendingDownload, host = pendingDownloadHost, scope = pendingDownloadScope;
+      pendingDownload = "";pendingDownloadScope="";
       if (result == RESULT_OK && data != null && data.getData() != null && !source.isEmpty()) {
         android.net.Uri destination = data.getData();
+        ImageDiskCache disk=app.thumbnails.disk(this);int generation=app.connectionGeneration();
         toast(UiText.get(R.string.ui_saving_file));
         mediaWorker.execute(() -> {
           try (OutputStream out = getContentResolver().openOutputStream(destination, "wt")) {
             if (out == null) throw new IOException("无法写入所选位置");
             if (app.profile == null || !host.equals(app.profile.id)) throw new IOException("连接已切换，请重新下载");
-            app.readMedia(source, out, MediaFiles.DOWNLOAD_LIMIT);
+            ImageSourceReader.read((name,dest,active)->app.readMedia(name,dest,MediaFiles.DOWNLOAD_LIMIT,active),
+                disk,scope,source,out,MediaFiles.DOWNLOAD_LIMIT,()->generation==app.connectionGeneration());
             app.main.post(() -> toast(UiText.get(R.string.ui_file_saved)));
           } catch (Exception e) {
             try { android.provider.DocumentsContract.deleteDocument(getContentResolver(), destination); } catch (Exception ignored) { }
