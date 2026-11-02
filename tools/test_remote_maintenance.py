@@ -164,7 +164,9 @@ class MaintenanceTest(unittest.TestCase):
                                       start_new_session=True)
             try:
                 deadline = time.monotonic() + 5
-                while not (session / 'server.pid').exists() and time.monotonic() < deadline:
+                # The daemon writes server.pid before daemon.pid and socket; wait
+                # until all of its readiness conditions are actually observable.
+                while not m.live_host(session) and time.monotonic() < deadline:
                     time.sleep(.02)
                 self.assertTrue(m.live_host(session))
                 with patch.object(m, 'hosted_folder', return_value=session):
