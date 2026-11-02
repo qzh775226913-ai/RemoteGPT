@@ -8,7 +8,7 @@
 
 稳定发布版本：**1.0.67 / versionCode 69**。支持 Android 8+。
 
-开发测试版本：**1.1.1 / versionCode 88**；上方下载链接仍为 GitHub 稳定版。
+开发测试版本：**1.1.1 / versionCode 89**；上方下载链接仍为 GitHub 稳定版。
 
 ## 界面
 
