@@ -2,7 +2,7 @@
 
 适用版本：1.1.1（开发测试版）；需求 R-01 至 R-32。最后核对：2026-11-02。
 
-[输入气泡与图片修复验证](verification/2026-11-02-composer-and-media.md) · [1.1.1 build 81 验证](verification/2026-11-01-1.1.1-build81.md) · [最近公开发布](verification/2026-10-30-1.0.67-release.md)
+[详情、提问和实时增删验证](verification/2026-11-02-detail-and-question.md) · [输入气泡与图片修复验证](verification/2026-11-02-composer-and-media.md) · [1.1.1 build 81 验证](verification/2026-11-01-1.1.1-build81.md) · [最近公开发布](verification/2026-10-30-1.0.67-release.md)
 
 ## 自动化合并门槛
 
