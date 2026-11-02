@@ -14,4 +14,21 @@ RollingChangeNumbers 现在提供只转换已结束数字 span 的入口，保�
 
 在修复前的生产代码上，这六项均失败：离屏用例没有末帧失效请求，其余用例落定后仍有两个动态数字 span。修复后，同一六项及原数字加速／跨位数检查、Activity 的最终摘要／任务结束／详情不重建回归，共 11 项通过，失败／错误／跳过均为 0。API 26／35 的合成截图位于 `app/build/screenshots/summary-number-settled-api26.png` 和 `summary-number-settled-api35.png`，显示“已更改36个文件 +648 −648”完整落定。
 
-这些检查复现了漏掉末帧更新的客户端路径；Robolectric 的绘制和失效请求不能证明已在用户手机的硬件缓存中复现完全相同的偶发条件。完整验收及安装包交付将在独立版本阶段记录；手机覆盖安装和真实滚动效果仍待测试。
+这些检查复现了漏掉末帧更新的客户端路径；Robolectric 的绘制和失效请求不能证明已在用户手机的硬件缓存中复现完全相同的偶发条件。手机覆盖安装和真实滚动效果仍待测试。
+
+
+## 完整验收与 build 90 局域网交付
+
+修复代码独立提交 `531f4c3`；版本阶段 `4c0f43d` 将 versionCode 89 递增到 90 并同步当前文档，没有混入其他功能。以既有 Python 3.12 venv、JDK 17 和 Android SDK、与此前相同的内存限制运行：
+
+```sh
+.venv/bin/python tools/verify.py --offline
+```
+
+完整入口约 3 分 4 秒通过：Android 589 项，0 失败、0 错误、0 跳过；Python 62 项，结构、35 个图标、数学字形、合成 SSH/SFTP、APK 构建全部通过。Lint 24 Warning、0 Error/Fatal，数量与 build 89 一致。没有使用真实 Codex 凭据、调用真实模型或重启生产任务。
+
+APK 仍为 app.remotessh、versionName 1.1.1，versionCode 90；大小 4,865,870 字节，SHA-256 `1b2619e7c575b4b07a083f33422d497f5d0ea79b97a60927441fcc51b9effba8`。签名校验通过，证书 SHA-256 `43ef05b33d4e9505eff7370a3a830af59dbc0b256c9925a12f76273e353f020a` 与此前一致。ZIP 内没有 Python 字节码缓存，远端脚本与许可／贡献文件和源码一致。
+
+复用仅绑定本机局域网接口 192.168.1.74:8025、只包含 APK 的既有独立下载目录，保留 build 89：[下载 build 90](http://192.168.1.74:8025/RemoteGPT-1.1.1-build90-Android-universal-debug.apk)。本机绕过代理完整下载返回 HTTP 200，MIME 正确，大小、SHA-256 及逐字节比较均与新构建一致；工作区文档路径返回 404。下载副本与服务元数据保存在忽略的 dist 中，未纳入源码。没有发布 GitHub Release 或部署远端代码。
+
+真实手机的局域网路径、覆盖安装及用户所示偶发动画效果尚待复测；自动化通过不能替代设备与真实服务验收。
