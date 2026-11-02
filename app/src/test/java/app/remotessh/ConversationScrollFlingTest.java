@@ -76,6 +76,26 @@ public class ConversationScrollFlingTest {
     } finally {owner.pause().stop().destroy();}
   }
 
+  @Test public void footerOffsetDuringFlingDoesNotEndScrollingEarly(){
+    ActivityController<Activity> owner=Robolectric.buildActivity(Activity.class).setup();
+    try{
+      Activity activity=owner.get();ConversationScrollView scroll=new ConversationScrollView(activity);
+      View timeline=new View(activity);timeline.setMinimumHeight(5000);
+      scroll.addView(timeline,new ScrollView.LayoutParams(-1,-2));activity.setContentView(scroll);layout(scroll);
+      scroll.follow();scroll.pin();int oldBottom=scroll.getScrollY();
+      scroll.scrollTo(0,oldBottom-300);assertFalse(scroll.isFollowing());scroll.fling(1200);
+      // Expansion reserves more bottom space while a visual offset is corrected.
+      scroll.setPadding(0,0,0,400);layout(scroll);
+      scroll.preserveVisualOffset(300);scroll.preserveVisualOffset(-300);
+      int before=scroll.getScrollY();
+      for(int i=0;i<12;i++){
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(16));scroll.computeScroll();
+      }
+      assertTrue("the in-progress fling should continue after footer layout",scroll.getScrollY()>before+50);
+      assertFalse("a layout correction must not force following",scroll.isFollowing());
+    }finally{owner.pause().stop().destroy();}
+  }
+
   private static void layout(View view){
     view.measure(View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(400,View.MeasureSpec.EXACTLY));
     view.layout(0,0,600,400);

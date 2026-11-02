@@ -176,7 +176,8 @@ public final class ConversationScrollView extends ScrollView {
   }
   @Override protected void onScrollChanged(int x, int y, int oldX, int oldY) {
     boolean atLatest=nearBottom();
-    if(flinging && flingDirection>0 && (atLatest ||
+    // Temporary layout and visual-offset corrections are not fling progress.
+    if(flinging && !layingOut && !pinning && flingDirection>0 && (atLatest ||
         y>=flingLatestLimit-2*getResources().getDisplayMetrics().density))flingReachedLatest=true;
     if (!layingOut && !pinning) following = atLatest || (flinging && flingDirection>0 && flingReachedLatest);
     boolean previous=userScrollCallback;
