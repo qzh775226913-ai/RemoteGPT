@@ -23,7 +23,7 @@ public class ModelCatalogTest {
     assertEquals(2, requests.size());
     assertEquals(3, result.length());
     assertEquals("gpt-6.1-sol", ModelOptions.id(result.getJSONObject(1)));
-    assertEquals("GPT-6.1 Sol", ModelOptions.displayName(result, "gpt-6.1-sol"));
+    assertEquals("6.1 Sol", ModelOptions.displayName(result, "gpt-6.1-sol"));
     assertEquals("future-model-99", ModelOptions.id(result.getJSONObject(2)));
   }
   @Test public void preservesNewEffortsAndServerOrdering() {

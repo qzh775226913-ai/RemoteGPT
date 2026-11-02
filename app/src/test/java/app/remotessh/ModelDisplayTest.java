@@ -17,9 +17,18 @@ public class ModelDisplayTest {
     JSONArray models=new JSONArray().put(Json.obj("model","gpt-a","displayName","GPT-Astra"))
         .put(Json.obj("model","other","displayName","Other GPT-Model"));
     assertEquals("Astra",ModelOptions.composerName(models,"gpt-a"));
-    assertEquals("GPT-Astra",ModelOptions.displayName(models,"gpt-a"));
+    assertEquals("Astra",ModelOptions.displayName(models,"gpt-a"));
     assertEquals("Other GPT-Model",ModelOptions.composerName(models,"other"));
     assertEquals("gpt-unknown",ModelOptions.composerName(models,"gpt-unknown"));
+  }
+  @Test public void modelNameKeepsRemoteSpacesAndHyphensInEveryDisplay() {
+    JSONObject terra=Json.obj("model","gpt-6.1-terra","displayName","GPT-6.1 Terra");
+    JSONArray models=new JSONArray().put(terra).put(Json.obj("model","sol","displayName","GPT-6.1-Sol"));
+    assertEquals("6.1 Terra",ModelOptions.displayName(models,"gpt-6.1-terra"));
+    assertEquals("6.1 Terra",ModelOptions.composerName(models,"gpt-6.1-terra"));
+    assertEquals("6.1-Sol",ModelOptions.displayName(models,"sol"));
+    assertEquals("GPT-6.1 Terra",terra.optString("displayName"));
+    assertEquals("gpt-6.1-terra",ModelOptions.id(terra));
   }
   @Test public void effortNamesStayEnglishAcrossAllInterfaceLanguages() {
     RemoteApp app=(RemoteApp)RuntimeEnvironment.getApplication();
