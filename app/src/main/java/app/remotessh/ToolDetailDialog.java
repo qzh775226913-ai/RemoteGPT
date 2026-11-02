@@ -9,7 +9,6 @@ import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.BackgroundColorSpan;
-import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -57,10 +56,10 @@ final class ToolDetailDialog {
     LinearLayout reasoningBody=ui.column();
     if(reasoning)scroll.addView(reasoningBody,new ScrollView.LayoutParams(-1,-2));
     else if(code){
-      HorizontalScrollView horizontal=new HorizontalScrollView(activity);horizontal.setFillViewport(true);
-      horizontal.setBackgroundColor(ui.panel);horizontal.addView(detail,new HorizontalScrollView.LayoutParams(-2,-1));scroll.addView(horizontal);
+      ToolCodeViewport viewport=new ToolCodeViewport(activity,detail);viewport.setBackgroundColor(ui.panel);
+      layout.addView(viewport,new LinearLayout.LayoutParams(-1,0,1));
     }else scroll.addView(detail,new ScrollView.LayoutParams(-1,-2));
-    layout.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));dialog.setContentView(layout);
+    if(!code)layout.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));dialog.setContentView(layout);
     Window window=dialog.getWindow();if(window!=null){window.setBackgroundDrawable(new ColorDrawable(ui.bg));window.setGravity(Gravity.CENTER);}
     layout.setFitsSystemWindows(true);dialog.show();
     if(window!=null)window.setLayout(wide?ui.dp(720):ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT);

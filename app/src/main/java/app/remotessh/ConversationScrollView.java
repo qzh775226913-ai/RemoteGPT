@@ -17,7 +17,7 @@ public final class ConversationScrollView extends ScrollView {
   private boolean following = true, layingOut, pinning;
   private View horizontalGesture;
   private boolean handlingUserScroll, flinging, userScrollCallback, flingReachedLatest;
-  private int touchDirection,flingDirection;
+  private int touchDirection,flingDirection,flingLatestLimit;
   private float lastRawY;
   private long lastFlingMotion;
   private final int touchSlop;
@@ -88,6 +88,7 @@ public final class ConversationScrollView extends ScrollView {
   @Override public void fling(int velocityY) {
     flinging=true;flingDirection=Integer.signum(velocityY);
     flingReachedLatest=flingDirection>0 && following && nearBottom();
+    flingLatestLimit=latestLimit();
     lastFlingMotion=android.os.SystemClock.uptimeMillis();super.fling(velocityY);
   }
 
@@ -110,6 +111,11 @@ public final class ConversationScrollView extends ScrollView {
     int before=getScrollY();boolean previous=handlingUserScroll;
     handlingUserScroll=flinging;
     try{super.computeScroll();}finally{handlingUserScroll=previous;}
+    // The platform fling keeps the range it had when it started. Stop it as soon
+    // as it reaches that range; later footer and stream layouts may have enlarged it.
+    if(flinging && flingDirection>0 && flingReachedLatest){
+      stopFling();if(following)pin();return;
+    }
     if(getScrollY()!=before)lastFlingMotion=android.os.SystemClock.uptimeMillis();
     else if(android.os.SystemClock.uptimeMillis()-lastFlingMotion>100){
       boolean reached=flingReachedLatest;flinging=false;flingReachedLatest=false;
@@ -125,9 +131,15 @@ public final class ConversationScrollView extends ScrollView {
     // that horizontal gesture while still letting Android update focus normally.
     return horizontalGesture != null ? 0 : super.computeScrollDeltaToGetChildRectOnScreen(rect);
   }
+  private int latestLimit(){
+    return getChildCount()==0?0:Math.max(0,getChildAt(0).getHeight()+getPaddingTop()+getPaddingBottom()-getHeight());
+  }
   public boolean nearBottom() {
-    return getChildCount() == 0 || getChildAt(0).getHeight() + getPaddingTop()
-        + getPaddingBottom() - getHeight() - getScrollY() <= 2 * getResources().getDisplayMetrics().density;
+    return getChildCount()==0 || latestLimit()-getScrollY()<=2*getResources().getDisplayMetrics().density;
+  }
+  void preserveVisualOffset(int amount){
+    boolean previous=pinning;pinning=true;
+    try{scrollTo(getScrollX(),getScrollY()+amount);}finally{pinning=previous;}
   }
   @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
     int readingY = getScrollY();
@@ -145,7 +157,8 @@ public final class ConversationScrollView extends ScrollView {
   }
   @Override protected void onScrollChanged(int x, int y, int oldX, int oldY) {
     boolean atLatest=nearBottom();
-    if(flinging && flingDirection>0 && atLatest)flingReachedLatest=true;
+    if(flinging && flingDirection>0 && (atLatest ||
+        y>=flingLatestLimit-2*getResources().getDisplayMetrics().density))flingReachedLatest=true;
     if (!layingOut && !pinning) following = atLatest || (flinging && flingDirection>0 && flingReachedLatest);
     boolean previous=userScrollCallback;
     int direction=flinging?flingDirection:touchDirection;

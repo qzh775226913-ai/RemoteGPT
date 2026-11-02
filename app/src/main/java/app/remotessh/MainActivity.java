@@ -399,6 +399,7 @@ public final class MainActivity extends Activity {
           jump.setVisibility(scroll.isFollowing() ? View.GONE : View.VISIBLE);
           if (scroll.isFollowing() && messageUpdatesPaused) scheduleRender();
           if(chrome!=null)chrome.onScroll(y,oy,scroll.userScrolling(),scroll.nearBottom());
+          if(footerMotion!=null)footerMotion.scrollChanged();
           scheduleMedia();
         });
     footer = column();

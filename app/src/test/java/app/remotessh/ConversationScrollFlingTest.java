@@ -42,6 +42,26 @@ public class ConversationScrollFlingTest {
     } finally {owner.pause().stop().destroy();}
   }
 
+  @Test public void growingBottomSpaceDoesNotMoveTheFinishLineOfAnExistingFling(){
+    ActivityController<Activity> owner=Robolectric.buildActivity(Activity.class).setup();
+    try{
+      Activity activity=owner.get();ConversationScrollView scroll=new ConversationScrollView(activity);
+      View timeline=new View(activity);timeline.setMinimumHeight(5000);
+      scroll.addView(timeline,new ScrollView.LayoutParams(-1,-2));activity.setContentView(scroll);layout(scroll);
+      scroll.follow();scroll.pin();int oldBottom=scroll.getScrollY();scroll.scrollTo(0,oldBottom-120);
+      assertFalse(scroll.isFollowing());scroll.fling(10000);
+      scroll.setPadding(0,0,0,240);layout(scroll);
+      scroll.scrollTo(0,oldBottom);
+      assertTrue("reaching the fling's original bottom must resume following",scroll.isFollowing());
+      scroll.computeScroll();assertTrue("the new footer space must also be reached",scroll.nearBottom());
+      for(int i=0;i<20;i++){
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(16));scroll.computeScroll();
+        assertTrue("old inertia must not pull the view back",scroll.nearBottom());
+        assertTrue(scroll.isFollowing());
+      }
+    }finally{owner.pause().stop().destroy();}
+  }
+
   @Test public void bouncingTowardLatestStaysLatchedUntilANewTouch(){
     ActivityController<Activity> owner=Robolectric.buildActivity(Activity.class).setup();
     try{

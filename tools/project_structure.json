@@ -69,6 +69,7 @@
       "ComposerRenderCache",
       "ComposerSurface",
       "ToolDetailDialog",
+      "ToolCodeViewport",
       "ToolActivityGroupView",
       "RollingChangeNumbers",
       "ToolInlineDetailView",

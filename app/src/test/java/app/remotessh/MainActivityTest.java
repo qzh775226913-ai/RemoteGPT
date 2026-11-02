@@ -1797,6 +1797,36 @@ public class MainActivityTest {
     assertTrue("the newest message must not sit behind the composer",lastPos[1]+last.getHeight()<=footerPos[1]);
     captureLaidOutView(content(),"fling-at-latest");
   }
+  @Test public void followingDuringComposerExpansionReservesSpaceWithoutFrameByFrameTimelineLayout() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;
+    app.threadId="frame-follow";app.turnId="running";app.busy=true;
+    app.draftText="one line\ntwo lines\nthree lines";app.draftFiles.add(new FileAttachment("notes.txt","/remote/notes.txt",10));
+    for(int i=0;i<40;i++)app.items.add(new ChatItem("msg-"+i,"agentMessage","Message "+i+"\nContent"));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));layoutContent();
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("scroll");field.setAccessible(true);
+    ConversationScrollView scroll=(ConversationScrollView)field.get(activity);
+    field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
+    ConversationChromeController chrome=(ConversationChromeController)field.get(activity);
+    field=MainActivity.class.getDeclaredField("footer");field.setAccessible(true);View footer=(View)field.get(activity);
+    field=MainActivity.class.getDeclaredField("messages");field.setAccessible(true);LinearLayout messages=(LinearLayout)field.get(activity);
+    chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    scroll.follow();scroll.pin();chrome.setCompact(false);
+    field=ConversationChromeController.class.getDeclaredField("composerAnimator");field.setAccessible(true);
+    android.animation.ValueAnimator motion=(android.animation.ValueAnimator)field.get(chrome);
+    int reserved=scroll.getPaddingBottom();
+    for(int i=0;i<25;i++){
+      motion.setCurrentPlayTime(i*8L);layoutContent();
+      assertEquals("a running follow must not remeasure the timeline for every frame",reserved,scroll.getPaddingBottom());
+      View last=messages.getChildAt(messages.getChildCount()-1);int[] lastPos=new int[2],footerPos=new int[2];
+      last.getLocationOnScreen(lastPos);footer.getLocationOnScreen(footerPos);
+      assertTrue("latest message must stay above the expanding footer at frame "+i,lastPos[1]+last.getHeight()<=footerPos[1]+2);
+    }
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    assertTrue(scroll.isFollowing());assertTrue(scroll.nearBottom());
+    assertEquals(0f,scroll.getChildAt(0).getTranslationY(),.01f);
+    assertEquals(footer.getHeight()+Math.round(8*activity.getResources().getDisplayMetrics().density),scroll.getPaddingBottom());
+  }
+
   @Test public void composerExpansionNeverOvershootsAndKeepsAttachmentVisibility() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="motion";
     app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));

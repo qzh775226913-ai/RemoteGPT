@@ -21,7 +21,8 @@ final class ConversationChromeController {
   private final TextView prompt;
   private final IconView enlarge;
   private final FrameLayout inputLayer, composerHost;
-  private final Runnable resizeInput,beginMotion,endMotion;
+  private final Runnable resizeInput,endMotion;
+  private final java.util.function.IntConsumer beginMotion;
   private boolean compact, large;
   private int accumulated, direction;
   private ValueAnimator headerAnimator, composerAnimator;
@@ -30,7 +31,7 @@ final class ConversationChromeController {
 
   ConversationChromeController(Activity activity, LinearLayout header, LinearLayout composer,
       EditText input, int foreground, int muted,
-      int panel, Runnable resizeInput,Runnable beginMotion,Runnable endMotion) {
+      int panel, Runnable resizeInput,java.util.function.IntConsumer beginMotion,Runnable endMotion) {
     this.activity=activity;this.header=header;this.composer=composer;this.input=input;
     this.resizeInput=resizeInput;this.beginMotion=beginMotion;this.endMotion=endMotion;
     LinearLayout parent=(LinearLayout)composer.getParent();
@@ -141,7 +142,6 @@ final class ConversationChromeController {
 
   private void animateComposer(boolean hide) {
     if(composerAnimator!=null){ValueAnimator old=composerAnimator;composerAnimator=null;old.cancel();}
-    beginMotion.run();
     int from=currentHeight(composerHost),fromWidth=currentWidth(composerHost);
     float fromNormal=composer.getVisibility()==View.GONE?0:composer.getAlpha();
     float fromPrompt=prompt.getVisibility()==View.GONE?0:prompt.getAlpha();
@@ -154,6 +154,7 @@ final class ConversationChromeController {
     contentParams.height=composerTargetHeight;composer.setLayoutParams(contentParams);
     int to=hide?dp(48):composerTargetHeight;
     int targetWidth=hide?Math.min(dp(206),fullWidth):fullWidth;
+    beginMotion.accept(to-from);
     prompt.setText(UiText.get(R.string.ui_send_message));prompt.setVisibility(View.VISIBLE);
     lp.height=from;lp.width=fromWidth;composerHost.setLayoutParams(lp);
     composer.setAlpha(fromNormal);prompt.setAlpha(fromPrompt);

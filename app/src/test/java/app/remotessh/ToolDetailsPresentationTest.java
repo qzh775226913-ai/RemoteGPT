@@ -64,6 +64,42 @@ public class ToolDetailsPresentationTest {
     } finally {owner.pause().stop().destroy();}
   }
 
+  @Test public void fullScreenCodeKeepsZoomAndCopyWhenTheServerUpdates(){
+    ActivityController<Activity> owner=Robolectric.buildActivity(Activity.class).setup();
+    try{
+      Activity activity=owner.get();UiText.initialize(activity);
+      DialogUi ui=new DialogUi(activity,Color.BLACK,Color.WHITE,Color.LTGRAY,0xff303030,Color.GRAY);
+      ChatItem command=new ChatItem("command","commandExecution","cat output.txt");
+      command.detail="first output";AtomicReference<String> copied=new AtomicReference<>();
+      ToolDetailDialog.show(activity,ui,false,command,()->command,copied::set);
+      Dialog dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+      View root=dialog.getWindow().getDecorView();ToolCodeViewport viewport=findViewport(root);assertNotNull(viewport);
+      viewport.measure(View.MeasureSpec.makeMeasureSpec(400,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(300,View.MeasureSpec.EXACTLY));
+      viewport.layout(0,0,400,300);viewport.zoom(1.7f,0,0,0,0);
+      command.detail="updated remote output";
+      org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(180));
+      assertEquals(1.7f,viewport.scaleFactor(),.001f);
+      TextView code=containing(viewport,"updated remote output");assertNotNull(code);assertTrue(code.isTextSelectable());
+      View copy=findByDescription(root,UiText.get(R.string.ui_copy));assertNotNull(copy);copy.performClick();
+      assertEquals("cat output.txt\n\nupdated remote output",copied.get());dialog.dismiss();
+    }finally{owner.pause().stop().destroy();}
+  }
+
+  private ToolCodeViewport findViewport(View view){
+    if(view instanceof ToolCodeViewport)return (ToolCodeViewport)view;
+    if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++){
+      ToolCodeViewport found=findViewport(((ViewGroup)view).getChildAt(i));if(found!=null)return found;
+    }
+    return null;
+  }
+  private View findByDescription(View view,String description){
+    if(description.contentEquals(view.getContentDescription()==null?"":view.getContentDescription()))return view;
+    if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++){
+      View found=findByDescription(((ViewGroup)view).getChildAt(i),description);if(found!=null)return found;
+    }
+    return null;
+  }
+
   @Test public void diffColorsRemainReadableInBothThemes(){
     for(int foreground:new int[]{Color.BLACK,Color.WHITE}){
       CharSequence text=ToolDetailDialog.highlight("+added\n-removed",true,foreground,Color.GRAY);
