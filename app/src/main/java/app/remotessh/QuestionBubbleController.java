@@ -85,6 +85,7 @@ final class QuestionBubbleController {
         .setNegativeButton(ConversationJournal.savedQuestion(next)?UiText.get(R.string.ui_skip_answer):UiText.get(R.string.ui_stop_task),
             (d,w)->{app.cancelQuestion(next);forget();close();})
         .setPositiveButton(UiText.get(R.string.ui_send),null).create();
+    dialog.setTitle(UiText.get(R.string.ui_additional_information));
     dialog.show();
     android.widget.Button send=dialog.getButton(AlertDialog.BUTTON_POSITIVE);
     form.onChanged(()->send.setEnabled(form.ready()));

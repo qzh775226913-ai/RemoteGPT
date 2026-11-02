@@ -856,7 +856,7 @@ public class MainActivityTest {
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
     assertEquals(View.GONE, ((View) card.getParent()).getVisibility());
     assertNull(find(details.getWindow().getDecorView(), "正在等待思考摘要…"));
-    assertNotNull(find(details.getWindow().getDecorView(), "远端未提供此思考项的摘要。部分思考项可能没有可显示的摘要。"));
+    assertNotNull(find(details.getWindow().getDecorView(), "暂无摘要"));
     reasoning.detail = "远端随后返回摘要"; app.changed();
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
     assertEquals(View.VISIBLE, ((View) card.getParent()).getVisibility());
