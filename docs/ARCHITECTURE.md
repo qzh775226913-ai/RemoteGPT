@@ -1,113 +1,76 @@
 # 架构、职责与状态归属
 
-当前链路：原生 Android 界面 → 应用协调层 → SSH 上的 JSON-RPC → 可选 Python 持久托管 → 远端 Codex App Server。
+当前链路：原生 Android Java 界面 → 应用协调层 → SSH 上的 JSON-RPC → 可选 Python 持久托管 → 远端 Codex App Server。
+
+本文件说明修改应放在哪里及必须保留的约束。具体界面尺寸、限额和产品行为以 [REQUIREMENTS.md](REQUIREMENTS.md) 为准；逐次修改与执行结果在 `docs/verification/`，不构成新需求。
 
 ## 模块边界
 
-| 模块 | 入口及职责 |
+全部主 Java 文件的唯一模块归属及规模上限见 [模块登记](../tools/project_structure.json)。MainActivity 和 RemoteApp 接近上限时应提取职责，不提高预算。
+
+| 职责 | 所有者与协作关系 |
 | --- | --- |
-| 界面生命周期 | `MainActivity` 管理页面、消息渲染、系统选择器和 Activity 回调；`BubbleActivity` 管理绑定会话的气泡页面 |
-| 独立窗口 | `ProfileEditor` 管理连接草稿／凭据表单／私钥导入；`ModelPicker` 管理模型／强度／速度选择及监听器；`DialogUi` 保持聊天窗口的原有样式与触摸行为 |
-| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 以实际文字墨迹与布局基线计算光学居中并保留横向阅读手势，`AppIcons` 将摘要矢量符号对齐同一墨迹中心，普通行内图标按布局行居中；`ToolActivityPresenter` 按同一回合和正文边界组合思考与相邻事件并标记运行状态，`DiffSummary` 从服务器 diff 计数，`ToolActivityGroupView` 在气泡内绘制二级折叠，`RollingChangeNumbers` 仅在实际数值改变时对旧值／新值做有界合并、加减速和轻微纵深滚动，连续更新缩短动画，结束只失效数字而不重建详情；`ToolInlineDetailView` 直接按思考正文、通知、命令和文件 diff 分别排版完整内容，`ToolDetailDialog` 以全屏内容区展示同一原始内容，移除时释放更新回调；`ToolCodeViewport` 对可选择的原生代码文字进行以双指中心为锚点的视觉缩放和双轴惯性拖动，长按选择交由文字控件，缩放不重排代码；`ConversationChromeController` 使用独立容器叠放收起提示与正常输入区，分别跟踪顶部和输入区目标状态；无消息的新对话主页按滚动方向变化顶部但输入区保持展开，开始对话后输入区恢复滚动收缩；提示和放大按钮不参与正常输入区测量；`ComposerSurface` 以复用的渐变着色器绘制细边及内凹明暗，不改变内容内边距；`ComposerRenderCache` 在 Activity 内按连接／对话及实际内容跳过无变化的附件与待发栏重建，失败后不提交快照；`ConversationFooterMotion` 在动画开始时一次性预留最大输入区高度，使用消息和跳转按钮位移跟随输入区，结束后恢复准确留白；`ConversationOverlayLayout` 固定接续按钮的跨状态尺寸；`ConversationScrollView` 在手指按住时补偿顶部动画造成的屏幕位置变化，并将内部触摸坐标转换到起始参考系；它按屏幕坐标的真实手势和惯性方向筛选滚动；向最新方向的惯性到达开始时的底部范围后停止旧惯性并跟随最新范围，过滤回弹和布局复位；主动跟随先通过原生滚动视图的触摸取消路径结束旧惯性，新触摸解除锁定，并在排除按钮、链接和滑动后将阅读区域单击交给控制器展开；消息、问答、图像预览和缩略图各有独立组件 |
-| 公式排版 | `MathMarkup` 扫描正文显式公式标记并保护代码／货币；`MathRenderer` 在单 worker 中执行有界本地 TeX 排版与缓存；`MathSpan` 保持原文并提供行内基线；`MathContentView` 拥有正文块的异步 generation、可滚动独立公式和 detach／reattach 清理，不接触会话选择 |
-| 应用协调 | `RemoteApp` 维持连接、初始化、恢复、事件路由和当前选中状态的兼容接口；全局串行的 loadingThread 附带当前请求是否为接续的瞬态标志，界面仅对所属选中会话显示接续进度；它不再实现窗口表单、完整发送流程或附件传输流程 |
-| 会话容器 | `ConversationStore` 是会话缓存和临时背景分发的唯一所有者；`ConversationState` 保存每条会话的消息、草稿、权限／速度、运行状态及待答表单的非秘密草稿和最小化状态 |
-| 轮次／队列 | `TurnController` 管理创建／发送／引导轮次、一条待发消息及其附件、可自动发送标记；请求仍走统一回调路由 |
-| 附件 | `AttachmentController` 管理批量上传、媒体读取、连接变化取消和主线程结果提交；`MediaFiles`／`FileAttachment` 定义格式、路径与限额 |
-| 消息图片 | `MessageImageTile` 拥有可见缩略图、读取任务与有界重试；同服务器／会话的连接 generation 变化时释放旧任务并重新绑定，主线程核对作用域后才显示结果。消息区暂停更新仍刷新图片连接状态；`ThumbnailLoader`／`ThumbnailCache` 分别提供任务调度和共享有界缓存；`ImageDialog` 拥有本次预览的对话图片快照、当前位置、加载 generation 与原图释放；`ZoomImageView` 负责适配／缩放拖动与边缘翻页手势 |
-| 目录／会话偏好 | `DirectoryController` 管理目录操作的 worker 和迟到结果；`ConversationPreferences` 管理稳定存储键及权限／速度／问答历史快照 |
-| 会话列表与标题 | `ThreadDirectory` 管理远端标题搜索、分页、重命名和连接范围内的本机置顶偏好；远端标题仅在成功响应后写入缓存 |
-| 上下文 | `ContextUsage` 保存单会话最近一次服务器 token 用量及窗口；`ContextRingView` 仅绘制本会话的估算比例；`ContextUsagePanel` 绘制精简的使用量图形；`ContextMenuPanel` 拥有上下文详情和手动压缩确认窗口；`ContextCompactionController` 在已确认的只读历史中等待接续及重放完成，并按会话／连接取消待发压缩 |
-| 对话信息 | `ConversationHub` 拥有顶部标题的信息入口、项目／会话详情及远端 Skills、MCP 只读查询；`CapabilityDirectoryDialog` 拥有分组名称列表、搜索和条目详情窗口；`McpServerDetail` 格式化单个服务的完整关键目录 |
-| 传输／协议 | `SshTransport` 管理 SSH、SFTP 和辅助通道；`RpcClient` 管理 JSON-RPC framing、请求匹配和事件分发，不操作 Android View |
-| 连接诊断 | `ConnectionPreflight` 生成无凭据输出的环境探测并解析分类失败、检查公开账户状态；`ConnectionSetupUi` 拥有用户显式关闭持久模式的确认窗口。探测有超时／输出上限，关闭或连接 generation 变化使后续初始化无效 |
-| 强制权限审批 | `ForcedApprovalController` 调度已显式授权的命令／文件审批，按会话和连接 generation 隔离、去重和失败恢复；State 内的 Burst 用单调时钟记录实时唯一权限请求、保留最近 3 个时间点，并在第 4 个到达时判断 30 秒窗口资格。授权与窗口均由现有 `ConversationState.capture/apply` 捕获该 State，不保存到偏好；重放不计数，成功应用新权限结束授权时清空窗口。`PermissionPicker` 拥有权限列表／警告窗口并释放监听器，只在已确认启用期间显示强制允许项；下一轮请求捕获权限选择与授权 revision，成功响应只能结束它实际应用的授权 |
-| 结构化提问 | `QuestionForm` 显示可选择的题目与选项并过滤秘密答案快照；`QuestionBubbleController` 拥有窗口、输入框定位和连接／会话／请求校验，`QuestionBubbleMotion` 仅使用有界内存快照动画并在结束或取消后释放。`QuestionUiState` 经 ConversationState capture/apply 与 ConversationStore 主线程分发按会话隔离 |
-| 配置／数据 | `Vault`／`Profile` 保存连接；模型、额度、权限、版本、线程快照与问答日志由对应类解析 |
-| 后台／通知 | `ConnectionService` 维持前台服务与唤醒锁；`LiveStatusNotifications` 及 `LiveActionReceiver` 处理会话通知、请求身份和点击路由 |
-| 远端资产 | `remote_session.py` 托管 Codex 进程、SQLite 事件及重放；`conversation_state.py` 有界读取问答日志；`remote_maintenance.py` 检查／更新／明确重启 |
+| 页面与系统回调 | `MainActivity` 组合页面、消息组件和系统选择器；`BubbleActivity` 管理绑定会话的气泡页面 |
+| 应用协调 | `RemoteApp` 负责连接、初始化、恢复、事件路由，以及供现有 UI／通知读取的选中会话字段；发送、附件和独立窗口交给对应模块 |
+| 会话状态 | `ConversationStore` 唯一管理缓存与临时背景分发；`ConversationState.capture/apply` 对选中字段做显式快照；`QuestionUiState` 保存非秘密表单草稿 |
+| 轮次与附件 | `TurnController` 管理创建、发送、引导及每会话一条待发消息；`AttachmentController` 管理上传和有界媒体读取；`MediaFiles`／`FileAttachment` 定义格式、路径与限额 |
+| 目录与偏好 | `DirectoryController` 负责 SSH 目录 I/O；`ThreadDirectory` 负责标题搜索、分页、重命名和本机置顶；`ConversationPreferences` 负责既有权限／速度／问答存储键及快照 |
+| 协议传输 | `SshTransport` 管理 SSH、SFTP、辅助通道及资产安装；`RpcClient` 负责 framing、请求匹配和事件分发，不操作 View |
+| 连接诊断 | `ConnectionPreflight` 生成有界无凭据探测、检查公开账户状态；`ConnectionFailure` 分类原始失败；`DiagnosticText` 保留客户端诊断的显示来源；`ConnectionSetupUi` 拥有关闭持久模式的确认窗口 |
+| 模型与权限 | `ModelCatalog` 原子合并完整分页；`ModelOptions`、`ModelSettings`、`ServiceTierOptions` 解析远端能力；连接级 `ModelRefreshScheduler` 定时刷新；`ForcedApprovalController` 调度已明确授权的权限审批 |
+| 独立窗口 | `ProfileEditor` 拥有连接草稿和私钥导入；`ModelPicker`／`PermissionPicker` 拥有各自窗口与监听器；`DialogUi` 提供统一窗口、点击反馈和有界说明区 |
+| 导航与上下文 | `RemoteBrowser`／`DirectoryPicker`／`RemoteScreens` 组合导航；`ConversationHub`、`CapabilityDirectoryDialog`、`McpServerDetail` 拥有详情与只读能力查询；`ContextUsage` 经会话快照隔离，`ContextCompactionController` 管理待发压缩，`ContextMenuPanel` 拥有确认窗口 |
+| 输入区与滚动 | `ConversationChromeController` 管理顶部／输入区目标状态；`ConversationFooterMotion` 协调动画空间和位移；`ConversationScrollView` 管理手势、惯性与跟随；`ConversationOverlayLayout` 固定接续按钮尺寸；`ComposerSurface` 绘制表面，`ComposerRenderCache` 跳过无变化的控件重建 |
+| 消息与执行详情 | `ChatItem` 保留原文和轮次；`InteractionHistory` 合并问答呈现；`ToolActivityPresenter` 分组，`DiffSummary` 统计实际 diff；`ToolActivityGroupView`、`ToolInlineDetailView`、`ToolDetailDialog` 呈现详情；`ToolCodeViewport` 管理代码缩放，`RollingChangeNumbers` 只动画变化的数字 |
+| 结构化问题 | `QuestionForm` 显示表单并过滤秘密快照；`QuestionBubbleController` 拥有窗口、作用域校验和输入框定位；`QuestionBubbleMotion` 拥有有界动画快照并释放 |
+| 正文、公式与表格 | `MessageBodyView` 拆分代码／正文；`Markdown`、`MathMarkup`、`TableMarkup` 解析；`MathRenderer` 在有界独立 worker 排版，`MathContentView` 管理异步 generation；`TableContentView` 复用单元格与整表横向滚动；`MathDrawable`／`MathGlyphs` 隔离引擎绘制与字体兼容 |
+| 图片 | `MessageImageTile` 管理可见加载、重试和作用域；`ThumbnailLoader`／`ThumbnailCache` 提供有界共享缩略图；`ImageDialog` 拥有冻结的画廊列表、任务和原图缓存；`ZoomImageView` 管理缩放／边缘翻页；`ImageSourceReader`／`ImageDiskCache` 提供精确作用域的缺失文件回退 |
+| 后台通知 | `ConnectionService` 维持前台服务、唤醒锁和会话快捷入口；`LiveStatusNotifications`／`LiveActionReceiver` 管理会话通知与请求身份路由 |
+| 语言与图标 | `AppLanguage` 管理显示偏好和 Activity 刷新；`UiText`／`UiPresentation` 负责明确来源的 UI 显示；图标由 `tools/icon_spec.json` 生成 |
+| 远端资产 | `remote_session.py` 托管进程、SQLite 事件和重放；`conversation_state.py` 有界读取问答元数据；`remote_maintenance.py` 检查、更新和明确重启 |
 
-所有主 Java 文件的模块归属及规模上限登记在 [模块登记](../tools/project_structure.json)。
+## 状态生命周期与线程
 
-`DialogUi` 和 `RemoteScreens` 分别提供聊天窗口与导航页面的 UI 组件。`DialogUi` 的有界信息窗口限制长说明区高度并保留原生操作栏，长内容只在说明区内滚动。
-
-## 三种状态生命周期
-
-| 生命周期 | 示例 | 约束 |
+| 生命周期 | 内容 | 约束 |
 | --- | --- | --- |
-| 连接级 | SSH/RPC、连接 generation、登录初始化、恢复队列、全局模型目录 | 换连接使旧异步结果无效；不可保存为某条会话的状态 |
-| 会话级 | threadId/turnId、消息、草稿、审批、权限／速度选择、busy/readOnly、问答历史 | 由 `ConversationState` 和 `ConversationStore` 隔离；后台结果按目标 threadId 分发 |
-| 会话级上下文 | 最近 `thread/tokenUsage/updated`、模型窗口和估算比例 | `ContextUsage` 经 `ConversationState.capture/apply` 隔离；连接切换清空，账户额度仍独立 |
-| 界面级 | View、Dialog、滚动位置、选择器待处理标识、可见缩略图 | Activity 拥有并清理；不能让旋转重启远端，也不能把销毁窗口的监听器留下 |
+| 连接级 | SSH/RPC、generation、初始化、恢复队列、模型目录和刷新定时器 | 换连接使旧任务无效，不属于某条会话 |
+| 会话级 | threadId/turnId、消息、草稿／附件、运行状态、审批、权限／速度、问答、上下文用量和错误诊断来源 | 经 ConversationStore 和 ConversationState 隔离；后台结果按目标 threadId 分发 |
+| 界面级 | View/Dialog、滚动位置、选择器待处理标识、画廊列表和临时原图 | 窗口／Activity 拥有并释放；旋转不重启 SSH；不把 View 存入会话 |
 
-附件上传批次目前属于连接上的串行操作，上传／创建／恢复中的短暂切换限制是现有行为；不能简单移除这些限制。
+会话容器的读写及作用域切换均须在主线程。`ConversationStore.dispatch` 保存选中会话、应用目标、执行动作，再在 finally 中保存目标并恢复选择、项目和最后会话；最外层恢复后才发布合并变化。嵌套与异常不能暴露临时选择。
 
-## 会话分发与兼容接口
+新增会话字段必须同时更新 ConversationState 声明、capture/apply，验证 A/B 隔离、异常恢复、重放和重连。兼容字段与快照并存是已知技术债，不另建第二套会话缓存。附件批次属于连接上的串行操作，现有上传／创建／恢复切换限制不可直接移除。
 
-现有 UI 和通知读取 `RemoteApp` 的选中会话字段。该兼容接口通过 `ConversationState.capture/apply` 做显式快照；选中状态与会话快照同时存在。
+SSH 和文件 I/O 在 worker；回到主线程后核对 generation，必要时再核对传输实例、配置 revision、服务器和会话身份。worker 不读取临时选中状态、不更新 View。`RemoteApp.request` 捕获发起会话并通过 `inConversation` 分发回调；控制器复用此入口。
 
-`ConversationStore.dispatch` 按以下顺序运行：保存选中会话 → 应用目标会话 → 执行动作 → 在 finally 中保存目标并恢复选中会话 → 最外层结束后发布合并的变化。嵌套动作／异常也恢复选择、项目和最后会话。缓存的读写及作用域切换必须在主线程；后台分发期间不得让通知或 UI 看见临时选择。
+窗口拥有监听器、Handler 回调和异步任务，关闭／宿主销毁时释放。连接级模型刷新器由 RemoteApp 在握手成功后启动、断开时停止；每 30 秒复用已有读取入口，loading 标记防止重叠，旧 generation 和旧定时器无效。
 
-新增会话字段须同时更新 `ConversationState` 的声明、capture/apply，并验证 A/B 隔离、异常恢复和重连。切换入口统一使用 ConversationStore；相关技术债见 [维护规则](MAINTENANCE.md)。
+## 协议与恢复约束
 
-## 异步和协议规则
+- 浏览使用 `thread/read`，接续使用 `thread/resume`；恢复活动会话与只读历史分开处理。重放是同步屏障，不授权队列发送或审批。ThreadStart 的沙盒是配置枚举，TurnStart 是 tagged policy。
+- 待发消息按连接配置 ID 和 threadId 隔离。断开清除自动发送许可、保留进程内待发内容；不保证手机进程被杀后的恢复。
+- 强制允许的状态、审批频率窗口和 revision 经现有会话快照隔离，不持久化。只计实时唯一权限请求；下一轮成功只能结束它提交时捕获的权限选择和授权 revision，不能清除后来的授权。
+- `InteractionHistory` 只按明确调用／工具 ID、轮次和完整问题合并；在原调用附近放置卡片，不修改服务器原文。缺来源时保留进程内已观察位置，冷恢复只回退到原轮次，不挂到最新任务。秘密答案不存档，不从普通问句猜请求。
+- `item/fileChange/patchUpdated` 按会话、轮次和条目更新原始 diff，空 started 不覆盖先到补丁；已完成条目或错误轮次的迟到补丁无效。无法归属的整轮 diff 只用于最终汇总。完成快照保留 turnId，缺轮次的晚到事件优先沿用原条目归属。
+- SFTP 通道未打开时释放失败通道，在同一有效连接上间隔 500ms 最多重试一次。取消／断开终止重试，只重试建立通道，不重放已经开始的文件操作。
+- Python 托管保留基线并重放有序事件；新增客户端字段同时核对透传、基线和旧托管兼容。安装新脚本不会自动替换运行中的旧进程；主机／进程崩溃不保证任务继续。
 
-- SshTransport 打开 SFTP 通道遇到 `channel is not opened.` 时，先释放失败通道，在同一有效连接上间隔 500ms 最多重试一次；关闭／断连／取消终止重试。重试边界仅为通道建立，不重放 put／rename 等文件操作，不重建 SSH 或重启远端任务。
-- SSH／文件 I/O 在 worker 执行；结果回到主线程。检查 generation，以及必要的传输实例、配置 revision、服务器／会话身份，迟到结果无效。
-- `RemoteApp.request` 捕获发起请求的会话，完成时通过 `inConversation` 路由。独立控制器必须复用该入口，不能自行给 RPC 回调更新当前页面。
-- 浏览用 `thread/read`，接续用 `thread/resume`；恢复活动会话与只读历史有不同路径。重放是同步屏障，不能当作实时完成来排队发送。
-- ThreadStart 的沙盒使用配置枚举，TurnStart 使用 tagged policy；不要互换格式或随意添加未知协议字段。
-- `TurnController` 的排队键包含连接配置 ID 和 threadId。断开清除自动发送许可，保留现有进程内待发内容；队列不保证手机进程被杀后的持久恢复。
-- Python 桥接会记录恢复基线；新增客户端字段须同时检查透传、基线和旧托管兼容。资产更新不会自动替换正在运行的旧进程。
-- 问答日志兼容只处理可确认身份的已接受请求；不从普通文字猜审批或表单，不输出未公开推理。
-- `InteractionHistory` 按调用／工具 ID 在原轮次中定位卡片，回答只改变呈现状态；同轮次多题按源消息位置匹配答案。缺失来源时按消息 ID 保留进程内已观察位置，冷恢复缺来源则限于原轮次的第一条最终回复／轮次末尾，不挂到最新任务。位置缓存属于已有会话级 InteractionHistory 实例，不增加持久化字段或修改远端历史。
-- `item/fileChange/patchUpdated` 按已有 `RemoteApp.event` 会话分发更新单条 `ChatItem.changes/detail`，接收服务器实际文件补丁，先到补丁可建立条目，之后空的 started 不覆盖；不把已完成条目或其他轮次的迟到补丁当作新数据。整轮 diff 仍用于最终汇总，不将无法归属的整轮数据猜测为某一次操作。
-- 完成快照的消息须保留对应 turnId；缺少轮次字段的晚到 item/completed 优先沿用原消息归属，不能借用新的活动轮次。
+## 绘制、媒体与语言边界
 
-## 持久化与安全
+正文先拆出代码，再解析显式公式和表格；无公式正文沿用原路径。TeX 使用固定版本 `ru.noties:jlatexmath-android:0.2.0` 和本地 Canvas／字体，无 WebView 或外部资源。View 自有 generation 丢弃迟到排版；`MathDrawable` 隔离文字／线框 Paint，`MathGlyphs` 由生成器提取原字体 U+00AD 轮廓。表格单个 HorizontalScrollView 滚动整表，横滑期间抑制父容器的焦点纵向位移，结束／取消／detach 释放；行统一绘制边线，避免交点和共享边重复叠加。
 
-公开 APK 分发由独立 `publish-release.yml` 与 `tools/publish_release.py` 承担。维护者使用临时注释标签提供制品 URL／摘要，源码不记录个人上传地址；流程校验安装包、许可、版本标签及对应完整 CI，先上传草稿附件再发布。发布前逐字核对 APK／安装 ZIP 的项目许可、贡献规则、组件与字体声明，并校验公式库对应源码摘要。只在显式发布任务中授予仓库写权限，不上传签名私钥，不重建不同签名的 APK；常规 Verify 仍为只读。
+顶部／输入区动画不能把布局补偿当作用户方向或惯性到底。FooterMotion 在开始时预留最大输入区高度，用位移跟随，结束恢复准确留白；ScrollView 用真实手势坐标处理方向、取消旧惯性和新触摸解锁。ComposerRenderCache 只在成功渲染后提交内容快照，不跨会话复用操作绑定。
 
-保留已有 Vault 加密格式、SharedPreferences 名称／键、包名和签名。权限／速度键对可能含私人值的启动身份做哈希；不得把命令或凭据直接打印到日志。重构数据格式必须有旧数据迁移和可逆性说明。
+图片来源规则由 MediaFiles 统一：显式结构化图片独立保留，正文链接先屏蔽代码／转义示例，工具摘要与思考不提取。画廊在主线程冻结当前会话已加载图片顺序和作用域；后台读取不依赖临时会话选择。原图缺失时只在同条目无部分输出且 SFTP 明确报告不存在后使用内嵌数据或私有副本；网络／权限失败不回退，重复路径不猜来源。缩略图为借用对象，不回收共享位图。缓存预算与重试次数见 R-15；任务取消、关闭和换作用域都释放窗口原图与临时文件。
 
-远端托管脚本按内容哈希安装到 `~/.remote-gpt`，目录 0700、脚本 0600。生产 SSH、主机信任、上游登录和活跃任务不属于自动化夹具。自动化夹具与生产远端相互独立。
+英文 strings.xml 是 UI 基准，另有九套本地化资源；Bundle 禁用语言拆分。`AppLanguage` 不改 JVM 默认 Locale 或会话，`UiText` 不持有 Activity。仅翻译应用来源的 UI，服务器文字、命令、错误与复制原文保留；`UiPresentation` 只适配已有内部状态，不能扩成任意文本词典。切换语言只刷新呈现，不触发业务授权；通知复用频道／快捷入口 ID，不重置用户设置。
 
-模型目录通过 `ModelCatalog` 完整分页原子替换，`ServiceTierOptions` 解析服务端速度 ID／名称／描述，`ModelPicker` 在打开时发现能力；连接级 `ModelRefreshScheduler` 由 RemoteApp 在握手成功后启动、断开时停止，每 30 秒复用既有目录／配置读取入口，按 generation 和任务身份隔离旧定时器，既有 loading 标记避免请求重叠。定时器不属于 Activity，不增加会话字段。旧目录别名兼容不能覆盖精确 ID，未知档位说明不推测性能。`MediaFiles.saveIntent` 为系统保存窗口提供匹配的 MIME／文件名，`MainActivity` 仍负责保存结果与传输，原始字节不变。
+DiagnosticText 随会话错误快照保存构造来源，最近错误来源随全局 lastError 保留；仅原始字符串引用匹配时重新本地化，不误翻译同内容服务器字符串。来源只保留显示所需的 threadId／path 和错误 data 文本；持久模式判断沿用原诊断。
 
-公式引擎为固定版本 `ru.noties:jlatexmath-android:0.2.0`，通过 Android Canvas 和本地字体绘制，不加载 WebView、脚本或远端资源。代码围栏在 MessageBodyView 层先拆分，仅正文进入公式扫描；普通无公式正文沿用原渲染路径。流式排版以 View 自己的 generation 丢弃旧结果，原始 ChatItem、ConversationState 和存储格式不变。第三方许可与源码入口见 [第三方组件](THIRD_PARTY.md)。
+## 持久化、资产与发布
 
-`MathDrawable` 通过公开 TeX API 绘制，隔离文字与线框的 Paint 状态；`MathGlyphs` 按原字体映射绘制被 Android 隐藏的 U+00AD 原始轮廓。轮廓在公式 worker 加载并发布后只读，不改变原始消息、会话或存储格式。
+保留 Vault 加密格式、SharedPreferences 名称／键、包名和签名。可能含私人值的启动身份只用于哈希键，不直接记录命令或凭据。数据格式变化需另行授权迁移和恢复方案。远端资产按内容哈希安装到 `~/.remote-gpt`，目录 0700、脚本 0600。
 
-`TableMarkup` 只解析 MessageBodyView 已拆出的正文，不解释代码围栏。`TableContentView` 以原生 TableLayout／TableRow 保持行列布局，单个 HorizontalScrollView 滚动整张表；其 GridScroll 在首个 MOVE 前暂阻父容器抢占，超过系统触摸阈值后按主要方向锁定／释放，结束／取消／detach 清理。横向手势期间由 ConversationScrollView 暂停焦点引发的自动纵向显示位移，保留正常焦点更新，释放后恢复显示请求；复用 MessageBodyView 显示单元格内的既有 Markdown／公式。MessageBodyView／MathContentView 的不可变字号与行距参数默认仍为正文 16sp／5dp，表格传入 14sp／1dp，公式排版复用该字号；TableContentView 的 Row 在整行内容绘制后统一绘制 1 物理像素浅色横纵分隔线与外框，分隔线和交点只绘制一次，Cell 不单独绘制边框，横向滚动条隐藏而手势保留；表头与内容同字号，仅表头加粗。TableContentView 自己拥有紧凑的单元格留白与列宽度量，不影响正文或持久状态。流式更新按表头及出现顺序复用表格和单元格，滚动位置仅归当前 View 所有，不写入会话缓存，不修改原文或协议。
+许可证与第三方字体声明是分发必需资产，不能按未使用资源删除。图标／数学字形由生成器维护，生成检查属于完整验证。Python 开发检查不应向资产目录写入字节码缓存。
 
-MediaFiles.images 仅扫描正文类型的图片链接，MarkdownImages 屏蔽代码与转义示例；显式结构化图片独立保留。ToolActivityPresenter 将折叠组子项的显式图片按事件顺序带入展示项，MainActivity 在组下方复用原有 MessageImageTile 与画廊入口，图片更新仍由当前会话／连接校验。命令／工具文本不参与链接提取，缩略图与画廊共用此来源规则，不改变原始消息或会话状态。
-
-生成图在 ChatItem 中保留保存路径及其内嵌数据，失效时按同一条目的路径回退；数据随既有 ConversationState 的消息列表隔离；带保存路径的生成图使用路径启动系统保存窗口，不把备用数据写入窗口状态。MessageImageTile 解码成功后在后台通过 ImageDiskCache 将远端原图首个副本存入私有缓存，按服务器／对话／消息／路径的哈希隔离，96 MiB 上限及最近使用淘汰；ImageSourceReader 始终先读当前远端，仅 SFTP 明确报告文件不存在、尚无部分输出时优先读取同条目内嵌数据，再读取副本。MediaFiles 在主线程生成消息级缓存作用域，重复路径不猜测原图作用域；全屏预览与保存复用同一作用域，系统可清理缓存，不修改会话存储或服务器文件。
-
-消息图片预览由 MediaFiles.imageGallery 在主线程从当前会话消息中按既有图片顺序收集、规范化路径并去重；MainActivity 仅连接消息／草稿入口和服务器、连接 generation、会话身份校验。图片列表和页号仅归 ImageDialog，不增加 ConversationState 字段；后台 I/O 不读取临时会话选择，主线程发布／保存时核对原会话。翻页取消并移除旧排队加载，窗口内按最近使用顺序保留已成功的原图与预览（最多 3 张、预览分配合计 16 MiB、原图文件合计 40 MiB），命中直接展示；超限淘汰与关闭时异步释放，迟到结果仍丢弃。两个 worker 分担当前页与未及时退出的旧任务／细节解码，最多两路执行。当前图显示后延迟 150ms，由窗口 Handler 在 worker 空闲时串行预下载、解码相邻前后各一张，优先最近翻页方向，不预取整个列表；后台最多一路，保留另一执行通道。预加载有独立 generation，翻到该邻图时提升同一任务为当前加载，其他翻页取消并移除过时预加载。预加载失败静默且不自动重试，当前页失败仍可点按重试；预算准入保护当前图与方向优先邻图，容量不足时跳过其他预取。所有队列／缓存修改和结果发布仍在主线程，关闭移除 Handler 回调及任务。关闭释放临时文件、原图及列表引用；MainActivity 在原连接／会话失效时关闭窗口释放缓存。原图文件长度在 ImageDocument 的 worker 构造阶段记录，预算检查不在主线程读磁盘。MessageImageTile.cachedPreview 仅为同作用域界面提供已有缩略图，借用而不回收。缩略图是借用对象，不能回收。
-
-## 界面语言
-
-`AppLanguage` 管理独立的 `language/tag` 显示偏好、系统首选语言解析和 Activity 生命周期；不改变 JVM 默认 Locale，也不写入会话状态。`UiText` 只接受编译期资源 ID，并持有应用来源的本地化 Resources，不持有 Context 或 Activity。英文基础资源和九套本地化资源存放于 Android res；UI 数量使用 plurals，日期／百分比显式使用所选 Locale。禁用 App Bundle 语言拆分，确保离线切换也具备完整资源；不增加语言下载库。
-
-`LanguagePicker` 使用原生单选窗口显示语言自称，窗口关闭／宿主销毁释放自己的生命周期监听。切换语言仅通知呈现监听器并重建现存 Activity，不调用会话事件分发、授权或传输入口。`UiPresentation` 在明确属于应用内部的状态字段和工具卡片标题处提供显示适配；原有状态字符串和历史标记保持不变，不对任意输入字符串、远端错误或消息执行通用翻译。新 UI 直接引用资源，禁止扩展为“遍历 View 替换文字”或对外部内容套词典。
-
-通知重绘签名含语言标识；现有频道仅更新名称，不删除频道、不重置用户设置。完成通知保留原始回复；无回复时在呈现时解析完成文案。语言选择不新增 ConversationState 字段，不改变 ConversationStore 主线程和异常恢复规则。
-
-模型面板的目录说明在首次绘制和状态监听回调中复用同一个 renderCatalogStatus，不直接显示内部状态字符串。推理强度档位名称集中在英文基础资源，标记 translatable=false，显示名称不随语言变化；动态可选项、顺序与协议 ID 仍由远端目录决定，未知 ID 原样保留。
-
-ConnectionService 记录每条会话最近发布的快捷入口名称；名称随语言或阶段变化时，复用原 shortcut ID 更新系统缓存，并沿用原延迟移除桌面动态入口的机制。该缓存仅属于通知服务，不写入会话状态或偏好。
-
-## 客户端诊断的本地化来源
-
-DiagnosticText 只在客户端构造连接／操作诊断时创建，保存原始诊断字符串与重新显示它所需的来源输入；原始异常消息、远端 RPC data 与 stderr 不经过翻译字典。ConnectionFailure 的原始格式、分类与环境检测仍可使用；显示层在来源对象与原始字符串引用相同时，才按当前语言重新呈现本地标题和指引，普通服务器字符串即使内容相同也不会误翻译。只快照显示需要的 threadId／path，RPC 错误数据保存为原始文本快照，不额外保留完整请求或消息内容。
-
-当前诊断来源随 errorDiagnostic 归属于会话，由 ConversationState.capture/apply 保存、恢复，并在原始错误已被其他内容替换时丢弃不匹配来源；最近错误的来源随原有全局 lastError 保留。所有读写沿用 ConversationStore 主线程分发。MainActivity 只做显示／复制连接，持久模式继续判断使用原始诊断，避免语言影响重连选择。
-
-ServiceTierOptions.choices 把“沿用远端默认”作为应用控制项置于远端档位列表之外；远端显式 default 不再过滤或重复插入，名称、说明与列表位置完整保留。旧目录缺少普通档时才补协议隐含的 Standard 控制。ModelCatalog 的 LinkedHashMap 继续保持分页首次出现的模型顺序，不以 isDefault 或名称排序。
-
-主页面输入区沿用线性布局和 `adjustResize`。Android 11+ 的窗口自行处理 Insets，根布局用系统栏和输入法底部边距的较大值留白；旧版保留原系统窗口 Insets 路径。根布局消费 Insets，避免子视图重复处理。
-输入框用草稿是否为空、焦点与输入法可见性控制空草稿一行／有字草稿失焦最多三行、输入时最多四行的高度限制，不修改草稿文本或会话状态。
-对话切换由 MainActivity 在刷新可见草稿前把焦点交给根视图并收起输入框；写入目标草稿后立即请求布局并在下一帧复核，避免历史对话初次显示沿用上一对话的实测高度。直接新建空对话也应用同一复位；不修改 ConversationStore 中的草稿归属。
-历史加载按钮沿用 DialogUi.action 的最小高度和反馈样式；MainActivity 使用专用的 8dp 水平／10dp 垂直内边距，不再固定 48dp 高度。外边距保持与消息列对齐，简短本地化文案仍由文字布局决定最终高度。
-全部非正文折叠摘要由 `DialogUi` 统一创建 `CompactSummaryTextView`，只在该类摘要上去除字体额外边距并收紧上下留白。该 View 从当前显示文字与实际 Paint 字体取得可见字形边界，在有限范围内补偿字体基线／下降部造成的视觉偏移；背景、点击区、展开详情与原文不移动。
+常规 Verify 只用合成回环 SSH，与生产凭据、任务和手机隔离。显式发布由 `publish-release.yml`／`tools/publish_release.py` 校验制品、许可、正式标签和完整 CI，先上传草稿再公开；只重分发原签名 APK，不上传私钥。执行说明见 [开发手册](DEVELOPMENT.md)，剩余技术债见 [维护规则](MAINTENANCE.md)。

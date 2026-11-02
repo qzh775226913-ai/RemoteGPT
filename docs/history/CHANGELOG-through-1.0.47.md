@@ -217,7 +217,7 @@
 
 完成会话恢复、运行状态、标题、询问弹窗、导航和紧凑通知的整体回归；额外修复旧端恢复 ID 被提前覆盖、跨会话历史重放触发排队发送、只读空闲残留待答状态、迟到快照覆盖新状态、旧端审批重复五个边界问题。
 
-逐项证据和真机验证边界见 [本对话验收记录](../../CONVERSATION_ACCEPTANCE.md)。128 项 Android 测试、4 项 Python 托管测试通过，构建和 Lint 无错误。
+逐项证据和真机验证边界见 [本对话验收记录](ACCEPTANCE-1.0.19.md)。128 项 Android 测试、4 项 Python 托管测试通过，构建和 Lint 无错误。
 
 ## 1.0.18：修复接续误报与标题丢失
 
@@ -248,7 +248,7 @@
 
 构建后的安装包：`app/build/outputs/apk/debug/app-debug.apk`。支持 Android 8.0 / API 26 及以上。
 
-该历史版本的交付文件位于 `dist/`：`RemoteGPT-1.0.16-debug.apk`、`RemoteGPT-1.0.16-source.zip` 及 `screenshots/`。该版本验证结果见 [TEST_REPORT.md](../../TEST_REPORT.md)。1.0.16 与旧版使用相同签名和应用 ID，具备同包名与签名的升级条件；设备安装另行验证。
+该历史版本的交付文件位于 `dist/`：`RemoteGPT-1.0.16-debug.apk`、`RemoteGPT-1.0.16-source.zip` 及 `screenshots/`。该版本验证结果见 [历史测试记录](TEST_REPORT-through-1.0.31.md)。1.0.16 与旧版使用相同签名和应用 ID，具备同包名与签名的升级条件；设备安装另行验证。
 
 ```sh
 adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -282,7 +282,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 - 普通运行、同步和提交答案期间不显示按钮；点击卡片仍打开对话。审批仅保留“允许一次／拒绝”，询问仅保留“填写信息”。移除常驻的查看与收起按钮；系统滑动关闭行为保持。
 - 思考与回复正文不再重复状态标题；执行内容区以命令和最新输出分段，限制旧日志占用的行数；审批先说明原因，再显示命令和目录，不输出空白字段。
 - 排版示例使用实际通知数据绘制，非系统模板或 ColorOS 真机截图。系统负责最终外壳和高度，应用没有使用可能失去流体云资格的自定义通知布局。
-- 多会话并行已评估，属于中等规模状态改造，本版未放开运行中切换。详细依据与方案见 [MULTI_SESSION_ASSESSMENT.md](../../MULTI_SESSION_ASSESSMENT.md)。
+- 多会话并行已评估，属于中等规模状态改造，本版未放开运行中切换。详细依据与方案见 [历史多会话评估](MULTI_SESSION-1.0.16.md)。
 
 ### 1.0.14 流体云实时进展与待处理提醒
 

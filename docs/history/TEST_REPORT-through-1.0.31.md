@@ -64,7 +64,7 @@
 
 新增 FinalAuditTest 覆盖旧恢复 ID 在初始化期间保留、后台历史完成不自动发送排队消息、只读空闲清理请求、过时快照不复活任务、旧端刷新不重复审批。非持久连接重开历史改为读取，避免仅重连就更新远端时间。
 
-完整需求映射、验证证据和真机限制见 [CONVERSATION_ACCEPTANCE.md](../../CONVERSATION_ACCEPTANCE.md)。构建环境为 JDK 17 / Android SDK 36；SSH 使用 127.0.0.1:22228 隔离测试服务。未访问生产 SSH 或真实模型。
+完整需求映射、验证证据和真机限制见 [历史验收记录](ACCEPTANCE-1.0.19.md)。构建环境为 JDK 17 / Android SDK 36；SSH 使用 127.0.0.1:22228 隔离测试服务。未访问生产 SSH 或真实模型。
 
 交付 dist/RemoteGPT-1.0.19-debug.apk 和 dist/RemoteGPT-1.0.19-source.zip。APK 使用相同包名与签名，可覆盖升级。
 

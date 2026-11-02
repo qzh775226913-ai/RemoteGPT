@@ -1,6 +1,6 @@
 # 当前需求与行为契约
 
-适用：1.1.1 / versionCode 88（开发测试版）。最后核对：2026-11-02。
+适用：1.1.1 / versionCode 88（开发测试版）。最后核对：2026-11-03。
 
 本文件是当前产品行为的唯一需求清单。版本记录说明曾经发生什么，不覆盖此处。编号永久保留；修改行为时修改对应条目和验收，取消需求时写明取消原因，不把编号转用于别的需求。
 
@@ -35,14 +35,14 @@
 | R-19 | 远端版本检查分清运行版本与磁盘安装版本；更新和重启需明确用户操作，检查失败不宣称最新，不自动重启活跃任务。 | [RemoteVersionTest](../app/src/test/java/app/remotessh/RemoteVersionTest.java)、[维护脚本测试](../tools/test_remote_maintenance.py)、[MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java) |
 | R-20 | 远程控制菜单为添加连接、编辑当前连接、刷新项目与对话、设置；对话右上菜单保留新对话与最近一次错误，上下文入口按 R-27 添加，原“当前项目与对话”迁至顶部名称的信息菜单。主题／字体／后台设置可用；后台连接窗口用精简要点说明保活与远端任务边界，窄屏／大字号时说明区有界滚动且应用设置、通知设置和返回操作保持可见。字号仅提供跟随系统、小（0.75 倍）、中（0.9 倍）、大（1 倍）、更大（1.15 倍），倍率作用于系统字号；原“小”按原存储值显示为“中”。移除原 1.3 倍档，已有该值读取时按 1.15 倍显示并选中“更大”，保留原偏好键和值以便回退。编辑连接表单的“移除此连接”与上方主机指纹按钮保持 12dp 间距；Activity 销毁释放所拥有的模型监听器。 | [MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java)、[LocalizationLayoutTest](../app/src/test/java/app/remotessh/LocalizationLayoutTest.java)、[DialogStyleTest](../app/src/test/java/app/remotessh/DialogStyleTest.java)、[DialogLifecycleTest](../app/src/test/java/app/remotessh/DialogLifecycleTest.java) |
 
-## 1.0.56 公式显示
+## 公式与表格
 
 | 编号 | 当前行为及失败边界 | 自动化入口 |
 | --- | --- | --- |
 | R-21 | Ω 与带边框公式必须保留完整实心字形，反三角函数及合法简写分式正常排版；浅色界面正文、公式、次要文字维持清晰对比度。 远端正文显式标记的 `\(…\)`、`$…$` 行内公式及 `\[…\]`、`$$…$$` 独立公式由本地原生 TeX 排版；支持分式、上下标、上横线、根式、希腊字母、求和／积分、矩阵及常用对齐环境。分式等与正文基线及行高匹配，跟随字号缩放和明暗主题；长公式可横向滚动，独立公式长按复制原始标记和 TeX。代码块、行内代码、转义标记、链接地址、普通货币和不完整流式片段不误转为公式。传输与会话原文不变；新片段、历史恢复、换会话和窗口释放不得发布迟到排版结果。排版在有界独立 worker 中执行，保留 64 项缓存；单正文最多 512 个公式、单式最多 4096 字符／32 层花括号／256 个命令，采用显式命令与环境允许列表，不执行文件、网络、宏定义或远端代码。队列拥塞、不支持、无效或超过尺寸限制时保留可读原文。 | [MathMarkupTest](../app/src/test/java/app/remotessh/MathMarkupTest.java)、[MathRenderingTest](../app/src/test/java/app/remotessh/MathRenderingTest.java)、[MathDefectsTest](../app/src/test/java/app/remotessh/MathDefectsTest.java)、[MathReadabilityTest](../app/src/test/java/app/remotessh/MathReadabilityTest.java) |
 | R-22 | 标准 Markdown 表格使用原生行列布局与表头，保留横纵分隔线和外框，全部采用同样浅细规格，超出屏幕时整张表横向滚动，不按屏幕强行挤压列宽；横滑允许轻微纵向偏移且保持消息纵向位置，松手不因单元格文字获取焦点而上跳；在表格上以纵向为主的手势仍滚动消息，结束／取消／移除释放横滑保护。表头与内容同为 14sp（正文 16sp），表头加粗；单元格左右 4dp／上下 2dp 留白、额外行距 1dp；列宽按相同字号和留白度量，范围 48–240dp。所有边线均为 1 物理像素、正文前景色约 8% 不透明度，由行统一绘制且交点不重复叠加；隐藏横向滚动条，仍可通过手势横滑。表格内公式同步按较小字号排版，跟随应用和系统字号缩放。列内容在有界列宽内换行，支持左／中／右对齐、单元格内既有 Markdown 和公式。复制表格及完整消息保留原始文本；流式追加保留表格、已有单元格与横向位置，相同表头的不同表格不共用位置。代码围栏、空格排版、分隔行不完整或无效的内容不误转表格；GFM 缺项补空、多余项不展示但保留原文。单正文上限 131072 字符／32 张表／1024 个单元格，单表最多 32 列／128 行（含表头），超限保留完整原文。浅色页面使用灰白底色、白色回复卡片及稍深的输入框／用户消息／表头，保留原布局与文字对比度。 | [TableMarkupTest](../app/src/test/java/app/remotessh/TableMarkupTest.java)、[TableRenderingTest](../app/src/test/java/app/remotessh/TableRenderingTest.java)、[TableGestureTest](../app/src/test/java/app/remotessh/TableGestureTest.java)、[MathReadabilityTest](../app/src/test/java/app/remotessh/MathReadabilityTest.java) |
 
-## 界面多语言
+## 界面语言与布局
 
 | 编号 | 当前行为及失败边界 | 自动化入口 |
 | --- | --- | --- |
@@ -51,7 +51,7 @@
 | R-25 | “加载更早的消息”按钮采用各语言简短、自然的“更早的消息（数量）”文案，保留剩余数量；专用水平内边距为 8dp，外边缘继续与消息列对齐。十种语言在 240dp 窄屏和较大字体下允许换行，按钮高度随文字增长，文字不溢出或被裁切，原有点击与消息间距不变。 | [MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java)、[LocalizationLayoutTest](../app/src/test/java/app/remotessh/LocalizationLayoutTest.java) |
 | R-26 | 折叠的思考、命令执行、文件更改、工具调用、图片查看／生成和网页搜索摘要气泡上下留白一致且紧凑；按当前字体的实际可见字形边界做光学垂直居中，折叠／展开符号与前置图标使用既有矢量图标并与气泡中心对齐；普通行内图标按实际文字行居中，英文、简繁中文、日文、韩文、西／葡／德／法／俄文及较大字号均不得因基线或下降部偏下。展开详情内容和复制原文保持原样。 | [MainActivityTest](../app/src/test/java/app/remotessh/MainActivityTest.java)、[LocalizationLayoutTest](../app/src/test/java/app/remotessh/LocalizationLayoutTest.java)、[DisclosureAlignmentTest](../app/src/test/java/app/remotessh/DisclosureAlignmentTest.java) |
 
-## 1.1.1 对话上下文与管理
+## 对话上下文与管理
 
 | 编号 | 当前行为及失败边界 | 自动化入口 |
 | --- | --- | --- |
@@ -66,7 +66,7 @@
 ## 当前不承诺的能力
 
 - 零 token／免扣 Codex 额度的聊天开关，以及技术上彻底禁用所有工具的独立聊天后端。
-- 语音、远端文件内容编辑器、全量历史服务器搜索、应用内远端 Codex 登录。
+- 语音、远端文件内容编辑器、历史消息正文的服务器全文搜索、应用内远端 Codex 登录；标题搜索按 R-28 提供。
 - 任意 CLI/TUI 自动适配；非 Codex 后端需提供兼容的 JSON-RPC 服务。
 - 手机重启／系统强杀后无条件后台存活，主机重启后任务无损继续，跨多控制端同时写同一会话。
 - 任意完整 TeX 文档／自定义宏／外部资源的排版，或与官方 ChatGPT 跨设备逐像素一致的公式效果。

@@ -6,7 +6,7 @@ A native Android app to remotely control OpenAI Codex over SSH. Manage coding se
 
 **[Download APK · 1.0.67](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.67/RemoteGPT-1.0.67-Android-universal-debug.apk)** · [Changelog](CHANGELOG.md) · [Issues](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-Current version: **1.0.67 / versionCode 69**. Android 8+.
+Stable release: **1.0.67 / versionCode 69**. Android 8+.
 
 Development test build: **1.1.1 / versionCode 88**; the download above remains the GitHub stable release.
 
@@ -40,6 +40,8 @@ The interface follows your phone’s system language by default. Choose another 
 1. Prepare SSH/SFTP and working Codex CLI access on the host. Persistent mode requires Python 3.8+.
 2. Install the APK and add an SSH connection.
 3. Choose a project, then create or resume a conversation.
+
+[Connection and usage guide](docs/USAGE.en.md)
 
 ## License
 

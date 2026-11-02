@@ -8,10 +8,12 @@
 | 模块与状态归属 | [ARCHITECTURE.md](ARCHITECTURE.md)、[模块登记](../tools/project_structure.json) |
 | 验收标准及支持范围 | [ACCEPTANCE.md](ACCEPTANCE.md) |
 | 环境与构建流程 | [DEVELOPMENT.md](DEVELOPMENT.md) |
-| 版本验证结果 | `docs/verification/` |
+| 版本验证结果 | `docs/verification/`；[最近维护清理](verification/2026-11-03-maintenance-cleanup.md) |
 | 历史版本记录 | `docs/history/` |
 
 README 和公开 Release 只展示产品功能、截图、下载、基本使用步骤、变更与许可；不展示开发手册、测试／验收记录、校验摘要、排错和内部架构／回退入口。调查结论默认只在对话中交付，明确要求公开后才发布。工程验证、完整性检查和维护留档仍按本文件及 AGENTS.md 执行。
+
+当前文档按职责维护，不按每次修复追加新的章节：行为修改对应需求条目，验收修改对应风险场景，执行过程只写入带日期的验证记录。已发布说明保持其版本范围；不把旧验证标为“当前版本”。废弃的跳转页、一次性操作脚本和无引用素材在确认引用后删除，可从 Git 恢复；仍有价值的历史证据集中存放，不从中推导新功能。许可证、旧数据／协议兼容和回归测试不得仅因生产代码未直接引用而删除。
 
 ## 代码约束
 

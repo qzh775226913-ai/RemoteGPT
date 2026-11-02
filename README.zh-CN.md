@@ -6,7 +6,7 @@
 
 **[下载 APK · 1.0.67](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.67/RemoteGPT-1.0.67-Android-universal-debug.apk)** · [更新记录](CHANGELOG.md) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-当前版本：**1.0.67 / versionCode 69**。支持 Android 8+。
+稳定发布版本：**1.0.67 / versionCode 69**。支持 Android 8+。
 
 开发测试版本：**1.1.1 / versionCode 88**；上方下载链接仍为 GitHub 稳定版。
 
@@ -40,6 +40,8 @@ English · 简体中文 · 繁體中文 · 日本語 · 한국어 · Español ·
 1. 远端主机准备 SSH/SFTP 和可用的 Codex CLI；持久模式需要 Python 3.8+。
 2. 安装 APK，添加 SSH 连接。
 3. 选择项目，新建或接续对话。
+
+[连接与使用说明](docs/USAGE.md)
 
 ## 许可
 
