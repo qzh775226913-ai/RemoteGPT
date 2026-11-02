@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 import android.app.*;
 import android.view.*;
 import android.widget.*;
+import java.time.Duration;
 import org.json.*;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -17,18 +18,55 @@ public class ModelDisplayTest {
     JSONArray models=new JSONArray().put(Json.obj("model","gpt-a","displayName","GPT-Astra"))
         .put(Json.obj("model","other","displayName","Other GPT-Model"));
     assertEquals("Astra",ModelOptions.composerName(models,"gpt-a"));
-    assertEquals("Astra",ModelOptions.displayName(models,"gpt-a"));
-    assertEquals("Other GPT-Model",ModelOptions.composerName(models,"other"));
-    assertEquals("gpt-unknown",ModelOptions.composerName(models,"gpt-unknown"));
+    assertEquals("GPT-Astra",ModelOptions.displayName(models,"gpt-a"));
+    assertEquals("Other GPT Model",ModelOptions.composerName(models,"other"));
+    assertEquals("unknown",ModelOptions.composerName(models,"gpt-unknown"));
   }
-  @Test public void modelNameKeepsRemoteSpacesAndHyphensInEveryDisplay() {
+  @Test public void modelNameDisplaysRemoteHyphenSeparatorsAsSpaces() {
     JSONObject terra=Json.obj("model","gpt-6.1-terra","displayName","GPT-6.1 Terra");
     JSONArray models=new JSONArray().put(terra).put(Json.obj("model","sol","displayName","GPT-6.1-Sol"));
-    assertEquals("6.1 Terra",ModelOptions.displayName(models,"gpt-6.1-terra"));
+    assertEquals("GPT-6.1 Terra",ModelOptions.displayName(models,"gpt-6.1-terra"));
     assertEquals("6.1 Terra",ModelOptions.composerName(models,"gpt-6.1-terra"));
-    assertEquals("6.1-Sol",ModelOptions.displayName(models,"sol"));
+    assertEquals("GPT-6.1 Sol",ModelOptions.displayName(models,"sol"));
+    assertEquals("6.1 Sol",ModelOptions.composerName(models,"sol"));
+    assertEquals("gpt-6.1 future",ModelOptions.displayName(models,"gpt-6.1-future"));
+    assertEquals("6.1 future",ModelOptions.composerName(models,"gpt-6.1-future"));
     assertEquals("GPT-6.1 Terra",terra.optString("displayName"));
     assertEquals("gpt-6.1-terra",ModelOptions.id(terra));
+  }
+
+  @Test public void pickerAndComposerShowSpaceSeparatedNamesAndKeepModelIds() {
+    var owner=Robolectric.buildActivity(MainActivity.class).setup();
+    RemoteApp app=(RemoteApp)owner.get().getApplication();
+    app.profile=new Profile();app.connected=true;app.model="gpt-6.1-sol";
+    app.reasoningEffort="";app.serviceTier="";
+    JSONObject sol=Json.obj("model","gpt-6.1-sol","displayName","GPT-6.1-Sol");
+    JSONObject terra=Json.obj("model","gpt-6.1-terra","displayName","GPT-6.1 Terra");
+    app.models=new JSONArray().put(sol).put(terra)
+        .put(Json.obj("model","gpt-6-astra","displayName","GPT-6-Astra"));
+    try {
+      app.changed();org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+      View content=owner.get().findViewById(android.R.id.content);
+      TextView button=(TextView)findDescription(content,UiText.get(R.string.ui_select_model_and_reasoning_effort));
+      assertNotNull(button);assertEquals("6.1 Sol",button.getText().toString());
+      button.performClick();
+      Dialog dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+      View shell=dialog.getWindow().getDecorView();
+      assertNotNull(find(shell,"GPT-6.1 Sol"));assertNotNull(find(shell,"GPT-6.1 Terra"));assertNotNull(find(shell,"GPT-6 Astra"));
+      assertNull(find(shell,"GPT-6.1-Sol"));
+      findDescription(shell,UiText.get(R.string.ui_select_model_1_s,"gpt-6-astra")).performClick();
+      find(shell,UiText.get(R.string.ui_done)).performClick();
+      org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+      assertEquals("gpt-6-astra",app.model);assertEquals("6 Astra",button.getText().toString());
+      assertEquals("GPT-6.1-Sol",sol.optString("displayName"));assertEquals("gpt-6.1-sol",ModelOptions.id(sol));
+      new ConversationHub(owner.get(),app).show();
+      AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+      menu.getListView().performItemClick(null,0,0);
+      AlertDialog details=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+      assertTrue(org.robolectric.Shadows.shadowOf(details).getMessage().toString()
+          .contains(UiText.get(R.string.ui_detail_model,"GPT-6 Astra")));
+      details.dismiss();
+    } finally {owner.pause().stop().destroy();}
   }
   @Test public void effortNamesStayEnglishAcrossAllInterfaceLanguages() {
     RemoteApp app=(RemoteApp)RuntimeEnvironment.getApplication();
@@ -80,6 +118,13 @@ public class ModelDisplayTest {
     if(view instanceof TextView && text.contentEquals(((TextView)view).getText()))return (TextView)view;
     if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++) {
       TextView found=find(((ViewGroup)view).getChildAt(i),text);if(found!=null)return found;
+    }
+    return null;
+  }
+  private View findDescription(View view,String text) {
+    if(text.contentEquals(view.getContentDescription()==null?"":view.getContentDescription()))return view;
+    if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++) {
+      View found=findDescription(((ViewGroup)view).getChildAt(i),text);if(found!=null)return found;
     }
     return null;
   }

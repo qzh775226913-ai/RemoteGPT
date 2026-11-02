@@ -95,7 +95,8 @@ public class LocalizationTest {
       assertEquals(raw, UiPresentation.itemTitle(message));
       assertEquals(raw, UiPresentation.itemTitle(command));
       assertEquals(raw, app.error);
-      assertEquals(raw, ModelOptions.displayName(new JSONArray().put(model),"remote"));
+      assertEquals(raw.replace('-', ' '), ModelOptions.displayName(new JSONArray().put(model),"remote"));
+      assertEquals(raw, model.optString("displayName"));
       assertEquals(raw, ServiceTierOptions.label("custom",model));
       assertEquals(raw, ServiceTierOptions.description("custom",model));
       QuestionForm form = new QuestionForm(AppLanguage.wrap(app), Json.object(request,"params"), 0xff000000,0xff777777,0xffffffff);

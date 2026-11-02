@@ -22,12 +22,17 @@ final class ModelOptions {
     for (int i = 0; i < models.length(); i++) {
       JSONObject model = models.optJSONObject(i);
       if (model != null && id(model).equals(id) && !model.isNull("displayName")
-          && !model.optString("displayName").trim().isEmpty()) return model.optString("displayName").replaceFirst("^GPT-", "");
+          && !model.optString("displayName").trim().isEmpty()) return formatName(model.optString("displayName"));
     }
-    return id;
+    return formatName(id);
+  }
+  private static String formatName(String name) {
+    int prefix = name.regionMatches(true, 0, "GPT-", 0, 4) ? 4 : 0;
+    return name.substring(0, prefix) + name.substring(prefix).replace('-', ' ');
   }
   static String composerName(JSONArray models, String id) {
-    return displayName(models, id);
+    String name = displayName(models, id);
+    return name.regionMatches(true, 0, "GPT-", 0, 4) ? name.substring(4) : name;
   }
   static String label(String effort) {
     switch (effort) {
