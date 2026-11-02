@@ -46,8 +46,16 @@ final class ToolActivityGroupView extends LinearLayout {
   }
 
   private void invalidateNumbers(){
-    if(header.getGlobalVisibleRect(visibleBounds))header.invalidate();
-    for(TextView row:rollingRows)if(row.getGlobalVisibleRect(visibleBounds))row.invalidate();
+    invalidateNumbers(header);
+    for(TextView row:rollingRows)invalidateNumbers(row);
+  }
+
+  private void invalidateNumbers(TextView view){
+    CharSequence text=view.getText(),settled=numbers.settledText(text);
+    // Only live frames may skip clipped rows. Replacing completed spans also
+    // discards their cached animation frame without rebinding expanded details.
+    if(settled!=text)view.setText(settled);
+    else if(view.getGlobalVisibleRect(visibleBounds))view.invalidate();
   }
 
   @Override protected void onAttachedToWindow(){super.onAttachedToWindow();numbers.attach();}

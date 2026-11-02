@@ -21,7 +21,7 @@
 | 独立窗口 | `ProfileEditor` 拥有连接草稿和私钥导入；`ModelPicker`／`PermissionPicker` 拥有各自窗口与监听器；`DialogUi` 提供统一窗口、点击反馈和有界说明区 |
 | 导航与上下文 | `RemoteBrowser`／`DirectoryPicker`／`RemoteScreens` 组合导航；`ConversationHub`、`CapabilityDirectoryDialog`、`McpServerDetail` 拥有详情与只读能力查询；`ContextUsage` 经会话快照隔离，`ContextCompactionController` 管理待发压缩，`ContextMenuPanel` 拥有确认窗口 |
 | 输入区与滚动 | `ConversationChromeController` 管理顶部／输入区目标状态；`ConversationFooterMotion` 协调动画空间和位移；`ConversationScrollView` 管理手势、惯性与跟随；`ConversationOverlayLayout` 固定接续按钮尺寸；`ComposerSurface` 绘制表面，`ComposerRenderCache` 跳过无变化的控件重建 |
-| 消息与执行详情 | `ChatItem` 保留原文和轮次；`InteractionHistory` 合并问答呈现；`ToolActivityPresenter` 分组，`DiffSummary` 统计实际 diff；`ToolActivityGroupView`、`ToolInlineDetailView`、`ToolDetailDialog` 呈现详情；`ToolCodeViewport` 管理代码缩放，`RollingChangeNumbers` 只动画变化的数字 |
+| 消息与执行详情 | `ChatItem` 保留原文和轮次；`InteractionHistory` 合并问答呈现；`ToolActivityPresenter` 分组，`DiffSummary` 统计实际 diff；`ToolActivityGroupView`、`ToolInlineDetailView`、`ToolDetailDialog` 呈现详情；`ToolCodeViewport` 管理代码缩放，`RollingChangeNumbers` 只动画变化的数字，结束或 detach 后把已完成的数字 span 换成静态着色文字；`ToolActivityGroupView` 即使离屏也提交落定文字，保留图标和详情子树 |
 | 结构化问题 | `QuestionForm` 显示表单并过滤秘密快照；`QuestionBubbleController` 拥有窗口、作用域校验和输入框定位；`QuestionBubbleMotion` 拥有有界动画快照并释放 |
 | 正文、公式与表格 | `MessageBodyView` 拆分代码／正文；`Markdown`、`MathMarkup`、`TableMarkup` 解析；`MathRenderer` 在有界独立 worker 排版，`MathContentView` 管理异步 generation；`TableContentView` 复用单元格与整表横向滚动；`MathDrawable`／`MathGlyphs` 隔离引擎绘制与字体兼容 |
 | 图片 | `MessageImageTile` 管理可见加载、重试和作用域；`ThumbnailLoader`／`ThumbnailCache` 提供有界共享缩略图；`ImageDialog` 拥有冻结的画廊列表、任务和原图缓存；`ZoomImageView` 管理缩放／边缘翻页；`ImageSourceReader`／`ImageDiskCache` 提供精确作用域的缺失文件回退 |

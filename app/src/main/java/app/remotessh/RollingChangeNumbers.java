@@ -46,8 +46,22 @@ final class RollingChangeNumbers {
     return result;
   }
 
+  /** Replace finished number spans so TextView discards any cached animation frame. */
+  CharSequence settledText(CharSequence text){
+    if(!(text instanceof Spanned))return text;
+    Spanned source=(Spanned)text;SpannableString result=null;
+    for(CountSpan span:source.getSpans(0,text.length(),CountSpan.class)){
+      if(span.counter.moving())continue;
+      if(result==null)result=new SpannableString(text);
+      result.removeSpan(span);
+      result.setSpan(new ForegroundColorSpan(span.color),source.getSpanStart(span),
+          source.getSpanEnd(span),source.getSpanFlags(span));
+    }
+    return result==null?text:result;
+  }
+
   void attach(){attached=true;for(Counter counter:counters.values())counter.startNext();}
-  void detach(){attached=false;settle();}
+  void detach(){attached=false;settle();redraw.run();}
   void settle(){for(Counter counter:counters.values())counter.finish();}
   boolean animating(){for(Counter counter:counters.values())if(counter.moving())return true;return false;}
   boolean animating(String scope,int index,String sign){
