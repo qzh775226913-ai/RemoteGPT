@@ -1940,6 +1940,68 @@ public class MainActivityTest {
     find(content(),"移除文件 report.txt").performClick();assertTrue(app.draftFiles.isEmpty());
   }
 
+  @Test @Config(sdk={26,35}) public void fingerTrackingStaysStableWhileHeaderCollapses() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;
+    app.threadId="drag-frame";app.turnId="turn";app.busy=true;
+    for(int i=0;i<60;i++)app.items.add(new ChatItem("drag-"+i,"agentMessage","Message "+i+"\nMore content"));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));layoutContent();
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("scroll");field.setAccessible(true);
+    ConversationScrollView scroll=(ConversationScrollView)field.get(activity);scroll.follow();scroll.pin();scroll.scrollTo(0,scroll.getScrollY()/2);layoutContent();
+    View root=content(),timeline=scroll.getChildAt(0);int[] rootPos=new int[2],scrollPos=new int[2],timelinePos=new int[2];
+    root.getLocationOnScreen(rootPos);scroll.getLocationOnScreen(scrollPos);
+    float x=scrollPos[0]-rootPos[0]+40,y=scrollPos[1]-rootPos[1]+scroll.getHeight()/2f;
+    long now=android.os.SystemClock.uptimeMillis();
+    dispatchTouch(root,now,now,MotionEvent.ACTION_DOWN,x,y);
+    dispatchTouch(root,now,now+20,MotionEvent.ACTION_MOVE,x,y+100);layoutContent();
+    assertFalse(scroll.isFollowing());timeline.getLocationOnScreen(timelinePos);int anchored=timelinePos[1];
+    int initialScroll=scroll.getScrollY();scroll.getLocationOnScreen(scrollPos);int initialTop=scrollPos[1];
+    for(int i=1;i<=24;i++){
+      if(i%6==0){app.items.add(new ChatItem("live-"+i,"agentMessage","New streamed output"));app.changed();}
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(8));layoutContent();
+      timeline.getLocationOnScreen(timelinePos);
+      scroll.getLocationOnScreen(scrollPos);
+      assertEquals("stationary frame "+i+" scroll "+initialScroll+" -> "+scroll.getScrollY()+" viewport "+initialTop+" -> "+scrollPos[1]+" translation "+timeline.getTranslationY()+" following "+scroll.isFollowing(),anchored,timelinePos[1],2);
+    }
+    int previous=timelinePos[1];
+    for(int i=1;i<=5;i++){
+      float next=y+100+12*i;dispatchTouch(root,now,now+220+i*16,MotionEvent.ACTION_MOVE,x,next);
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(16));layoutContent();timeline.getLocationOnScreen(timelinePos);
+      assertEquals("content must follow the finger while the chrome moves",12,timelinePos[1]-previous,3);previous=timelinePos[1];
+    }
+    dispatchTouch(root,now,now+320,MotionEvent.ACTION_UP,x,y+160);
+  }
+
+  @Test @Config(sdk={26,35}) public void fingerTrackingStaysStableWhileHeaderExpandsAndDirectionReverses() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="drag-return";
+    for(int i=0;i<60;i++)app.items.add(new ChatItem("line-"+i,"agentMessage","Message "+i+"\nMore content"));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));layoutContent();
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("scroll");field.setAccessible(true);
+    ConversationScrollView scroll=(ConversationScrollView)field.get(activity);scroll.follow();scroll.pin();scroll.scrollTo(0,scroll.getScrollY()/2);
+    field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
+    ConversationChromeController chrome=(ConversationChromeController)field.get(activity);chrome.setCompact(true);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    View root=content(),timeline=scroll.getChildAt(0);int[] rootPos=new int[2],scrollPos=new int[2],timelinePos=new int[2];
+    root.getLocationOnScreen(rootPos);scroll.getLocationOnScreen(scrollPos);
+    float x=scrollPos[0]-rootPos[0]+40,y=scrollPos[1]-rootPos[1]+scroll.getHeight()/2f;
+    long now=android.os.SystemClock.uptimeMillis();
+    dispatchTouch(root,now,now,MotionEvent.ACTION_DOWN,x,y);
+    dispatchTouch(root,now,now+20,MotionEvent.ACTION_MOVE,x,y-100);layoutContent();
+    assertFalse(scroll.isFollowing());timeline.getLocationOnScreen(timelinePos);int anchored=timelinePos[1];
+    for(int i=1;i<=20;i++){
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(8));layoutContent();timeline.getLocationOnScreen(timelinePos);
+      assertEquals("stationary finger must remain anchored during header expansion",anchored,timelinePos[1],2);
+    }
+    int previous=timelinePos[1];
+    for(int i=1;i<=12;i++){
+      int delta=i<=6?-12:12;float next=i<=6?y-100-12*i:y-172+12*(i-6);
+      dispatchTouch(root,now,now+180+i*16,MotionEvent.ACTION_MOVE,x,next);
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(16));layoutContent();timeline.getLocationOnScreen(timelinePos);
+      assertEquals("content must follow the finger through a direction change at step "+i,delta,timelinePos[1]-previous,3);
+      previous=timelinePos[1];
+    }
+    dispatchTouch(root,now,now+400,MotionEvent.ACTION_UP,x,y-100);
+  }
+
   @Test public void readingDuringLiveMotionKeepsTimelineStableAndJumpAboveComposer() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;
     app.threadId="live-motion";app.turnId="turn";app.busy=true;
@@ -2110,9 +2172,44 @@ public class MainActivityTest {
   @Test @Config(qualifiers="zh-rCN-w1280dp-h800dp-mdpi")
   public void conversationSpacingIsBalancedOnTablet() throws Exception {verifyConversationSpacing("conversation-spacing-tablet");}
 
+  @Test public void openingHistoryDoesNotPretendToResumeTheConversation() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="previous";
+    java.io.PipedOutputStream server=new java.io.PipedOutputStream();java.io.ByteArrayOutputStream sent=new java.io.ByteArrayOutputStream();
+    RpcClient rpc=new RpcClient(new java.io.PipedInputStream(server,65536),sent,new RpcClient.Events(){
+      public void onEvent(org.json.JSONObject event){} public void onClosed(Exception error){}
+    });
+    java.lang.reflect.Field field=RemoteApp.class.getDeclaredField("rpc");field.setAccessible(true);field.set(app,rpc);rpc.start();
+    try{
+      app.viewConversation("history");shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+      TextView button=(TextView)find(content(),"接续");assertNotNull(button);
+      assertEquals("reading history is not a resume", "接续",button.getText().toString());
+      assertFalse(button.isEnabled());assertNull(button.getCompoundDrawables()[0]);
+      for(int i=0;i<200 && !sent.toString("UTF-8").contains("thread/read");i++){Thread.sleep(5);shadowOf(android.os.Looper.getMainLooper()).idle();}
+      org.json.JSONObject read=new org.json.JSONObject(sent.toString("UTF-8").trim());assertEquals("thread/read",read.optString("method"));
+      server.write((Json.obj("id",read.getLong("id"),"result",Json.obj("thread",Json.obj("id","history","status",Json.obj("type","idle"),"turns",new org.json.JSONArray())))+"\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));server.flush();
+      for(int i=0;i<200 && app.recoveryInProgress();i++){Thread.sleep(5);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(10));}
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));assertTrue(app.readOnly);assertTrue(button.isEnabled());
+      button.performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+      assertEquals("a real resume still shows progress","接续中",button.getText().toString());assertFalse(button.isEnabled());
+    }finally{rpc.close();server.close();field.set(app,null);}
+  }
+
+  @Test public void anotherConversationResumingDoesNotChangeTheSelectedButton() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.readOnly=true;app.threadId="selected";
+    java.lang.reflect.Field loading=RemoteApp.class.getDeclaredField("loadingThread");loading.setAccessible(true);loading.set(app,"other");
+    java.lang.reflect.Field resuming=RemoteApp.class.getDeclaredField("loadingResuming");resuming.setAccessible(true);resuming.setBoolean(app,true);
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    TextView button=(TextView)find(content(),"接续");assertEquals("接续",button.getText().toString());
+    assertFalse(button.isEnabled());assertNull(button.getCompoundDrawables()[0]);
+    loading.set(app,"selected");app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertEquals("接续中",button.getText().toString());assertNotNull(button.getCompoundDrawables()[0]);
+    loading.set(app,"");resuming.setBoolean(app,false);
+  }
+
   @Test public void recoveryButtonsAnimateUntilHistoryAndReplayAreReady() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.readOnly=true;app.threadId="chat";
     java.lang.reflect.Field loading=RemoteApp.class.getDeclaredField("loadingThread");loading.setAccessible(true);loading.set(app,"chat");
+    java.lang.reflect.Field resuming=RemoteApp.class.getDeclaredField("loadingResuming");resuming.setAccessible(true);resuming.setBoolean(app,true);
     app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
     TextView button=(TextView)find(content(),"接续");assertEquals("接续中",button.getText().toString());assertFalse(button.isEnabled());
     LoadingSpinner spinner=(LoadingSpinner)button.getCompoundDrawables()[0];assertTrue(spinner.isRunning());

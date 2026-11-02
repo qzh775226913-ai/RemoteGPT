@@ -594,7 +594,7 @@ public final class MainActivity extends Activity {
     boolean available=app.connected && !app.connecting && !recovering;
     resumeButton.setEnabled((available && app.readOnly && !app.attaching) ||
         (!app.connected && !app.connecting && !recovering && !app.busy));
-    updateRecoveryButton(resumeButton,resumeSpinner,recovering || app.connecting,
+    updateRecoveryButton(resumeButton,resumeSpinner,app.connecting || app.replaying || app.resumingCurrentThread(),
         app.connecting?UiText.get(R.string.ui_connecting):app.replaying?UiText.get(R.string.ui_synchronizing):UiText.get(R.string.ui_resuming),
         app.connected?UiText.get(R.string.ui_resume):UiText.get(R.string.ui_reconnect_and_resume));
     input.setEnabled(true);
@@ -717,7 +717,7 @@ public final class MainActivity extends Activity {
     String icon=m.status.equals("completed")?"check":m.status.equals("failed")?"error":"chevron";
     String title=m.type.equals("reasoning")?ToolActivityPresenter.reasoningPreview(m):UiPresentation.itemTitle(m);
     if(m.type.equals("fileChange"))title=ToolActivityGroupView.fileLabel(m);
-    CharSequence label=AppIcons.label(this,symbol + "  " + title.replaceAll("\\s+", " ") + "  ›",icon,"chevron",muted,dp(15));
+    CharSequence label=AppIcons.compactLabel(this,symbol + "  " + title.replaceAll("\\s+", " ") + "  ›",icon,"chevron",muted,dp(15));
     return m.type.equals("fileChange") && ToolActivityGroupView.hasFileStats(m)?ToolActivityGroupView.tintStats(label,isDark()):label;
   }
 

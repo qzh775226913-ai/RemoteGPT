@@ -2,7 +2,6 @@ package app.remotessh;
 
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.graphics.Rect;
 import android.view.MotionEvent;
 import android.view.ViewConfiguration;
@@ -56,12 +55,10 @@ final class CompactSummaryTextView extends TextView {
   @Override public boolean performClick(){return super.performClick();}
 
   float opticalShift() {
-    String value=getText().toString().trim();
-    if(value.length()>2)value=value.substring(1,value.length()-1).trim();
-    if(value.isEmpty())return 0;
-    getPaint().getTextBounds(value,0,value.length(),inkBounds);
-    Paint.FontMetricsInt metrics=getPaint().getFontMetricsInt();
-    float shift=(metrics.ascent+metrics.descent-inkBounds.top-inkBounds.bottom)/2f;
+    AppIcons.textInkBounds(getPaint(),getText(),inkBounds);
+    if(inkBounds.isEmpty())return 0;
+    float center=(getCompoundPaddingTop()+getHeight()-getCompoundPaddingBottom())/2f;
+    float shift=center-getBaseline()-(inkBounds.top+inkBounds.bottom)/2f;
     float limit=1.5f*getResources().getDisplayMetrics().density;
     return Math.max(-limit,Math.min(limit,shift));
   }

@@ -24,7 +24,9 @@ public final class ConversationScrollView extends ScrollView {
   private Runnable readingTap;
   private float tapX,tapY;
   private long tapTime;
-  private boolean tapCandidate;
+  private boolean tapCandidate,touchActive,screenTopKnown;
+  private int touchStartScreenTop,lastScreenTop;
+  private final int[] screenPosition=new int[2];
   public ConversationScrollView(Context context) {
     super(context);touchSlop=ViewConfiguration.get(context).getScaledTouchSlop();
   }
@@ -36,18 +38,19 @@ public final class ConversationScrollView extends ScrollView {
   @Override public boolean dispatchTouchEvent(MotionEvent event) {
     int action=event.getActionMasked();
     if(action==MotionEvent.ACTION_DOWN){
-      flinging=false;flingReachedLatest=false;touchDirection=0;lastRawY=event.getRawY();tapX=event.getX();tapY=event.getY();tapTime=event.getEventTime();
-      tapCandidate=readingTap!=null && !interactiveAt(this,tapX,tapY);
+      getLocationOnScreen(screenPosition);touchStartScreenTop=lastScreenTop=screenPosition[1];screenTopKnown=true;touchActive=true;
+      flinging=false;flingReachedLatest=false;touchDirection=0;lastRawY=event.getRawY();tapX=event.getRawX();tapY=event.getRawY();tapTime=event.getEventTime();
+      tapCandidate=readingTap!=null && !interactiveAt(this,event.getX(),event.getY());
     } else if(action==MotionEvent.ACTION_MOVE){
       touchDirection=Float.compare(lastRawY,event.getRawY());lastRawY=event.getRawY();
-      if(Math.abs(event.getX()-tapX)>touchSlop || Math.abs(event.getY()-tapY)>touchSlop)tapCandidate=false;
+      if(Math.abs(event.getRawX()-tapX)>touchSlop || Math.abs(event.getRawY()-tapY)>touchSlop)tapCandidate=false;
     } else if(action==MotionEvent.ACTION_POINTER_DOWN || action==MotionEvent.ACTION_CANCEL)tapCandidate=false;
     boolean tap=action==MotionEvent.ACTION_UP && tapCandidate &&
         event.getEventTime()-tapTime<ViewConfiguration.getLongPressTimeout() &&
-        Math.abs(event.getX()-tapX)<=touchSlop && Math.abs(event.getY()-tapY)<=touchSlop &&
+        Math.abs(event.getRawX()-tapX)<=touchSlop && Math.abs(event.getRawY()-tapY)<=touchSlop &&
         !interactiveAt(this,event.getX(),event.getY());
     boolean handled=super.dispatchTouchEvent(event);
-    if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_CANCEL)tapCandidate=false;
+    if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_CANCEL || action==MotionEvent.ACTION_DOWN && !handled){tapCandidate=false;touchActive=false;}
     if(tap && readingTap!=null)readingTap.run();
     return handled;
   }
@@ -79,11 +82,23 @@ public final class ConversationScrollView extends ScrollView {
     }
     return view!=this && view.isClickable();
   }
+  // Keep ScrollView's internal gesture coordinates stable while its header moves.
+  private MotionEvent stableTouch(MotionEvent event){
+    if(!touchActive)return null;
+    getLocationOnScreen(screenPosition);int delta=screenPosition[1]-touchStartScreenTop;
+    if(delta==0)return null;
+    MotionEvent copy=MotionEvent.obtain(event);copy.offsetLocation(0,delta);return copy;
+  }
+  @Override public boolean onInterceptTouchEvent(MotionEvent event){
+    MotionEvent stable=stableTouch(event);
+    try{return super.onInterceptTouchEvent(stable==null?event:stable);}finally{if(stable!=null)stable.recycle();}
+  }
   @android.annotation.SuppressLint("ClickableViewAccessibility") // ScrollView handles clicks; this observes its drag.
   @Override public boolean onTouchEvent(MotionEvent event) {
     boolean previous=handlingUserScroll;
     handlingUserScroll=event.getActionMasked()==MotionEvent.ACTION_MOVE;
-    try{return super.onTouchEvent(event);}finally{handlingUserScroll=previous;}
+    MotionEvent stable=stableTouch(event);
+    try{return super.onTouchEvent(stable==null?event:stable);}finally{if(stable!=null)stable.recycle();handlingUserScroll=previous;}
   }
   @Override public void fling(int velocityY) {
     flinging=true;flingDirection=Integer.signum(velocityY);
@@ -131,6 +146,7 @@ public final class ConversationScrollView extends ScrollView {
     // that horizontal gesture while still letting Android update focus normally.
     return horizontalGesture != null ? 0 : super.computeScrollDeltaToGetChildRectOnScreen(rect);
   }
+  @Override protected void onDetachedFromWindow(){touchActive=false;screenTopKnown=false;super.onDetachedFromWindow();}
   private int latestLimit(){
     return getChildCount()==0?0:Math.max(0,getChildAt(0).getHeight()+getPaddingTop()+getPaddingBottom()-getHeight());
   }
@@ -143,10 +159,13 @@ public final class ConversationScrollView extends ScrollView {
   }
   @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
     int readingY = getScrollY();
+    getLocationOnScreen(screenPosition);int top=screenPosition[1];
+    int anchorAdjustment=touchActive && screenTopKnown && !following?top-lastScreenTop:0;
     layingOut = true;
     super.onLayout(changed, l, t, r, b);
-    if (!following) scrollTo(0, readingY);
+    if (!following) scrollTo(0, readingY+anchorAdjustment);
     layingOut = false;
+    lastScreenTop=top;screenTopKnown=true;
     pin();
   }
   public void pin() {

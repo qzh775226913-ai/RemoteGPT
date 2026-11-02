@@ -3,6 +3,7 @@ package app.remotessh;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.StateListDrawable;
 import android.widget.CompoundButton;
@@ -27,17 +28,50 @@ final class AppIcons {
     button.setButtonTintList(null);button.setButtonDrawable(states);
   }
   static CharSequence label(Context context,CharSequence text,String leading,String trailing,int color,int size) {
+    return label(context,text,leading,trailing,color,size,false,false);
+  }
+  static CharSequence compactLabel(Context context,CharSequence text,String leading,String trailing,int color,int size) {
+    return label(context,text,leading,trailing,color,size,true,false);
+  }
+  static CharSequence compactLabel(Context context,CharSequence text,String leading,String trailing,int color,int size,boolean flipTrailing) {
+    return label(context,text,leading,trailing,color,size,true,flipTrailing);
+  }
+  private static CharSequence label(Context context,CharSequence text,String leading,String trailing,int color,int size,
+      boolean compact,boolean flipTrailing) {
     SpannableStringBuilder result=new SpannableStringBuilder(text);
-    if(text.length()>0 && leading!=null)result.setSpan(new Glyph(drawable(context,leading,color),size),0,1,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-    if(text.length()>0 && trailing!=null)result.setSpan(new Glyph(drawable(context,trailing,color),size),text.length()-1,text.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    if(text.length()>0 && leading!=null)result.setSpan(new Glyph(drawable(context,leading,color),size,compact,false),0,1,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    if(text.length()>0 && trailing!=null)result.setSpan(new Glyph(drawable(context,trailing,color),size,compact,flipTrailing),text.length()-1,text.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
     return result;
   }
+  static void textInkBounds(Paint paint,CharSequence text,Rect bounds){
+    StringBuilder value=new StringBuilder(text);
+    if(text instanceof Spanned){
+      Spanned spans=(Spanned)text;
+      for(Glyph icon:spans.getSpans(0,text.length(),Glyph.class))
+        for(int i=Math.max(0,spans.getSpanStart(icon));i<Math.min(value.length(),spans.getSpanEnd(icon));i++)value.setCharAt(i,' ');
+    }
+    String visible=value.toString().trim();bounds.setEmpty();
+    if(!visible.isEmpty())paint.getTextBounds(visible,0,visible.length(),bounds);
+  }
   private static final class Glyph extends ReplacementSpan {
-    final Drawable drawable;final int size;
-    Glyph(Drawable drawable,int size){this.drawable=drawable;this.size=size;drawable.setBounds(0,0,size,size);}
+    final Drawable drawable;final int size;final boolean compact,flip;
+    final Rect ink=new Rect();
+    CharSequence measuredText;float measuredSize,measuredScale;android.graphics.Typeface measuredTypeface;
+    Glyph(Drawable drawable,int size,boolean compact,boolean flip){
+      this.drawable=drawable;this.size=size;this.compact=compact;this.flip=flip;drawable.setBounds(0,0,size,size);
+    }
     @Override public int getSize(Paint paint,CharSequence text,int start,int end,Paint.FontMetricsInt fm){return size;}
     @Override public void draw(Canvas canvas,CharSequence text,int start,int end,float x,int top,int y,int bottom,Paint paint) {
-      Paint.FontMetrics fm=paint.getFontMetrics();canvas.save();canvas.translate(x,y+(fm.ascent+fm.descent-size)/2);drawable.draw(canvas);canvas.restore();
+      float center=(top+bottom)/2f;
+      if(compact){
+        if(measuredText!=text || measuredSize!=paint.getTextSize() || measuredScale!=paint.getTextScaleX() || measuredTypeface!=paint.getTypeface()){
+          textInkBounds(paint,text,ink);measuredText=text;measuredSize=paint.getTextSize();measuredScale=paint.getTextScaleX();measuredTypeface=paint.getTypeface();
+        }
+        if(!ink.isEmpty())center=y+(ink.top+ink.bottom)/2f;
+      }
+      canvas.save();canvas.translate(x,center-size/2f);
+      if(flip)canvas.rotate(180,size/2f,size/2f);
+      drawable.draw(canvas);canvas.restore();
     }
   }
 }

@@ -103,6 +103,7 @@ public final class RemoteApp extends Application {
   private String restoringThread = "", pendingNavigation = "", replayThread = "";
   String loadingThread = "";
   private String loadingStage="";
+  private boolean loadingResuming;
   private ThreadSnapshot preparedThread;
   private boolean multiSessionHost = true;
 
@@ -118,6 +119,10 @@ public final class RemoteApp extends Application {
 
   boolean recoveryInProgress() {
     return connected && (!loadingThread.isEmpty() || !restoringThread.isEmpty() || !restoreQueue.isEmpty() || !replayThread.isEmpty() || replaying);
+  }
+
+  boolean resumingCurrentThread() {
+    return connected && !threadId.isEmpty() && threadId.equals(loadingThread) && loadingResuming;
   }
 
   String recoveryStatus() {
@@ -183,12 +188,12 @@ public final class RemoteApp extends Application {
       if (!pendingNavigation.isEmpty()) { String id=pendingNavigation; pendingNavigation=""; viewConversation(id); }
       return;
     }
-    String id = restoreQueue.removeFirst(); restoringThread=id; loadingThread=id;loadingStage="正在检查对话状态…";
+    String id = restoreQueue.removeFirst(); restoringThread=id; loadingThread=id;loadingResuming=false;loadingStage="正在检查对话状态…";
     inConversation(id, () -> {
       busy=true;changed();
       request("thread/read", Json.obj("threadId", id, "includeTurns", false), snapshot -> {
         if (Json.object(Json.object(snapshot, "thread"), "status").optString("type").equals("active")) {
-          loadingStage="正在接续对话…";changed();
+          loadingResuming=true;loadingStage="正在接续对话…";changed();
           request("thread/resume", Json.obj("threadId", id), r -> {
             applyThread(r, id, false);
             if (!r.optBoolean("remoteReplay")) { restoringThread=""; main.post(this::restoreNext); }
@@ -245,7 +250,7 @@ public final class RemoteApp extends Application {
     boolean loaded = loadedThreads.contains(id);
     select(id);
     if (loaded) { changed(); return; }
-    busy = true; loadingThread = id; loadingStage="正在获取对话历史…";changed();
+    busy = true; loadingThread = id; loadingResuming=false;loadingStage="正在获取对话历史…";changed();
     readThread(id, true);
   }
 
@@ -992,7 +997,7 @@ public final class RemoteApp extends Application {
     replaying = false;
     turns.clearReady();
     restoreQueue.clear(); restoringThread=""; pendingNavigation=""; loadingThread=""; replayThread="";
-    loadingStage="";preparedThread=null;
+    loadingStage="";loadingResuming=false;preparedThread=null;
     conversationStore.clear();
     remoteRunning = false;
     reconnectThread = "";
@@ -1055,6 +1060,7 @@ public final class RemoteApp extends Application {
           || method.equals("thread/read")
           || method.equals("thread/start")
           || method.startsWith("turn/")) busy = false;
+      if((method.equals("thread/resume") || method.equals("thread/read")) && !loadingThread.isEmpty() && loadingThread.equals(params.optString("threadId",threadId))){loadingThread="";loadingResuming=false;}
       error = "请先连接 SSH 主机";
       changed();
       return;
@@ -1094,6 +1100,7 @@ public final class RemoteApp extends Application {
                                   failConnection(e, transport);
                                   return;
                                 } else if (method.equals("thread/resume") && isWriterConflict(e)) {
+                                  if(params.optString("threadId").equals(loadingThread)){loadingResuming=false;loadingStage="正在获取对话历史…";changed();}
                                   readThread(params.optString("threadId"), true);
                                   return;
                                 } else if (method.startsWith("turn/")
@@ -1108,7 +1115,7 @@ public final class RemoteApp extends Application {
                               };
                               if (threadRequest) inConversation(requestThread, completion); else completion.run();
                               if (e != null && requestThread.equals(loadingThread) && !isWriterConflict(e)) {
-                                loadingThread=""; main.post(this::restoreNext);
+                                loadingThread="";loadingResuming=false; main.post(this::restoreNext);
                               }
                               if (e != null && requestThread.equals(restoringThread) && !isWriterConflict(e)) {
                                 restoringThread=""; main.post(this::restoreNext);
@@ -1185,7 +1192,7 @@ public final class RemoteApp extends Application {
     boolean cached = conversationStore.contains(id) && loadedThreads.contains(id);
     select(id);
     if (cached) { changed(); return; }
-    error=""; busy=true; loadingThread=id; loadingStage="正在接续对话…";changed();
+    error=""; busy=true; loadingThread=id; loadingResuming=true;loadingStage="正在接续对话…";changed();
     request("thread/resume", Json.obj("threadId", id), r -> applyThread(r, id, false));
   }
 
@@ -1212,7 +1219,7 @@ public final class RemoteApp extends Application {
 
   public void refreshReadOnly() {
     if (connected && readOnly && !busy) {
-      busy = true;loadingThread=threadId;loadingStage="正在刷新对话历史…";
+      busy = true;loadingThread=threadId;loadingResuming=false;loadingStage="正在刷新对话历史…";
       changed();
       readThread(threadId, true);
     }
@@ -1350,7 +1357,7 @@ public final class RemoteApp extends Application {
         catch (Exception e) { main.post(() -> { if (g == generation) failConnection(e, transport); }); }
       });
     } else if (id.equals(loadingThread)) {
-      loadingThread="";
+      loadingThread="";loadingResuming=false;
       if (id.equals(restoringThread)) restoringThread="";
       main.post(this::restoreNext);
     }
@@ -1552,7 +1559,7 @@ public final class RemoteApp extends Application {
     if (method.equals("remote/replayCompleted")) {
       replaying = false;
       if (threadId.equals(replayThread)) replayThread="";
-      if (threadId.equals(loadingThread)) loadingThread="";
+      if (threadId.equals(loadingThread)) {loadingThread="";loadingResuming=false;}
       changed();
       refreshOtherLegacyThreads(threadId);
       if (threadId.equals(restoringThread)) restoringThread="";

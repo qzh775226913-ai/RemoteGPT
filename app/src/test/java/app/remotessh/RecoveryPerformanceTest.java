@@ -45,6 +45,44 @@ public class RecoveryPerformanceTest {
     }finally{rpc.close();server.close();field.set(app,null);}
   }
 
+  @Test public void writerConflictSwitchesTheProgressBackToReadingHistory() throws Exception {
+    RemoteApp app=app();PipedOutputStream server=new PipedOutputStream();ByteArrayOutputStream sent=new ByteArrayOutputStream();
+    RpcClient rpc=new RpcClient(new PipedInputStream(server,65536),sent,new RpcClient.Events(){public void onEvent(JSONObject e){}public void onClosed(Exception e){}});
+    Field field=rpcField();field.set(app,rpc);rpc.start();
+    try{
+      app.resume("conflict");assertTrue(app.resumingCurrentThread());JSONObject resume=outgoing(sent,0);
+      server.write((Json.obj("id",resume.getLong("id"),"error",Json.obj("code",-32600,"message","already has an active writer"))+"\n").getBytes(StandardCharsets.UTF_8));server.flush();
+      JSONObject read=outgoing(sent,1);assertEquals("thread/read",read.optString("method"));
+      assertFalse("falling back to history is no longer resuming",app.resumingCurrentThread());assertTrue(app.recoveryInProgress());
+      reply(server,read,Json.obj("thread",Json.obj("id","conflict","status",Json.obj("type","idle"),"turns",new JSONArray())));
+      await(()->!app.recoveryInProgress());assertTrue(app.readOnly);
+    }finally{rpc.close();server.close();field.set(app,null);}
+  }
+
+  @Test public void missingRpcClientClearsTheResumeOperation(){
+    RemoteApp app=app();app.resume("unavailable");
+    assertFalse(app.resumingCurrentThread());assertFalse(app.recoveryInProgress());
+    assertFalse(app.busy);assertEquals("请先连接 SSH 主机",app.error);
+  }
+
+  @Test public void backgroundWriterConflictDoesNotChangeSelectedResumeProgress() throws Exception {
+    RemoteApp app=app();app.threadId="selected";app.loadingThread="selected";
+    org.robolectric.util.ReflectionHelpers.setField(app,"loadingResuming",true);
+    PipedOutputStream server=new PipedOutputStream();ByteArrayOutputStream sent=new ByteArrayOutputStream();
+    RpcClient rpc=new RpcClient(new PipedInputStream(server,65536),sent,new RpcClient.Events(){public void onEvent(JSONObject e){}public void onClosed(Exception e){}});
+    Field field=rpcField();field.set(app,rpc);rpc.start();
+    try{
+      app.inConversation("background",()->app.request("thread/resume",Json.obj("threadId","background"),response->{}));
+      JSONObject resume=outgoing(sent,0);
+      server.write((Json.obj("id",resume.getLong("id"),"error",Json.obj("code",-32600,"message","already has an active writer"))+"\n").getBytes(StandardCharsets.UTF_8));server.flush();
+      JSONObject read=outgoing(sent,1);assertEquals("thread/read",read.optString("method"));
+      assertEquals("selected",app.threadId);assertTrue("another conversation must not change this resume",app.resumingCurrentThread());
+      reply(server,read,Json.obj("thread",Json.obj("id","background","status",Json.obj("type","idle"),"turns",new JSONArray())));
+      for(int i=0;i<30;i++){Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(5);}
+      assertTrue(app.resumingCurrentThread());assertEquals("selected",app.threadId);
+    }finally{app.loadingThread="";org.robolectric.util.ReflectionHelpers.setField(app,"loadingResuming",false);rpc.close();server.close();field.set(app,null);}
+  }
+
   @Test public void idleRecoveryLoadsHistoryWithoutClaimingWriter() throws Exception {
     RemoteApp app=app();PipedOutputStream server=new PipedOutputStream();ByteArrayOutputStream sent=new ByteArrayOutputStream();
     RpcClient rpc=new RpcClient(new PipedInputStream(server),sent,new RpcClient.Events(){public void onEvent(JSONObject e){}public void onClosed(Exception e){}});

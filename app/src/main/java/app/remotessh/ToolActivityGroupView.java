@@ -67,7 +67,8 @@ final class ToolActivityGroupView extends LinearLayout {
     String groupIcon="book";
     for(ChatItem child:item.children)if(child.type.equals("fileChange")){groupIcon="pencil";break;}
     else if(child.type.equals("commandExecution") || child.type.equals("mcpToolCall"))groupIcon="terminal";
-    CharSequence title=summary?label:AppIcons.label(getContext(),"◦  "+label,groupIcon,null,ui.muted,ui.dp(16));
+    CharSequence title=AppIcons.compactLabel(getContext(),summary?label:"◦  "+label,summary?null:groupIcon,
+        open?"chevronDown":"chevron",summary?ui.fg:ui.muted,ui.dp(15));
     header.setText(numbers.style("header",title,running,summary));
     header.setContentDescription(label);
     rollingRows.clear();
@@ -78,8 +79,9 @@ final class ToolActivityGroupView extends LinearLayout {
     int count=summary && !all?Math.min(3,item.children.size()):item.children.size();
     for(int i=0;i<count;i++)addChild(item.children.get(i));
     if(summary && item.children.size()>3){
-      TextView more=ui.compactSummary();more.setText(all?UiText.get(R.string.ui_collapse_files)+"  ⌃":
-          UiText.get(R.string.ui_more_files_count,item.children.size()-count)+"  ›");
+      TextView more=ui.compactSummary();String moreLabel=all?UiText.get(R.string.ui_collapse_files)+"  ⌃":
+          UiText.get(R.string.ui_more_files_count,item.children.size()-count)+"  ›";
+      more.setText(AppIcons.compactLabel(getContext(),moreLabel,null,all?"chevronDown":"chevron",ui.fg,ui.dp(15),all));
       more.setTextColor(ui.fg);more.setBackgroundColor(Color.TRANSPARENT);
       more.setPadding(ui.dp(8),ui.dp(2),ui.dp(8),ui.dp(2));
       ui.clickable(more,()->{if(!expanded.add(item.id+"-all"))expanded.remove(item.id+"-all");bind(this.item);});
@@ -115,6 +117,7 @@ final class ToolActivityGroupView extends LinearLayout {
       disclosure.addView(detail,codeParams);
       TextView full=ui.text(UiText.get(child.type.equals("reasoning")?
           R.string.ui_reasoning:R.string.ui_execution_details)+"  ↗",12,ui.muted);
+      full.setText(AppIcons.label(getContext(),full.getText(),null,"arrowUpRight",ui.muted,ui.dp(14)));
       full.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
       full.setPadding(0,ui.dp(3),ui.dp(7),ui.dp(3));
       ui.clickable(full,()->openDetail.accept(child));
