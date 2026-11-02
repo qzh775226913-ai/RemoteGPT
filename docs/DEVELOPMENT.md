@@ -37,7 +37,9 @@ python3 tools/generate_icons.py
 python3 tools/generate_icons.py --check
 ```
 
-完整入口强制重新执行任务，避免 SSH 测试开关变化时误用缓存结果。`--unit` 允许 SSH 用例按原设计跳过，报告明确不满足完整验收。Python-only 只检查源码／文档／图标和 Python 逻辑。
+完整入口强制重新执行任务，避免 SSH 测试开关变化时误用缓存结果，并禁止子进程写 Python 字节码，避免测试导入远端脚本后在 assets 中留下缓存。`--unit` 允许 SSH 用例按原设计跳过，报告明确不满足完整验收。Python-only 只检查源码／文档／图标和 Python 逻辑。
+
+结构检查覆盖主 Java 子目录、模块唯一登记、陈旧规模预算、未登记 Python 资产，以及根目录／docs（含历史）／贡献模板的 Markdown 和 HTML 图片链接。中英文主页、需求和验收中的开发版本须与 Gradle 一致；历史报告保留各自版本。图标检查也拒绝规格中已删除但仍遗留的生成资源，生成器只清理其拥有的 `ic_ui_*.xml`。
 
 | 产物 | 路径 |
 | --- | --- |

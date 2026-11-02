@@ -61,15 +61,20 @@ def main():
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     spec = json.loads((ROOT / 'tools/icon_spec.json').read_text())
-    stale = []
-    for path, content in outputs(spec).items():
+    expected = outputs(spec)
+    obsolete = sorted(set((RES / 'drawable').glob('ic_ui_*.xml')) - expected.keys())
+    stale = [str(path.relative_to(ROOT)) for path in obsolete]
+    if not args.check:
+        for path in obsolete:
+            path.unlink()
+    for path, content in expected.items():
         if args.check:
             if not path.exists() or path.read_text() != content:
                 stale.append(str(path.relative_to(ROOT)))
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content)
-    if stale:
+    if args.check and stale:
         raise SystemExit('Stale icon outputs: ' + ', '.join(stale))
     print(('Verified' if args.check else 'Generated') + f' {len(spec["icons"])} icons and shared launcher/notification variants')
 

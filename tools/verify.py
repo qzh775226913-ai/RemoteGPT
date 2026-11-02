@@ -21,7 +21,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def run(command):
     print("\nRunning: " + " ".join(map(str, command)), flush=True)
-    subprocess.run(list(map(str, command)), cwd=ROOT, check=True)
+    # Tests import shipped scripts; never leave development bytecode in Android assets.
+    subprocess.run(list(map(str, command)), cwd=ROOT, check=True,
+                   env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
 
 
 def check_fixture_port(port=22228):

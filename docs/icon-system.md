@@ -19,7 +19,7 @@ python3 tools/generate_icons.py
 python3 tools/generate_icons.py --check
 ```
 
-生成器同步更新界面资源、应用图标、通知图标及 Java 资源目录。生成资源统一由规格文件更新。
+生成器同步更新界面资源、应用图标、通知图标及 Java 资源目录，并删除规格中已移除的 `ic_ui_*.xml`；其他 drawable 不受影响。`--check` 只读检查缺失、内容漂移及多余生成图标。生成资源统一由规格文件更新。
 
 `IconStyleTest` 使用 Android 原生图形渲染检查 24 px 的留白、中心箭头与回路净空、通知透明轮廓、Android 8 自适应图标、Android 13 主题图标安全区、主题切换和原生选择状态，并输出原生预览至 `app/build/screenshots/`。预览包括 `launcher-icon-masks.png`、`icon-system-dark.png` 和 `RemoteGPT-icon-512.png`。
 

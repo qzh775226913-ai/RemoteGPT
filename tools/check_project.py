@@ -13,7 +13,9 @@ def document_links(path, root):
     errors = []
     # Code examples aren't actual Markdown links.
     content = re.sub(r"```[^\n]*\n[\s\S]*?```", "", path.read_text())
-    for target in re.findall(r"!?\[[^\]]*\]\(([^)]+)\)", content):
+    targets = re.findall(r"!?\[[^\]]*\]\(([^)]+)\)", content)
+    targets += re.findall(r'<(?:img|a)\b[^>]*\b(?:src|href)=[\'"]([^\'"]+)[\'"]', content, re.I)
+    for target in targets:
         url = urlsplit(target.strip().strip("<>"))
         if url.scheme or url.netloc or not url.path:
             continue
@@ -27,7 +29,11 @@ def check(root):
     errors = []
     registry = json.loads((root / "tools/project_structure.json").read_text())
     base = root / "app/src/main/java/app/remotessh"
-    actual = {p.stem: p for p in base.glob("*.java")}
+    actual = {}
+    for path in base.rglob("*.java"):
+        if path.stem in actual:
+            errors.append(f"{path.stem}: duplicate source name in module registry")
+        actual[path.stem] = path
     owners = {}
     for module, names in registry["modules"].items():
         for name in names:
@@ -38,16 +44,21 @@ def check(root):
         errors.append(f"{name}: missing module registration")
     for name in sorted(owners.keys() - actual.keys()):
         errors.append(f"{name}: registered source does not exist")
+    for name in sorted(registry["line_budgets"].keys() - actual.keys()):
+        errors.append(f"{name}: stale Java line budget")
     for name, path in actual.items():
         budget = registry["line_budgets"].get(name, registry["default_java_line_budget"])
         count = len(path.read_text().splitlines())
         if count > budget:
             errors.append(f"{name}: {count} lines exceed {budget}; extract a responsibility before growing this file")
+    scripts = {p.name for p in (root / "app/src/main/assets").glob("*.py")}
+    for name in sorted(scripts - registry["python_asset_line_budgets"].keys()):
+        errors.append(f"{name}: missing Python asset line budget")
     for name, budget in registry["python_asset_line_budgets"].items():
         path = root / "app/src/main/assets" / name
         if not path.exists() or len(path.read_text().splitlines()) > budget:
             errors.append(f"{name}: missing or exceeds {budget} lines")
-    docs = list(root.glob("*.md")) + [p for p in (root / "docs").rglob("*.md") if "history" not in p.relative_to(root / "docs").parts]
+    docs = list(root.glob("*.md")) + list((root / "docs").rglob("*.md")) + list((root / ".github").rglob("*.md"))
     for path in docs:
         errors.extend(document_links(path, root))
     requirements = (root / "docs/REQUIREMENTS.md").read_text()
@@ -62,9 +73,13 @@ def check(root):
     version = re.search(r"versionName\s+'([^']+)'", build).group(1)
     code = re.search(r"versionCode\s+(\d+)", build).group(1)
     expected = f"{version} / versionCode {code}"
-    for path in [root / "README.md", root / "docs/REQUIREMENTS.md"]:
+    for name in ("README.md", "README.zh-CN.md", "docs/REQUIREMENTS.md", "docs/ACCEPTANCE.md"):
+        path = root / name
         if expected not in path.read_text():
             errors.append(f"{path.relative_to(root)}: current version must match {expected}")
+    acceptance = (root / "docs/ACCEPTANCE.md").read_text()
+    for ident in sorted(set(re.findall(r"\bR-\d+\b", acceptance)) - set(ids)):
+        errors.append(f"ACCEPTANCE.md: unknown requirement {ident}")
     return errors
 
 

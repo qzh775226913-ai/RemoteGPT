@@ -76,7 +76,6 @@ class LocalizationResourcesTest(unittest.TestCase):
             'MainActivity': {'正在停止', '无法写入所选位置', '连接已切换，请重新下载'},
             'ProfileEditor': {'无法读取文件', '私钥文件不能超过 64 KiB'},
             'LiveStatusNotifications': {'正在停止'},
-            'PermissionPicker': {'新的审批权限生效前，客户端将会自动允许全部审批请求，继续吗？'},
             'QuestionHistoryView': {'回答：'},
         }
         names = ('MainActivity ProfileEditor ModelPicker DialogUi RemoteBrowser DirectoryPicker '

@@ -4,6 +4,7 @@ import contextlib
 import io
 import os
 import socket
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -98,6 +99,16 @@ class VerificationGateTest(unittest.TestCase):
         doc = self.root / "README.md"
         doc.write_text('```text\n[example](not-a-real-file.md)\n```\n')
         self.assertEqual([], check_project.document_links(doc, self.root))
+
+    def test_verification_imports_do_not_create_development_bytecode_in_assets(self):
+        assets = self.root / "app/src/main/assets"
+        assets.mkdir(parents=True)
+        (assets / "shipped.py").write_text("value = 42\n")
+        with patch.dict(os.environ), contextlib.redirect_stdout(io.StringIO()):
+            os.environ.pop("PYTHONDONTWRITEBYTECODE", None)
+            verify.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'app/src/main/assets'); "
+                        "import shipped; assert shipped.value == 42"])
+        self.assertFalse((assets / "__pycache__").exists())
 
 
 if __name__ == "__main__":
