@@ -105,6 +105,10 @@ final class ConversationChromeController {
     if(accumulated>=dp(sign>0?32:40)) {setCompact(sign>0,home);accumulated=0;}
   }
 
+  void keepComposerOpen(){
+    if(composerCompact){composerCompact=false;animateComposer(false);}
+  }
+
   void setCompact(boolean value) {setCompact(value,false);}
   private void setCompact(boolean value,boolean home) {
     if(compact!=value){compact=value;animateHeader(value);}

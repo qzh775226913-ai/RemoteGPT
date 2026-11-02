@@ -690,6 +690,19 @@ public class MainActivityTest {
     assertEquals("once conversation messages exist, scrolling can shrink the composer",View.GONE,composer.getVisibility());
   }
 
+  @Test public void returningToTheSameEmptyHomeRestoresAShrunkenComposer() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="";
+    app.items.add(new ChatItem("pending","agentMessage","A message before the server assigned a thread"));app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));layoutContent();
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
+    ConversationChromeController chrome=(ConversationChromeController)field.get(activity);
+    field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);LinearLayout composer=(LinearLayout)field.get(activity);
+    chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    assertEquals(View.GONE,composer.getVisibility());app.newChat();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    assertTrue(app.items.isEmpty());assertEquals("",app.threadId);assertEquals(View.VISIBLE,composer.getVisibility());
+  }
+
   @Test public void openingHistorySettlesComposerBeforeInputIsTapped() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication();
     app.profile = new Profile(); app.connected = true; app.threadId = "previous-thread";

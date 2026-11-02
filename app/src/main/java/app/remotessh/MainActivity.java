@@ -580,6 +580,7 @@ public final class MainActivity extends Activity {
       historyLimit=60;firstRender=true;
       messageUpdatesPaused = false;
     }
+    if(app.threadId.isEmpty() && app.items.isEmpty())chrome.keepComposerOpen();
     ComposerRenderCache.text(title,app.threadTitle.isEmpty() ? (app.threadId.isEmpty() ? getString(R.string.app_name) : UiText.get(R.string.ui_unnamed_conversation)) : app.threadTitle);
     contextRing.show(app.contextUsage);
     contextRing.setContentDescription(UiText.get(R.string.ui_context_ring_description,
