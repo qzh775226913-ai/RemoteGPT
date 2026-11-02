@@ -1704,8 +1704,21 @@ public final class RemoteApp extends Application {
         int i = items.indexOf(old);
         if (method.equals("item/started") && incoming.text.isEmpty()) incoming.text = old.text;
         if(incoming.phase.isEmpty())incoming.phase=old.phase;
+        if(method.equals("item/started") && incoming.type.equals("fileChange") && old.type.equals("fileChange")
+            && (incoming.changes==null || incoming.changes.length()==0) && old.changes!=null)
+          incoming.updateFileChanges(old.changes);
         preserveReasoning(incoming, old);
         items.set(i, incoming);
+      }
+    } else if (method.equals("item/fileChange/patchUpdated")) {
+      String id=p.optString("itemId"),eventTurn=p.optString("turnId");JSONArray changes=p.optJSONArray("changes");
+      ChatItem m=id.isEmpty()?null:find(id);
+      if(m==null && !id.isEmpty() && changes!=null){
+        m=new ChatItem(id,"fileChange","文件更改");m.turnId=eventTurn.isEmpty()?turnId:eventTurn;m.status="inProgress";items.add(m);
+      }
+      if(m!=null && m.type.equals("fileChange") && changes!=null && (eventTurn.isEmpty() || m.turnId.isEmpty() || eventTurn.equals(m.turnId))
+          && !m.status.equals("completed") && !m.status.equals("failed") && !m.status.equals("declined")){
+        if(m.turnId.isEmpty())m.turnId=eventTurn;m.updateFileChanges(changes);
       }
     } else if (method.equals("item/reasoning/summaryPartAdded")) {
       ChatItem m = find(p.optString("itemId"));

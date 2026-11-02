@@ -8,7 +8,7 @@
 | --- | --- |
 | 界面生命周期 | `MainActivity` 管理页面、消息渲染、系统选择器和 Activity 回调；`BubbleActivity` 管理绑定会话的气泡页面 |
 | 独立窗口 | `ProfileEditor` 管理连接草稿／凭据表单／私钥导入；`ModelPicker` 管理模型／强度／速度选择及监听器；`DialogUi` 保持聊天窗口的原有样式与触摸行为 |
-| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 负责折叠摘要的跨字体光学居中和横向阅读手势；`ToolActivityPresenter` 按同一回合和正文边界组合思考与相邻事件并标记运行状态，`DiffSummary` 从服务器 diff 计数，`ToolActivityGroupView` 在气泡内绘制二级折叠，`RollingChangeNumbers` 仅在实际数值改变时对旧值／新值做有界队列和缓动滚动，`ToolInlineDetailView` 直接按思考正文、通知、命令和文件 diff 分别排版完整内容，`ToolDetailDialog` 以全屏内容区展示同一原始内容，移除时释放更新回调；`ConversationChromeController` 使用独立容器叠放收起提示与正常输入区，按阅读方向动画改变容器尺寸，提示和放大按钮不参与正常输入区测量；`ComposerSurface` 以复用的渐变着色器绘制细边及内凹明暗，不改变内容内边距；`ComposerRenderCache` 在 Activity 内按连接／对话及实际内容跳过无变化的附件与待发栏重建，失败后不提交快照；`ConversationFooterMotion` 在阅读历史期间通过跳转按钮位移跟随输入区，动画结束后再调整消息区底部留白；`ConversationOverlayLayout` 固定接续按钮的跨状态尺寸；`ConversationScrollView` 按屏幕坐标的真实手势和惯性方向筛选滚动，过滤回弹、布局和自动定位位移，并在排除按钮、链接和滑动后将阅读区域单击交给控制器展开；消息、问答、图像预览和缩略图各有独立组件 |
+| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 负责折叠摘要的跨字体光学居中和横向阅读手势；`ToolActivityPresenter` 按同一回合和正文边界组合思考与相邻事件并标记运行状态，`DiffSummary` 从服务器 diff 计数，`ToolActivityGroupView` 在气泡内绘制二级折叠，`RollingChangeNumbers` 仅在实际数值改变时对旧值／新值做有界合并、加减速和轻微纵深滚动，连续更新缩短动画，结束只失效数字而不重建详情；`ToolInlineDetailView` 直接按思考正文、通知、命令和文件 diff 分别排版完整内容，`ToolDetailDialog` 以全屏内容区展示同一原始内容，移除时释放更新回调；`ConversationChromeController` 使用独立容器叠放收起提示与正常输入区，按阅读方向动画改变容器尺寸，提示和放大按钮不参与正常输入区测量；`ComposerSurface` 以复用的渐变着色器绘制细边及内凹明暗，不改变内容内边距；`ComposerRenderCache` 在 Activity 内按连接／对话及实际内容跳过无变化的附件与待发栏重建，失败后不提交快照；`ConversationFooterMotion` 在阅读历史期间通过跳转按钮位移跟随输入区，动画结束后再调整消息区底部留白；`ConversationOverlayLayout` 固定接续按钮的跨状态尺寸；`ConversationScrollView` 按屏幕坐标的真实手势和惯性方向筛选滚动，过滤回弹、布局和自动定位位移，并在排除按钮、链接和滑动后将阅读区域单击交给控制器展开；消息、问答、图像预览和缩略图各有独立组件 |
 | 公式排版 | `MathMarkup` 扫描正文显式公式标记并保护代码／货币；`MathRenderer` 在单 worker 中执行有界本地 TeX 排版与缓存；`MathSpan` 保持原文并提供行内基线；`MathContentView` 拥有正文块的异步 generation、可滚动独立公式和 detach／reattach 清理，不接触会话选择 |
 | 应用协调 | `RemoteApp` 维持连接、初始化、恢复、事件路由和当前选中状态的兼容接口；它不再实现窗口表单、完整发送流程或附件传输流程 |
 | 会话容器 | `ConversationStore` 是会话缓存和临时背景分发的唯一所有者；`ConversationState` 保存每条会话的消息、草稿、权限／速度、运行状态及待答表单的非秘密草稿和最小化状态 |
@@ -61,6 +61,7 @@
 - Python 桥接会记录恢复基线；新增客户端字段须同时检查透传、基线和旧托管兼容。资产更新不会自动替换正在运行的旧进程。
 - 问答日志兼容只处理可确认身份的已接受请求；不从普通文字猜审批或表单，不输出未公开推理。
 - `InteractionHistory` 按调用／工具 ID 在原轮次中定位卡片，回答只改变呈现状态；同轮次多题按源消息位置匹配答案。缺失来源时按消息 ID 保留进程内已观察位置，冷恢复缺来源则限于原轮次的第一条最终回复／轮次末尾，不挂到最新任务。位置缓存属于已有会话级 InteractionHistory 实例，不增加持久化字段或修改远端历史。
+- `item/fileChange/patchUpdated` 按已有 `RemoteApp.event` 会话分发更新单条 `ChatItem.changes/detail`，接收服务器实际文件补丁，先到补丁可建立条目，之后空的 started 不覆盖；不把已完成条目或其他轮次的迟到补丁当作新数据。整轮 diff 仍用于最终汇总，不将无法归属的整轮数据猜测为某一次操作。
 - 完成快照的消息须保留对应 turnId；缺少轮次字段的晚到 item/completed 优先沿用原消息归属，不能借用新的活动轮次。
 
 ## 持久化与安全

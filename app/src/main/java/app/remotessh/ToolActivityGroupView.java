@@ -33,8 +33,7 @@ final class ToolActivityGroupView extends LinearLayout {
       Consumer<ChatItem> openDetail){
     super(activity);this.ui=ui;this.item=item;this.expanded=expanded;this.openDetail=openDetail;
     summary=item.type.equals("fileSummary");
-    numbers=new RollingChangeNumbers(ui.bg==Color.BLACK,this::invalidateNumbers,
-        ()->post(()->{if(getWindowToken()!=null)bind(this.item);}));
+    numbers=new RollingChangeNumbers(ui.bg==Color.BLACK,this::invalidateNumbers);
     setOrientation(VERTICAL);
     if(summary){setBackground(ui.rounded(ui.panel,18));setPadding(ui.dp(12),ui.dp(3),ui.dp(12),ui.dp(3));}
     header=ui.compactSummary();

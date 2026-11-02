@@ -24,6 +24,15 @@ public final class ChatItem {
     return user() || type.equals("agentMessage") || type.equals("plan");
   }
 
+  void updateFileChanges(JSONArray value) {
+    changes=value;StringBuilder text=new StringBuilder();
+    if(value!=null)for(int i=0;i<value.length();i++){
+      JSONObject change=value.optJSONObject(i);
+      if(change!=null)text.append(change.optString("path")).append('\n').append(change.optString("diff")).append('\n');
+    }
+    detail=text.toString();
+  }
+
   private static String readableText(Object value) {
     if (value instanceof String) return ((String) value).trim();
     if (value instanceof JSONObject) return readableText(((JSONObject) value).opt("text"));
@@ -78,16 +87,7 @@ public final class ChatItem {
         break;
       case "fileChange":
         m.text = "文件更改";
-        JSONArray changes = j.optJSONArray("changes");
-        m.changes = changes;
-        StringBuilder d = new StringBuilder();
-        if (changes != null)
-          for (int i = 0; i < changes.length(); i++) {
-            JSONObject v = changes.optJSONObject(i);
-            if (v != null)
-              d.append(v.optString("path")).append('\n').append(v.optString("diff")).append('\n');
-          }
-        m.detail = d.toString();
+        m.updateFileChanges(j.optJSONArray("changes"));
         break;
       case "reasoning":
         m.text = "思考过程";

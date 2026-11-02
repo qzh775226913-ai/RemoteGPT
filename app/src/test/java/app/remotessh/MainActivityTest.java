@@ -1611,6 +1611,31 @@ public class MainActivityTest {
     running.text="已编辑 1 个文件  +6 −2";card.bind(running);assertTrue(card.countsAnimating());
     running.status="completed";card.bind(running);assertFalse(card.countsAnimating());
   }
+
+  @Test public void serverPatchUpdatesLiveCountsWithoutRebuildingWhenAnimationStops() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;
+    app.threadId="chat";app.turnId="turn";app.busy=true;
+    ChatItem thought=new ChatItem("thought","reasoning","");thought.turnId="turn";thought.status="inProgress";thought.detail="Checking";
+    ChatItem edit=ChatItem.from(Json.obj("id","edit","type","fileChange","status","inProgress","changes",
+        new org.json.JSONArray().put(Json.obj("path","src/Main.java","diff","-old\n+new\n"))));edit.turnId="turn";
+    app.items.add(thought);app.items.add(edit);app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("activityViews");field.setAccessible(true);
+    ToolActivityGroupView group=(ToolActivityGroupView)((java.util.Map<?,?>)field.get(activity)).get("activity-turn-thought");
+    group.getChildAt(0).performClick();LinearLayout children=(LinearLayout)group.getChildAt(1);
+    ((LinearLayout)children.getChildAt(1)).getChildAt(0).performClick();
+    java.lang.reflect.Method event=RemoteApp.class.getDeclaredMethod("event",org.json.JSONObject.class);event.setAccessible(true);
+    org.json.JSONArray changes=new org.json.JSONArray().put(Json.obj("path","src/Main.java","kind","update","diff","-old\n+new\n+more\n"));
+    org.json.JSONObject update=Json.obj("method","item/fileChange/patchUpdated","params",
+        Json.obj("threadId","chat","turnId","turn","itemId","edit","changes",changes));
+    event.invoke(app,update);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(45));
+    assertTrue(group.countTransitioned("header",0,"+","1","2"));assertFalse(group.countAnimating("header",1,"−"));
+    assertTrue(group.countTransitioned("file:edit",0,"+","1","2"));
+    View expandedRow=children.getChildAt(1);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(600));
+    assertSame("finishing a count must not rebuild the expanded detail",expandedRow,children.getChildAt(1));assertFalse(group.countsAnimating());
+    event.invoke(app,update);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertFalse("unchanged server values must stay still",group.countsAnimating());assertSame(expandedRow,children.getChildAt(1));
+  }
   @Test public void fileNameNumbersAreNotColoredOrAnimatedAsChangeCounts() {
     DialogUi ui=new DialogUi(activity,Color.WHITE,Color.BLACK,0xff666666,0xffeeeeee,0xffdddddd);
     String path="src/my +12 file −7.java";

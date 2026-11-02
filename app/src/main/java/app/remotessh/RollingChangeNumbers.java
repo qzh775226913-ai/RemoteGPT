@@ -20,14 +20,15 @@ import java.util.regex.Pattern;
 final class RollingChangeNumbers {
   private static final Pattern COUNT=Pattern.compile("(?<!\\S)[+−]\\d+");
   private static final Pattern FILE_COUNT=Pattern.compile("(?<!\\S)[+−]\\d+(?=\\s*(?:[+−]\\d+)?$)");
-  private static final int MAX_PENDING=8;
+  private static final int MAX_PENDING=2;
+  private static final long NORMAL_DURATION=320, BUSY_DURATION=200;
   private final Map<String,Counter> counters=new HashMap<>();
-  private final Runnable redraw,settled;
+  private final Runnable redraw;
   private final boolean dark;
   private boolean attached;
 
-  RollingChangeNumbers(boolean dark,Runnable redraw,Runnable settled){
-    this.dark=dark;this.redraw=redraw;this.settled=settled;
+  RollingChangeNumbers(boolean dark,Runnable redraw){
+    this.dark=dark;this.redraw=redraw;
   }
 
   CharSequence style(String scope,CharSequence label,boolean animateChanges,boolean animateFirst){
@@ -54,11 +55,11 @@ final class RollingChangeNumbers {
   }
   boolean transitioned(String scope,int index,String sign,String from,String to){
     Counter counter=counters.get(scope+"/"+index+sign);
-    return counter!=null && from.equals(counter.from) && to.equals(counter.to);
+    return counter!=null && from.equals(counter.lastFrom) && to.equals(counter.lastTo);
   }
 
   private final class Counter {
-    String current,latest,from,to;
+    String current,latest,from,to,lastFrom,lastTo;
     float progress;
     ValueAnimator animator;
     final ArrayDeque<String> pending=new ArrayDeque<>();
@@ -72,12 +73,18 @@ final class RollingChangeNumbers {
         if(animate && attached){
           if(pending.size()>=MAX_PENDING)pending.removeLast();
           pending.add(value);
+          accelerate();
         } else finish();
       } else if(!animate && !initial && moving())finish();
       startNext();
     }
 
     boolean moving(){return animator!=null || !pending.isEmpty();}
+    void accelerate(){
+      if(animator==null || animator.getDuration()<=BUSY_DURATION)return;
+      float elapsed=Math.min(1f,animator.getCurrentPlayTime()/(float)animator.getDuration());
+      animator.setDuration(BUSY_DURATION);animator.setCurrentPlayTime(Math.round(elapsed*BUSY_DURATION));
+    }
     void finish(){
       if(animator!=null){ValueAnimator old=animator;animator=null;old.cancel();}
       pending.clear();current=latest;from=to=null;progress=0;
@@ -86,14 +93,14 @@ final class RollingChangeNumbers {
       if(!attached || animator!=null || pending.isEmpty())return;
       from=current;to=pending.removeFirst();
       if(from.equals(to)){current=to;startNext();return;}
-      progress=0;animator=ValueAnimator.ofFloat(0f,1f);animator.setDuration(480);
-      animator.setInterpolator(new PathInterpolator(.22f,0f,.16f,1f));
+      lastFrom=from;lastTo=to;
+      progress=0;animator=ValueAnimator.ofFloat(0f,1f);animator.setDuration(pending.isEmpty()?NORMAL_DURATION:BUSY_DURATION);
+      animator.setInterpolator(new PathInterpolator(.42f,0f,.25f,1f));
       animator.addUpdateListener(a->{progress=(float)a.getAnimatedValue();redraw.run();});
       animator.addListener(new AnimatorListenerAdapter(){
         @Override public void onAnimationEnd(Animator animation){
           if(animator!=animation)return;
-          current=to;animator=null;progress=0;startNext();
-          settled.run();
+          current=to;animator=null;from=to=null;progress=0;startNext();redraw.run();
         }
       });
       animator.start();
@@ -104,24 +111,32 @@ final class RollingChangeNumbers {
     private final String sign;
     private final Counter counter;
     private final int color;
+    private float reserved;
     CountSpan(String sign,Counter counter,int color){this.sign=sign;this.counter=counter;this.color=color;}
     @Override public int getSize(Paint paint,CharSequence text,int start,int end,Paint.FontMetricsInt metrics){
       String from=counter.from==null?counter.current:counter.from;
       String to=counter.to==null?from:counter.to;
-      return (int)Math.ceil(paint.measureText(sign)+Math.max(paint.measureText(from),paint.measureText(to)));
+      reserved=Math.max(Math.max(paint.measureText(from),paint.measureText(to)),paint.measureText(counter.latest));
+      return (int)Math.ceil(paint.measureText(sign)+reserved);
     }
     @Override public void draw(Canvas canvas,CharSequence text,int start,int end,float x,int top,int baseline,int bottom,Paint paint){
       String from=counter.from==null?counter.current:counter.from;
       String to=counter.to==null?from:counter.to;
-      float fromWidth=paint.measureText(from),toWidth=paint.measureText(to),slot=Math.max(fromWidth,toWidth);
+      float fromWidth=paint.measureText(from),toWidth=paint.measureText(to),slot=Math.max(reserved,Math.max(fromWidth,toWidth));
       int old=paint.getColor();paint.setColor(color);canvas.drawText(sign,x,baseline,paint);
       float startX=x+paint.measureText(sign),height=bottom-top;
       float direction=compare(to,from)>=0?1f:-1f;
       canvas.save();canvas.clipRect(startX,top,startX+slot,bottom);
-      canvas.drawText(from,startX+(slot-fromWidth)/2,baseline-direction*height*counter.progress,paint);
-      if(counter.animator!=null)canvas.drawText(to,startX+(slot-toWidth)/2,
-          baseline+direction*height*(1-counter.progress),paint);
+      float p=counter.animator==null?0:counter.progress;int alpha=paint.getAlpha();
+      drawValue(canvas,paint,from,startX+slot/2,baseline-direction*height*p,fromWidth,1f-.1f*p,alpha*(1f-.3f*p));
+      if(counter.animator!=null)drawValue(canvas,paint,to,startX+slot/2,
+          baseline+direction*height*(1-p),toWidth,.9f+.1f*p,alpha*(.7f+.3f*p));
       canvas.restore();paint.setColor(old);
+    }
+    private static void drawValue(Canvas canvas,Paint paint,String text,float center,float baseline,float width,float scale,float alpha){
+      int oldAlpha=paint.getAlpha();paint.setAlpha(Math.max(0,Math.min(255,Math.round(alpha))));
+      canvas.save();canvas.translate(center,baseline);canvas.scale(1f,scale);canvas.drawText(text,-width/2,0,paint);canvas.restore();
+      paint.setAlpha(oldAlpha);
     }
     private static int compare(String a,String b){
       if(a.length()!=b.length())return Integer.compare(a.length(),b.length());
