@@ -12,7 +12,8 @@ public class ConnectionFailureTest {
     assertTrue(ConnectionFailure.upstreamForbidden(diagnostic));
     assertFalse(ConnectionFailure.upstreamForbidden("[UNDICI-EHPA] Warning"));
     String message = ConnectionFailure.describe(new EOFException("exited"), "远端协议握手 / 通信", -1, diagnostic);
-    assertTrue(message.contains("远端到模型服务的链路"));
+    assertTrue(message.contains("远端 Codex 连接模型服务时收到 HTTP 403"));
+    assertTrue(message.contains("代理或网络策略"));assertFalse(message.contains("手机 SSH 密码"));
     assertFalse(message.contains("\u001b"));
   }
 

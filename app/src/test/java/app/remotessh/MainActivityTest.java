@@ -894,6 +894,71 @@ public class MainActivityTest {
     assertTrue(dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled());assertSame(req,app.visibleApproval());
   }
 
+  @Test public void minimizedQuestionStaysAboveComposerAndRestoresAfterRotation() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.busy=true;app.threadId="chat";
+    org.json.JSONObject req=Json.obj("id",17,"method","item/tool/requestUserInput","params",Json.obj("threadId","chat","questions",
+        new org.json.JSONArray().put(Json.obj("id","q","question","选择方案","options",new org.json.JSONArray().put(Json.obj("label","方案 A","description","优先兼容"))))));
+    app.approvals.add(req);app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertTrue(((TextView)find(dialog.getWindow().getDecorView(),"选择方案")).isTextSelectable());
+    RadioButton option=(RadioButton)find(dialog.getWindow().getDecorView(),"方案 A");assertTrue(option.isTextSelectable());option.performClick();
+    capture("question-before-minimize");
+    find(dialog.getWindow().getDecorView(),"缩小提问").performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+    View bubble=find(content(),"恢复提问");assertEquals(View.VISIBLE,bubble.getVisibility());assertSame(req,app.visibleApproval());
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);
+    View host=(View)((View)field.get(activity)).getParent();int[] bubblePos=new int[2],hostPos=new int[2];
+    bubble.getLocationOnScreen(bubblePos);host.getLocationOnScreen(hostPos);
+    assertTrue("bubble must sit above the input",bubblePos[1]+bubble.getHeight()<=hostPos[1]);
+    capture("question-minimized");
+    controller.recreate();activity=controller.get();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    bubble=find(content(),"恢复提问");assertEquals(View.VISIBLE,bubble.getVisibility());bubble.performClick();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+    dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertTrue(((RadioButton)find(dialog.getWindow().getDecorView(),"方案 A")).isChecked());
+    assertTrue(dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled());assertSame(req,app.visibleApproval());
+    assertEquals(View.INVISIBLE,bubble.getVisibility());
+  }
+
+  @Test public void minimizedQuestionsKeepTheirOwnAnswersAcrossConversations() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="chat";
+    org.json.JSONObject first=Json.obj("id",1,"method","item/tool/requestUserInput","params",Json.obj("threadId","chat","questions",
+        new org.json.JSONArray().put(Json.obj("id","q","question","问题 A","options",new org.json.JSONArray().put(Json.obj("label","答案 A"))))));
+    org.json.JSONObject second=Json.obj("id",2,"method","item/tool/requestUserInput","params",Json.obj("threadId","other","questions",
+        new org.json.JSONArray().put(Json.obj("id","q","question","问题 B","options",new org.json.JSONArray().put(Json.obj("label","答案 B"))))));
+    app.approvals.add(first);app.inConversation("other",()->app.approvals.add(second));app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));capture("question-cross-thread");
+    android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    find(dialog.getWindow().getDecorView(),"答案 A").performClick();find(dialog.getWindow().getDecorView(),"缩小提问").performClick();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+    app.conversationStore.select("other");app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    RadioButton option=(RadioButton)find(dialog.getWindow().getDecorView(),"答案 B");assertNotNull(option);assertFalse(option.isChecked());
+    option.performClick();find(dialog.getWindow().getDecorView(),"缩小提问").performClick();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+    app.conversationStore.select("chat");app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    View bubble=find(content(),"恢复提问");assertEquals(View.VISIBLE,bubble.getVisibility());bubble.performClick();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+    dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    assertTrue(((RadioButton)find(dialog.getWindow().getDecorView(),"答案 A")).isChecked());assertNull(find(dialog.getWindow().getDecorView(),"答案 B"));
+    assertSame(first,app.visibleApproval());
+  }
+
+  @Test public void replayPreservesMinimizedQuestionAndExpiredRequestRemovesIt() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="chat";
+    org.json.JSONObject req=Json.obj("id",8,"method","item/tool/requestUserInput","params",Json.obj("threadId","chat","questions",
+        new org.json.JSONArray().put(Json.obj("id","q","question","选择","options",new org.json.JSONArray().put(Json.obj("label","选项"))))));
+    app.approvals.add(req);app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    find(dialog.getWindow().getDecorView(),"选项").performClick();find(dialog.getWindow().getDecorView(),"缩小提问").performClick();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+    app.replaying=true;app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertEquals(View.INVISIBLE,find(content(),"恢复提问").getVisibility());
+    app.replaying=false;app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    View bubble=find(content(),"恢复提问");assertEquals(View.VISIBLE,bubble.getVisibility());assertSame(req,app.visibleApproval());
+    app.approvals.clear();app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    assertEquals(View.INVISIBLE,bubble.getVisibility());assertEquals("",app.questionUi.token);
+  }
+
   @Test public void savedAsyncQuestionShowsChoicesAndKeepsPermission() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="chat";
     app.journal.apply(ConversationJournalTest.fixture("call"),"chat");app.syncJournalQuestions();app.effectivePermissionMode=PermissionMode.FULL;app.changed();
@@ -1359,7 +1424,7 @@ public class MainActivityTest {
     fileRow.performClick();
     LinearLayout expandedFile=(LinearLayout)((LinearLayout)files.getChildAt(1)).getChildAt(0);
     ToolInlineDetailView code=(ToolInlineDetailView)expandedFile.getChildAt(1);
-    assertTrue(((TextView)((HorizontalScrollView)code.getChildAt(1)).getChildAt(0)).getText().toString().contains("+new"));
+    assertTrue(((TextView)((HorizontalScrollView)code.getChildAt(0)).getChildAt(0)).getText().toString().contains("+new"));
     capture("nested-inline-code-diff");
   }
   @Test public void readingBubbleRestoresDraftAndReadOnlyControlsStayBehindComposer() throws Exception {
@@ -1470,7 +1535,7 @@ public class MainActivityTest {
     first=(LinearLayout)content.getChildAt(0);
     assertEquals(3,first.getChildCount());
     ToolInlineDetailView inline=(ToolInlineDetailView)first.getChildAt(1);
-    HorizontalScrollView code=(HorizontalScrollView)inline.getChildAt(1);
+    HorizontalScrollView code=(HorizontalScrollView)inline.getChildAt(0);
     TextView source=(TextView)code.getChildAt(0);
     assertTrue(source.getText().toString().contains("+new"));
     assertTrue(source.getText() instanceof android.text.Spanned);
@@ -1503,7 +1568,7 @@ public class MainActivityTest {
     assertEquals("先检查文件，再核对输出。",((TextView)prose.getChildAt(0)).getText().toString());
     ((LinearLayout)children.getChildAt(2)).getChildAt(0).performClick();
     ToolInlineDetailView diff=(ToolInlineDetailView)((LinearLayout)children.getChildAt(2)).getChildAt(1);
-    TextView code=(TextView)((HorizontalScrollView)diff.getChildAt(1)).getChildAt(0);
+    TextView code=(TextView)((HorizontalScrollView)diff.getChildAt(0)).getChildAt(0);
     assertTrue(code.getText().toString().contains("+new"));
     assertTrue(code.getText() instanceof android.text.Spanned);
     capture("live-reasoning-tool-group");

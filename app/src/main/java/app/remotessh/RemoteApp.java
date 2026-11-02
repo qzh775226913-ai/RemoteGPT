@@ -37,6 +37,7 @@ public final class RemoteApp extends Application {
   public boolean readOnly, remoteRunning;
   public final UsageLimits usage = new UsageLimits();
   ContextUsage contextUsage = new ContextUsage();
+  QuestionUiState questionUi = new QuestionUiState();
   public String threadCwd = "";
   private String reconnectThread = "", resumeDraftThread = "";
   public String threadTitle = "", historyProject = "", historySearch = "", lastError = "";
@@ -973,6 +974,7 @@ public final class RemoteApp extends Application {
 
   public void disconnect() {
     modelRefresh.stop();
+    questionUi = new QuestionUiState();
     forcedApprovalState = new ForcedApprovalController.State();
     journalPolling.clear();
     recoveringThreads.clear();
@@ -1249,7 +1251,7 @@ public final class RemoteApp extends Application {
     String id = "historical-error-" + (turn.isEmpty() ? message : turn);
     ChatItem item = find(id);
     if (item == null) { item = new ChatItem(id, "historicalError", "历史任务错误"); items.add(item); }
-    item.detail = "历史记录，并非本次接续失败。\n" + message;
+    item.detail = message;
     item.status = "failed";
   }
 

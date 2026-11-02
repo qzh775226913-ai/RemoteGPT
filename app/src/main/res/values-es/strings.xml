@@ -80,7 +80,7 @@
     <string name="ui_restore_messages">"Mensaje de recuperación"</string>
     <string name="ui_got_it">"Entendido"</string>
     <string name="ui_waiting_for_reasoning_summary">"Esperando resumen de pensamientos…"</string>
-    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"El servidor no proporcionó un resumen de este elemento de razonamiento. Algunos elementos pueden no tener un resumen disponible."</string>
+    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"No hay resumen disponible"</string>
     <string name="ui_copy">"Copiar"</string>
     <string name="ui_reasoning">"Razonamiento"</string>
     <string name="ui_execution_details">"Detalles de ejecución"</string>
@@ -148,7 +148,7 @@
     <string name="ui_latest_stable_version">"\nÚltima versión estable: "</string>
     <string name="ui_not_retrieved">"Aún no obtenido"</string>
     <string name="ui_remote_codex_version">"Versión remota del Codex"</string>
-    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\n¿Actualizar el Codex remoto? La nueva versión se habilitará automáticamente cuando esté inactiva y admite el reinicio seguro; instálelo primero cuando haya una tarea en ejecución y luego haga clic aquí para reiniciar una vez completada la tarea. Seleccione No actualizar todavía para continuar usando la versión actual."</string>
+    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\n¿Actualizar el Codex remoto? La nueva versión se habilitará automáticamente cuando esté inactiva y admite el reinicio seguro; instálelo primero cuando haya una tarea en ejecución y luego haga clic aquí para reiniciar una vez completada la tarea."</string>
     <string name="ui_not_now">"Aún no actualizado"</string>
     <string name="ui_updating_keep_the_connection_open">"\n\nActualizando, por favor manténgase conectado."</string>
     <string name="ui_the_new_version_is_installed_but_this_session_still_uses_the_old">"\n\nSe ha instalado la nueva versión, pero la sesión actual todavía ejecuta la versión anterior. Depende de usted decidir cuándo reiniciar. Al reiniciar se detendrá cualquier conversación remota en curso, luego se desconectará brevemente y se volverá a conectar usando la nueva versión."</string>
@@ -292,9 +292,6 @@
     <string name="ui_new_project_name">"Nuevo nombre del proyecto"</string>
     <string name="ui_create_a_folder_in">"Cree una nueva carpeta en el siguiente directorio:\n"</string>
     <string name="ui_create">"crear"</string>
-    <string name="ui_the_remote_asynchronous_question_has_been_saved_tap_send_to_retur">"Se han conservado los problemas asincrónicos en el extremo remoto. Una vez que haga clic en Enviar, la respuesta se enviará como un mensaje de conversación."</string>
-    <string name="ui_choose_an_option_or_enter_an_answer_then_tap_send_to_continue">"Espere su respuesta antes de continuar; seleccione una opción o ingrese el contenido y luego haga clic en Enviar."</string>
-    <string name="ui_this_is_a_non_blocking_remote_question_the_task_can_continue_inde">"Se trata de una pregunta que no bloquea desde el extremo remoto: puede seguir trabajando de forma independiente mientras espera una respuesta."</string>
     <string name="ui_enter_your_answer">"Ingrese la respuesta"</string>
     <string name="ui_write_your_own_answer">"自己填写"</string>
     <string name="ui_question_answered">"Pregunta interactiva·Respuesta"</string>
@@ -317,7 +314,7 @@
     <string name="ui_choose_file_manager">"Seleccionar administrador de archivos"</string>
     <string name="ui_choose_gallery_or_image_app">"Seleccionar álbum de fotos o aplicación de imágenes"</string>
     <string name="ui_disable_persistence_and_reconnect">"Reconectar después de cerrar la sesión persistente"</string>
-    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"Al desactivar el modo persistente, Codex se iniciará directamente. No se garantiza que las tareas continúen tras una desconexión. Las comprobaciones y actualizaciones de versión y parte de la recuperación del historial de preguntas siguen requiriendo Python. No se instalará software automáticamente. ¿Continuar?"</string>
+    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"Al desactivar el modo persistente, Codex se iniciará directamente. No se garantiza que las tareas continúen tras una desconexión. Las comprobaciones y actualizaciones de versión y parte de la recuperación del historial de preguntas siguen requiriendo Python. ¿Continuar?"</string>
     <string name="ui_disable_and_reconnect">"Cerrar y volver a conectar"</string>
     <string name="ui_use_current_conversation">"Usar la conversación actual"</string>
     <string name="ui_send_a_message_to_update_permissions">"Enviar mensaje para actualizar permisos"</string>
@@ -494,12 +491,12 @@
     <string name="diagnostic_main_thread">"Falló la inicialización de la conexión: se ejecutó una operación de red en el hilo principal (NetworkOnMainThreadException)"</string>
     <string name="diagnostic_connection_failed">"Conexión fallida · "</string>
     <string name="diagnostic_connection_reason">"\n\nRazón: "</string>
-    <string name="diagnostic_upstream_guidance">"\n\nLa conexión remota Codex WebSocket al servicio modelo recibió HTTP 403. Esto es una falla entre el host y el servicio modelo, no una contraseña SSH telefónica incorrecta. Bajo el mismo usuario remoto, verifique el inicio de sesión del Codex, el acceso a la cuenta y la política de red o proxy. El registro por sí solo no puede identificar quién es el responsable. La advertencia experimental de la UNDICI no es en sí misma un fracaso. Si el proceso remoto ha cerrado, el cliente no puede recibir más resultados del mismo."</string>
+    <string name="diagnostic_upstream_guidance">"\n\nCodex remoto recibió HTTP 403 del servicio de modelo. Compruebe el inicio de sesión de Codex, el acceso a la cuenta y la política de proxy o red para el mismo usuario remoto."</string>
     <string name="diagnostic_tcp_guidance">"\n\nLa autenticación SSH no se ha iniciado. Verifique la dirección del host y el puerto. Si otro cliente SSH en este teléfono puede llegar al mismo host, verifique Tailscale → perfil → túnel dividido basado en aplicaciones, asegúrese de que RemoteGPT (app.remotessh) no esté excluido y verifique si el teléfono bloquea el acceso a la red de esta aplicación. También puedes volver a conectar Tailscale y volver a intentarlo."</string>
     <string name="diagnostic_ssh_guidance">"\n\nSi usa Tailscale, confirme que la VPN del teléfono esté conectada, que el host esté en línea y que las reglas de acceso permitan el puerto de destino. Si la resolución MagicDNS falla, pruebe con la dirección 100.x del host. Utilice una contraseña o clave privada para SSH normal y autenticación sin contraseña para Tailscale SSH. Si es necesaria una nueva autenticación, complétela en la aplicación Tailscale antes de volver a intentarlo."</string>
     <string name="diagnostic_exit_code">"\nCódigo de salida remota: "</string>
     <string name="diagnostic_python_guidance">"\nSSH conectado, pero no se encontró python3. Instale Python 3.8 o posterior para el mismo usuario SSH y agréguelo a la RUTA no interactiva, o deshabilite manualmente las sesiones persistentes y vuelva a conectarse."</string>
-    <string name="diagnostic_program_guidance">"\nSSH conectado, pero el shell remoto no pudo encontrar el programa de inicio. Esto no es una falla de conexión IPv6. Ejecute el comando -v codex con el mismo usuario remoto e ingrese la ruta absoluta resultante como comando de inicio, por ejemplo /opt/homebrew/bin/codex app-server. Si no se devuelve ninguna ruta, primero instale Codex para ese usuario."</string>
+    <string name="diagnostic_program_guidance">"\nSSH conectado, pero el shell remoto no pudo encontrar el programa de inicio. Ejecute el comando -v codex con el mismo usuario remoto e ingrese la ruta absoluta resultante como comando de inicio, por ejemplo /opt/homebrew/bin/codex app-server. Si no se devuelve ninguna ruta, primero instale Codex para ese usuario."</string>
     <string name="diagnostic_remote_output">"\n\nSalida de diagnóstico remoto (las advertencias pueden no ser la causa):\n"</string>
     <string name="diagnostic_phase_initializing">"Inicializando el programa remoto"</string>
     <string name="diagnostic_phase_ssh">"Conexión y autenticación SSH"</string>
@@ -570,4 +567,7 @@
     <string name="ui_permission_auto_description">Revisar automáticamente las solicitudes de aprobación</string>
     <string name="ui_permission_read_description">Editar archivos o ejecutar comandos requiere aprobación</string>
     <string name="ui_permission_full_description">Acceso completo al ordenador (mayor riesgo)</string>
+    <string name="ui_historical_task_error">"Error de una tarea anterior"</string>
+    <string name="ui_minimize_question">"Minimizar pregunta"</string>
+    <string name="ui_restore_question">"Restaurar pregunta"</string>
 </resources>

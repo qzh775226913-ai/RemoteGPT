@@ -81,7 +81,7 @@
     <string name="ui_restore_messages">"Restore messages"</string>
     <string name="ui_got_it">"Got it"</string>
     <string name="ui_waiting_for_reasoning_summary">"Waiting for reasoning summary…"</string>
-    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"The server provided no summary for this reasoning item. Some reasoning items may have no displayable summary."</string>
+    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"No summary available"</string>
     <string name="ui_copy">"Copy"</string>
     <string name="ui_reasoning">"Reasoning"</string>
     <string name="ui_execution_details">"Execution details"</string>
@@ -149,7 +149,7 @@
     <string name="ui_latest_stable_version">"\nLatest stable version: "</string>
     <string name="ui_not_retrieved">"Not retrieved"</string>
     <string name="ui_remote_codex_version">"Remote Codex version"</string>
-    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\nUpdate remote Codex? The new version is activated automatically when idle and safe restart is supported. If tasks are running, it is installed first; return here to restart after they finish. Choose Not now to keep using the current version."</string>
+    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\nUpdate remote Codex? The new version is activated automatically when idle and safe restart is supported. If tasks are running, it is installed first; return here to restart after they finish."</string>
     <string name="ui_not_now">"Not now"</string>
     <string name="ui_updating_keep_the_connection_open">"\n\nUpdating. Keep the connection open."</string>
     <string name="ui_the_new_version_is_installed_but_this_session_still_uses_the_old">"\n\nThe new version is installed, but this session still uses the old version. Restart when convenient. Restarting stops all active remote conversations, briefly disconnects, and reconnects using the new version."</string>
@@ -293,9 +293,6 @@
     <string name="ui_new_project_name">"New project name"</string>
     <string name="ui_create_a_folder_in">"Create a folder in:\n"</string>
     <string name="ui_create">"Create"</string>
-    <string name="ui_the_remote_asynchronous_question_has_been_saved_tap_send_to_retur">"The remote asynchronous question has been saved. Tap Send to return your answer as a conversation message."</string>
-    <string name="ui_choose_an_option_or_enter_an_answer_then_tap_send_to_continue">"Choose an option or enter an answer, then tap Send to continue."</string>
-    <string name="ui_this_is_a_non_blocking_remote_question_the_task_can_continue_inde">"This is a non-blocking remote question. The task can continue independently while awaiting your answer."</string>
     <string name="ui_enter_your_answer">"Enter your answer"</string>
     <string name="ui_write_your_own_answer">"Write your own answer"</string>
     <string name="ui_question_answered">"Question · Answered"</string>
@@ -318,7 +315,7 @@
     <string name="ui_choose_file_manager">"Choose file manager"</string>
     <string name="ui_choose_gallery_or_image_app">"Choose gallery or image app"</string>
     <string name="ui_disable_persistence_and_reconnect">"Disable persistence and reconnect"</string>
-    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"Codex will start directly. Tasks may not continue after disconnection. Remote version checks, updates, and some question history recovery still require Python. No software will be installed automatically. Continue?"</string>
+    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"Codex will start directly. Tasks may not continue after disconnection. Remote version checks, updates, and some question history recovery still require Python. Continue?"</string>
     <string name="ui_disable_and_reconnect">"Disable and reconnect"</string>
     <string name="ui_use_current_conversation">"Use current conversation"</string>
     <string name="ui_send_a_message_to_update_permissions">"Send a message to update permissions"</string>
@@ -498,12 +495,12 @@
     <string name="diagnostic_main_thread">"Connection initialization failed: a network operation ran on the main thread (NetworkOnMainThreadException)"</string>
     <string name="diagnostic_connection_failed">"Connection failed · "</string>
     <string name="diagnostic_connection_reason">"\n\nReason: "</string>
-    <string name="diagnostic_upstream_guidance">"\n\nThe remote Codex WebSocket connection to the model service received HTTP 403. This is a failure between the host and the model service, not an incorrect phone SSH password. Under the same remote user, check Codex login, account access, and proxy or network policy. The log alone cannot identify which is responsible. The UNDICI experimental warning is not itself a failure. If the remote process has exited, the client cannot receive further output from it."</string>
+    <string name="diagnostic_upstream_guidance">"\n\nRemote Codex received HTTP 403 from the model service. Check Codex sign-in, account access, and proxy or network policy for the same remote user."</string>
     <string name="diagnostic_tcp_guidance">"\n\nSSH authentication has not started. Check the host address and port. If another SSH client on this phone can reach the same host, check Tailscale → profile → app-based split tunneling, ensure RemoteGPT (app.remotessh) is not excluded, and check whether the phone blocks this app\'s network access. You can also reconnect Tailscale and retry."</string>
     <string name="diagnostic_ssh_guidance">"\n\nIf using Tailscale, confirm the phone VPN is connected, the host is online, and access rules allow the target port. If MagicDNS resolution fails, try the host\'s 100.x address. Use a password or private key for ordinary SSH, and passwordless authentication for Tailscale SSH. If reauthentication is required, complete it in the Tailscale app before retrying."</string>
     <string name="diagnostic_exit_code">"\nRemote exit code: "</string>
     <string name="diagnostic_python_guidance">"\nSSH connected, but python3 was not found. Install Python 3.8 or later for the same SSH user and add it to the non-interactive PATH, or manually disable persistent sessions and reconnect."</string>
-    <string name="diagnostic_program_guidance">"\nSSH connected, but the remote shell could not find the startup program. This is not an IPv6 connection failure. Run command -v codex under the same remote user and enter the resulting absolute path as the startup command, for example /opt/homebrew/bin/codex app-server. If no path is returned, install Codex for that user first."</string>
+    <string name="diagnostic_program_guidance">"\nSSH connected, but the remote shell could not find the startup program. Run command -v codex under the same remote user and enter the resulting absolute path as the startup command, for example /opt/homebrew/bin/codex app-server. If no path is returned, install Codex for that user first."</string>
     <string name="diagnostic_remote_output">"\n\nRemote diagnostic output (warnings may not be the cause):\n"</string>
     <string name="diagnostic_phase_initializing">"Initializing remote program"</string>
     <string name="diagnostic_phase_ssh">"SSH connection and authentication"</string>
@@ -574,4 +571,7 @@
     <string name="ui_permission_auto_description">Automatically review approval requests</string>
     <string name="ui_permission_read_description">Editing files or running commands requires approval</string>
     <string name="ui_permission_full_description">Full access to the computer (higher risk)</string>
+    <string name="ui_historical_task_error">"Past task error"</string>
+    <string name="ui_minimize_question">"Minimize question"</string>
+    <string name="ui_restore_question">"Restore question"</string>
 </resources>

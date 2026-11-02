@@ -80,7 +80,7 @@
     <string name="ui_restore_messages">"Wiederherstellungsnachricht"</string>
     <string name="ui_got_it">"Verstanden"</string>
     <string name="ui_waiting_for_reasoning_summary">"Ich warte auf eine Zusammenfassung meiner Gedanken…"</string>
-    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"Der Server hat keine Zusammenfassung dieses Denkschritts bereitgestellt. Für manche Denkschritte ist keine Zusammenfassung verfügbar."</string>
+    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"Keine Zusammenfassung verfügbar"</string>
     <string name="ui_copy">"Kopieren"</string>
     <string name="ui_reasoning">"Überlegungen"</string>
     <string name="ui_execution_details">"Ausführungsdetails"</string>
@@ -148,7 +148,7 @@
     <string name="ui_latest_stable_version">"\nNeueste stabile Version: "</string>
     <string name="ui_not_retrieved">"Noch nicht erhalten"</string>
     <string name="ui_remote_codex_version">"Remote-Codex-Version"</string>
-    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\nDen Remote-Codex aktualisieren? Die neue Version wird im Leerlauf automatisch aktiviert und unterstützt einen sicheren Neustart. Installieren Sie es zuerst, wenn eine Aufgabe ausgeführt wird, und klicken Sie dann hier, um nach Abschluss der Aufgabe neu zu starten. Wählen Sie „Noch nicht aktualisieren“, um weiterhin die aktuelle Version zu verwenden."</string>
+    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\nDen Remote-Codex aktualisieren? Die neue Version wird im Leerlauf automatisch aktiviert und unterstützt einen sicheren Neustart. Installieren Sie es zuerst, wenn eine Aufgabe ausgeführt wird, und klicken Sie dann hier, um nach Abschluss der Aufgabe neu zu starten."</string>
     <string name="ui_not_now">"Noch nicht aktualisiert"</string>
     <string name="ui_updating_keep_the_connection_open">"\n\nAktualisierung, bitte bleiben Sie in Verbindung."</string>
     <string name="ui_the_new_version_is_installed_but_this_session_still_uses_the_old">"\n\nDie neue Version wurde installiert, aber in der aktuellen Sitzung wird immer noch die alte Version ausgeführt. Es liegt an Ihnen, zu entscheiden, wann Sie neu starten. Durch einen Neustart werden alle laufenden Remote-Gespräche gestoppt. Anschließend wird die Verbindung kurzzeitig getrennt und die Verbindung mit der neuen Version wiederhergestellt."</string>
@@ -292,9 +292,6 @@
     <string name="ui_new_project_name">"Neuer Projektname"</string>
     <string name="ui_create_a_folder_in">"Erstellen Sie einen neuen Ordner im folgenden Verzeichnis:\n"</string>
     <string name="ui_create">"Erstellen"</string>
-    <string name="ui_the_remote_asynchronous_question_has_been_saved_tap_send_to_retur">"Das asynchrone Problem der Gegenstelle wurde beibehalten. Sobald Sie auf „Senden“ klicken, wird die Antwort als Konversationsnachricht zurückgesendet."</string>
-    <string name="ui_choose_an_option_or_enter_an_answer_then_tap_send_to_continue">"Warten Sie auf Ihre Antwort, bevor Sie fortfahren. Wählen Sie eine Option aus oder geben Sie Inhalte ein und klicken Sie dann auf Senden."</string>
-    <string name="ui_this_is_a_non_blocking_remote_question_the_task_can_continue_inde">"Dies ist eine nicht blockierende Frage von der Gegenseite: Sie kann unabhängig weiterarbeiten, während sie auf eine Antwort wartet."</string>
     <string name="ui_enter_your_answer">"Antwort eingeben"</string>
     <string name="ui_write_your_own_answer">"Füllen Sie es selbst aus"</string>
     <string name="ui_question_answered">"Interaktive Frage·Beantwortet"</string>
@@ -317,7 +314,7 @@
     <string name="ui_choose_file_manager">"Dateimanager auswählen"</string>
     <string name="ui_choose_gallery_or_image_app">"Fotoalbum oder Bilder-App auswählen"</string>
     <string name="ui_disable_persistence_and_reconnect">"Stellen Sie die Verbindung wieder her, nachdem die persistente Sitzung geschlossen wurde"</string>
-    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"Nach dem Deaktivieren des dauerhaften Modus wird Codex direkt gestartet. Es ist nicht garantiert, dass Aufgaben nach einer Trennung weiterlaufen. Versionsprüfungen, Updates und Teile der Wiederherstellung des Frageverlaufs benötigen weiterhin Python. Es wird keine Software automatisch installiert. Fortfahren?"</string>
+    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"Nach dem Deaktivieren des dauerhaften Modus wird Codex direkt gestartet. Es ist nicht garantiert, dass Aufgaben nach einer Trennung weiterlaufen. Versionsprüfungen, Updates und Teile der Wiederherstellung des Frageverlaufs benötigen weiterhin Python. Fortfahren?"</string>
     <string name="ui_disable_and_reconnect">"Schließen und erneut verbinden"</string>
     <string name="ui_use_current_conversation">"Aktuelle Konversation verwenden"</string>
     <string name="ui_send_a_message_to_update_permissions">"Nachricht senden, um Berechtigungen zu aktualisieren"</string>
@@ -488,12 +485,12 @@
     <string name="diagnostic_main_thread">"Die Verbindungsinitialisierung ist fehlgeschlagen: Im Hauptthread wurde ein Netzwerkvorgang ausgeführt (NetworkOnMainThreadException)."</string>
     <string name="diagnostic_connection_failed">"Verbindung fehlgeschlagen · "</string>
     <string name="diagnostic_connection_reason">"\n\nGrund: "</string>
-    <string name="diagnostic_upstream_guidance">"\n\nDie Remote-Codex-WebSocket-Verbindung zum Modelldienst hat HTTP 403 empfangen. Hierbei handelt es sich um einen Fehler zwischen dem Host und dem Modelldienst, nicht um ein falsches Telefon-SSH-Passwort. Überprüfen Sie unter demselben Remote-Benutzer die Codex-Anmeldung, den Kontozugriff und die Proxy- oder Netzwerkrichtlinie. Das Protokoll allein kann nicht erkennen, wer dafür verantwortlich ist. Die experimentelle UNDICI-Warnung ist an sich kein Fehlschlag. Wenn der Remote-Prozess beendet wurde, kann der Client keine weiteren Ausgaben mehr von ihm empfangen."</string>
+    <string name="diagnostic_upstream_guidance">"\n\nDer Remote-Codex erhielt HTTP 403 vom Modelldienst. Prüfen Sie die Codex-Anmeldung, den Kontozugriff und die Proxy- oder Netzwerkrichtlinie für denselben Remote-Benutzer."</string>
     <string name="diagnostic_tcp_guidance">"\n\nSSH-Authentifizierung wurde nicht gestartet. Überprüfen Sie die Hostadresse und den Port. Wenn ein anderer SSH-Client auf diesem Telefon denselben Host erreichen kann, überprüfen Sie Tailscale → Profil → App-basiertes Split-Tunneling, stellen Sie sicher, dass RemoteGPT (app.remotessh) nicht ausgeschlossen ist, und prüfen Sie, ob das Telefon den Netzwerkzugriff dieser App blockiert. Sie können Tailscale auch erneut verbinden und es erneut versuchen."</string>
     <string name="diagnostic_ssh_guidance">"\n\nWenn Sie Tailscale verwenden, stellen Sie sicher, dass das Telefon-VPN verbunden ist, der Host online ist und die Zugriffsregeln den Zielport zulassen. Wenn die MagicDNS-Auflösung fehlschlägt, versuchen Sie es mit der 100.x-Adresse des Hosts. Verwenden Sie ein Passwort oder einen privaten Schlüssel für normales SSH und eine passwortlose Authentifizierung für Tailscale SSH. Wenn eine erneute Authentifizierung erforderlich ist, schließen Sie diese in der Tailscale-App ab, bevor Sie es erneut versuchen."</string>
     <string name="diagnostic_exit_code">"\nRemote-Exit-Code: "</string>
     <string name="diagnostic_python_guidance">"\nSSH verbunden, aber Python3 wurde nicht gefunden. Installieren Sie Python 3.8 oder höher für denselben SSH-Benutzer und fügen Sie es dem nicht interaktiven PATH hinzu oder deaktivieren Sie persistente Sitzungen manuell und stellen Sie die Verbindung erneut her."</string>
-    <string name="diagnostic_program_guidance">"\nSSH verbunden, aber die Remote-Shell konnte das Startprogramm nicht finden. Dies ist kein IPv6-Verbindungsfehler. Führen Sie den Befehl -v codex unter demselben Remote-Benutzer aus und geben Sie den resultierenden absoluten Pfad als Startbefehl ein, zum Beispiel /opt/homebrew/bin/codex app-server. Wenn kein Pfad zurückgegeben wird, installieren Sie Codex zuerst für diesen Benutzer."</string>
+    <string name="diagnostic_program_guidance">"\nSSH verbunden, aber die Remote-Shell konnte das Startprogramm nicht finden. Führen Sie den Befehl -v codex unter demselben Remote-Benutzer aus und geben Sie den resultierenden absoluten Pfad als Startbefehl ein, zum Beispiel /opt/homebrew/bin/codex app-server. Wenn kein Pfad zurückgegeben wird, installieren Sie Codex zuerst für diesen Benutzer."</string>
     <string name="diagnostic_remote_output">"\n\nFerndiagnoseausgabe (Warnungen dürfen nicht die Ursache sein):\n"</string>
     <string name="diagnostic_phase_initializing">"Remote-Programm initialisieren"</string>
     <string name="diagnostic_phase_ssh">"SSH-Verbindung und Authentifizierung"</string>
@@ -564,4 +561,7 @@
     <string name="ui_permission_auto_description">Genehmigungsanfragen automatisch prüfen</string>
     <string name="ui_permission_read_description">Dateien bearbeiten oder Befehle ausführen erfordert Genehmigung</string>
     <string name="ui_permission_full_description">Voller Computerzugriff (höheres Risiko)</string>
+    <string name="ui_historical_task_error">"Fehler einer früheren Aufgabe"</string>
+    <string name="ui_minimize_question">"Frage minimieren"</string>
+    <string name="ui_restore_question">"Frage wiederherstellen"</string>
 </resources>

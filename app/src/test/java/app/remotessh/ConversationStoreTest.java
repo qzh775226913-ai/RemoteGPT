@@ -95,4 +95,24 @@ public class ConversationStoreTest {
     assertEquals("selected", app.threadId);
     assertEquals("selected draft", app.draftText);
   }
+
+  @Test public void questionStateIsIsolatedAndRestoredAfterReplayAndException() {
+    app.questionUi.token="selected";app.questionUi.minimized=true;
+    app.questionUi.answers=new android.os.Bundle();app.questionUi.answers.putString("q","A");
+    try {
+      app.inConversation("background",()->{
+        assertEquals("",app.questionUi.token);app.questionUi.token="background";
+        app.questionUi.answers=new android.os.Bundle();app.questionUi.answers.putString("q","B");
+        app.replaying=true;throw new IllegalStateException("synthetic");
+      });
+      fail("failure must propagate");
+    } catch(IllegalStateException expected) {assertEquals("synthetic",expected.getMessage());}
+    assertEquals("selected",app.questionUi.token);assertTrue(app.questionUi.minimized);
+    assertEquals("A",app.questionUi.answers.getString("q"));assertFalse(app.replaying);
+    app.inConversation("background",()->{
+      assertEquals("background",app.questionUi.token);assertEquals("B",app.questionUi.answers.getString("q"));assertTrue(app.replaying);
+      app.replaying=false;
+    });
+    app.disconnect();assertEquals("",app.questionUi.token);assertNull(app.questionUi.answers);
+  }
 }

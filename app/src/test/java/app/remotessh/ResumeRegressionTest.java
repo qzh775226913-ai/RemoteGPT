@@ -37,6 +37,7 @@ public class ResumeRegressionTest {
     assertEquals("",app.error); assertEquals("",app.lastError);
     assertEquals(1,app.items.size()); assertTrue(app.items.get(0).detail.contains(LIMIT));
     assertEquals("历史任务错误",app.items.get(0).text);
+    assertEquals("historical errors must contain only the server message",LIMIT,app.items.get(0).detail);
   }
   @Test public void liveUsageFailureAfterReplayStillRaisesError() throws Exception {
     emit("remote/replayStarted",Json.obj("threadId","thread"));

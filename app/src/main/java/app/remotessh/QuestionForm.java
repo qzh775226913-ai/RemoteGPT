@@ -5,12 +5,38 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.*;
 import android.view.View;
+import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 import android.widget.*;
 import java.util.*;
 import org.json.*;
 
 /** Explicit selection and validated answers; opening the form never submits an answer. */
 final class QuestionForm extends LinearLayout {
+  /** Text selection consumes short touches in TextView; keep radio taps working as well. */
+  private static final class SelectableRadioButton extends RadioButton {
+    private float downX,downY;
+    private boolean tap;
+    SelectableRadioButton(Context context){super(context);}
+    @Override public boolean onTouchEvent(MotionEvent event){
+      switch(event.getActionMasked()){
+        case MotionEvent.ACTION_DOWN:downX=event.getX();downY=event.getY();tap=true;break;
+        case MotionEvent.ACTION_MOVE:
+          int slop=ViewConfiguration.get(getContext()).getScaledTouchSlop();
+          if(Math.abs(event.getX()-downX)>slop || Math.abs(event.getY()-downY)>slop)tap=false;
+          break;
+        case MotionEvent.ACTION_CANCEL:tap=false;break;
+        default:break;
+      }
+      boolean handled=super.onTouchEvent(event);
+      if(event.getActionMasked()==MotionEvent.ACTION_UP){
+        boolean choose=tap && event.getEventTime()-event.getDownTime()<ViewConfiguration.getLongPressTimeout()
+            && event.getX()>=0 && event.getY()>=0 && event.getX()<getWidth() && event.getY()<getHeight();
+        tap=false;if(choose && !isChecked())performClick();
+      }
+      return handled || event.getActionMasked()==MotionEvent.ACTION_DOWN || event.getActionMasked()==MotionEvent.ACTION_UP;
+    }
+  }
   private static final class Answer {
     String id; boolean secret; EditText text; RadioGroup choices; int other=-1;
     final Map<Integer,String> labels=new LinkedHashMap<>();
@@ -27,17 +53,12 @@ final class QuestionForm extends LinearLayout {
 
   QuestionForm(Context context, JSONObject params, int fg, int muted, int panel) {
     super(context);setOrientation(VERTICAL);setPadding(dp(20),dp(8),dp(20),dp(16));
-    TextView hint=label(params.has("callId")
-        ? UiText.get(R.string.ui_the_remote_asynchronous_question_has_been_saved_tap_send_to_retur)
-        : params.optBoolean("isBlocking",true)
-        ? UiText.get(R.string.ui_choose_an_option_or_enter_an_answer_then_tap_send_to_continue)
-        : UiText.get(R.string.ui_this_is_a_non_blocking_remote_question_the_task_can_continue_inde),muted);
-    addView(hint);JSONArray questions=params.optJSONArray("questions");
+    JSONArray questions=params.optJSONArray("questions");
     if (questions==null) return;
     for (int i=0;i<questions.length();i++) {
       JSONObject q=questions.optJSONObject(i);if(q==null)continue;
       Answer answer=new Answer();answer.id=q.optString("id");answer.secret=q.optBoolean("isSecret");answers.add(answer);
-      TextView title=label(q.optString("question"),fg);title.setPadding(0,dp(20),0,dp(10));addView(title);
+      TextView title=label(q.optString("question"),fg);title.setTextIsSelectable(true);title.setPadding(0,dp(12),0,dp(10));addView(title);
       answer.text=new EditText(context);answer.text.setTextSize(15);answer.text.setTextColor(fg);answer.text.setHintTextColor(muted);
       answer.text.setHint(UiText.get(R.string.ui_enter_your_answer));answer.text.setContentDescription(q.optString("question"));
       answer.text.setPadding(dp(14),dp(12),dp(14),dp(12));answer.text.setMinHeight(dp(48));answer.text.setBackground(background(panel));
@@ -49,15 +70,15 @@ final class QuestionForm extends LinearLayout {
         for (int k=0;k<options.length();k++) {
           JSONObject option=options.optJSONObject(k);if(option==null)continue;
           String name=option.optString("label"),description=option.optString("description");
-          RadioButton button=new RadioButton(context);button.setId(View.generateViewId());button.setText(name+(description.isEmpty()?"":"\n"+description));
+          RadioButton button=new SelectableRadioButton(context);button.setId(View.generateViewId());button.setText(name+(description.isEmpty()?"":"\n"+description));
           AppIcons.selection(button,fg,muted,true);
-          button.setTextSize(14);button.setTextColor(fg);button.setContentDescription(name);button.setMinHeight(dp(56));
+          button.setTextSize(14);button.setTextColor(fg);button.setTextIsSelectable(true);button.setContentDescription(name);button.setMinHeight(dp(56));
           button.setPadding(dp(8),dp(12),dp(12),dp(12));button.setBackground(background(panel));
           RadioGroup.LayoutParams bp=new RadioGroup.LayoutParams(-1,-2);bp.bottomMargin=dp(10);answer.choices.addView(button,bp);
           answer.labels.put(button.getId(),name);
         }
         if(q.optBoolean("isOther")) {
-          RadioButton other=new RadioButton(context);other.setId(View.generateViewId());other.setText(UiText.get(R.string.ui_write_your_own_answer));other.setTextColor(fg);other.setMinHeight(dp(48));
+          RadioButton other=new SelectableRadioButton(context);other.setId(View.generateViewId());other.setText(UiText.get(R.string.ui_write_your_own_answer));other.setTextColor(fg);other.setTextIsSelectable(true);other.setMinHeight(dp(48));
           AppIcons.selection(other,fg,muted,true);
           answer.other=other.getId();answer.choices.addView(other);
         }

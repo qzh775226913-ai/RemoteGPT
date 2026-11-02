@@ -80,7 +80,7 @@
     <string name="ui_restore_messages">"Message de récupération"</string>
     <string name="ui_got_it">"Compris"</string>
     <string name="ui_waiting_for_reasoning_summary">"En attente d\'un résumé des réflexions…"</string>
-    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"Le serveur n’a pas fourni de résumé pour cette étape de raisonnement. Certaines étapes peuvent ne pas avoir de résumé affichable."</string>
+    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"Aucun résumé disponible"</string>
     <string name="ui_copy">"Copier"</string>
     <string name="ui_reasoning">"Raisonnement"</string>
     <string name="ui_execution_details">"Détails d\'exécution"</string>
@@ -148,7 +148,7 @@
     <string name="ui_latest_stable_version">"\nDernière version stable : "</string>
     <string name="ui_not_retrieved">"Pas encore obtenu"</string>
     <string name="ui_remote_codex_version">"Version du Codex distant"</string>
-    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\nMettre à jour le Codex distant ? La nouvelle version sera automatiquement activée en cas d\'inactivité et prendra en charge le redémarrage en toute sécurité ; installez-le d\'abord lorsqu\'une tâche est en cours d\'exécution, puis cliquez ici pour redémarrer une fois la tâche terminée. Sélectionnez Ne pas mettre à jour pour l\'instant pour continuer à utiliser la version actuelle."</string>
+    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\nMettre à jour le Codex distant ? La nouvelle version sera automatiquement activée en cas d\'inactivité et prendra en charge le redémarrage en toute sécurité ; installez-le d\'abord lorsqu\'une tâche est en cours d\'exécution, puis cliquez ici pour redémarrer une fois la tâche terminée."</string>
     <string name="ui_not_now">"Pas encore mis à jour"</string>
     <string name="ui_updating_keep_the_connection_open">"\n\nMise à jour, veuillez rester connecté."</string>
     <string name="ui_the_new_version_is_installed_but_this_session_still_uses_the_old">"\n\nLa nouvelle version a été installée, mais la session en cours exécute toujours l\'ancienne version. C\'est à vous de décider quand redémarrer. Le redémarrage arrêtera toutes les conversations à distance en cours, puis se déconnectera et se reconnectera brièvement à l\'aide de la nouvelle version."</string>
@@ -292,9 +292,6 @@
     <string name="ui_new_project_name">"Nouveau nom de projet"</string>
     <string name="ui_create_a_folder_in">"Créez un nouveau dossier dans le répertoire suivant :\n"</string>
     <string name="ui_create">"Créer"</string>
-    <string name="ui_the_remote_asynchronous_question_has_been_saved_tap_send_to_retur">"Le problème asynchrone de l\'extrémité distante a été retenu. Une fois que vous avez cliqué sur Envoyer, la réponse sera renvoyée sous forme de message de conversation."</string>
-    <string name="ui_choose_an_option_or_enter_an_answer_then_tap_send_to_continue">"Attendez votre réponse avant de continuer ; sélectionnez une option ou saisissez le contenu, puis cliquez sur Envoyer."</string>
-    <string name="ui_this_is_a_non_blocking_remote_question_the_task_can_continue_inde">"Il s\'agit d\'une question non bloquante du côté distant : il peut continuer à travailler de manière autonome en attendant une réponse."</string>
     <string name="ui_enter_your_answer">"Saisir la réponse"</string>
     <string name="ui_write_your_own_answer">"Remplissez vous-même"</string>
     <string name="ui_question_answered">"Question interactive · Réponse"</string>
@@ -317,7 +314,7 @@
     <string name="ui_choose_file_manager">"Sélectionnez le gestionnaire de fichiers"</string>
     <string name="ui_choose_gallery_or_image_app">"Sélectionnez un album photo ou une application photo"</string>
     <string name="ui_disable_persistence_and_reconnect">"Reconnexion après la fermeture de la session persistante"</string>
-    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"Après la désactivation du mode persistant, Codex démarrera directement. La poursuite des tâches après une déconnexion n’est pas garantie. La vérification et la mise à jour de version ainsi qu’une partie de la récupération des questions nécessitent toujours Python. Aucun logiciel ne sera installé automatiquement. Continuer ?"</string>
+    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"Après la désactivation du mode persistant, Codex démarrera directement. La poursuite des tâches après une déconnexion n’est pas garantie. La vérification et la mise à jour de version ainsi qu’une partie de la récupération des questions nécessitent toujours Python. Continuer ?"</string>
     <string name="ui_disable_and_reconnect">"Fermer et reconnecter"</string>
     <string name="ui_use_current_conversation">"Utiliser la conversation en cours"</string>
     <string name="ui_send_a_message_to_update_permissions">"Envoyer un message pour mettre à jour les autorisations"</string>
@@ -494,12 +491,12 @@
     <string name="diagnostic_main_thread">"Échec de l\'initialisation de la connexion : une opération réseau s\'est exécutée sur le thread principal (NetworkOnMainThreadException)"</string>
     <string name="diagnostic_connection_failed">"Échec de la connexion · "</string>
     <string name="diagnostic_connection_reason">"\n\nRaison : "</string>
-    <string name="diagnostic_upstream_guidance">"\n\nLa connexion Codex WebSocket distante au service modèle a reçu HTTP 403. Il s\'agit d\'un échec entre l\'hôte et le service modèle, et non d\'un mot de passe SSH de téléphone incorrect. Sous le même utilisateur distant, vérifiez la connexion au Codex, l\'accès au compte et la politique de proxy ou de réseau. Le journal à lui seul ne peut pas identifier le responsable. L’alerte expérimentale UNDICI n’est pas en soi un échec. Si le processus distant s\'est terminé, le client ne peut pas en recevoir d\'autres résultats."</string>
+    <string name="diagnostic_upstream_guidance">"\n\nCodex distant a reçu HTTP 403 du service de modèle. Vérifiez la connexion à Codex, l’accès au compte et la politique de proxy ou réseau pour le même utilisateur distant."</string>
     <string name="diagnostic_tcp_guidance">"\n\nL\'authentification SSH n\'a pas démarré. Vérifiez l\'adresse et le port de l\'hôte. Si un autre client SSH sur ce téléphone peut atteindre le même hôte, cochez Tailscale → profil → tunneling fractionné basé sur l\'application, assurez-vous que RemoteGPT (app.remotessh) n\'est pas exclu et vérifiez si le téléphone bloque l\'accès au réseau de cette application. Vous pouvez également reconnecter Tailscale et réessayer."</string>
     <string name="diagnostic_ssh_guidance">"\n\nSi vous utilisez Tailscale, confirmez que le VPN du téléphone est connecté, que l\'hôte est en ligne et que les règles d\'accès autorisent le port cible. Si la résolution MagicDNS échoue, essayez l\'adresse 100.x de l\'hôte. Utilisez un mot de passe ou une clé privée pour SSH ordinaire et une authentification sans mot de passe pour Tailscale SSH. Si une nouvelle authentification est requise, complétez-la dans l\'application Tailscale avant de réessayer."</string>
     <string name="diagnostic_exit_code">"\nCode de sortie à distance : "</string>
     <string name="diagnostic_python_guidance">"\nSSH connecté, mais python3 n\'a pas été trouvé. Installez Python 3.8 ou version ultérieure pour le même utilisateur SSH et ajoutez-le au PATH non interactif, ou désactivez manuellement les sessions persistantes et reconnectez-vous."</string>
-    <string name="diagnostic_program_guidance">"\nSSH connecté, mais le shell distant n\'a pas pu trouver le programme de démarrage. Il ne s\'agit pas d\'un échec de connexion IPv6. Exécutez la commande -v codex sous le même utilisateur distant et entrez le chemin absolu résultant comme commande de démarrage, par exemple /opt/homebrew/bin/codex app-server. Si aucun chemin n\'est renvoyé, installez d\'abord Codex pour cet utilisateur."</string>
+    <string name="diagnostic_program_guidance">"\nSSH connecté, mais le shell distant n\'a pas pu trouver le programme de démarrage. Exécutez la commande -v codex sous le même utilisateur distant et entrez le chemin absolu résultant comme commande de démarrage, par exemple /opt/homebrew/bin/codex app-server. Si aucun chemin n\'est renvoyé, installez d\'abord Codex pour cet utilisateur."</string>
     <string name="diagnostic_remote_output">"\n\nSortie de diagnostic à distance (les avertissements peuvent ne pas en être la cause) :\n"</string>
     <string name="diagnostic_phase_initializing">"Initialisation du programme distant"</string>
     <string name="diagnostic_phase_ssh">"Connexion et authentification SSH"</string>
@@ -570,4 +567,7 @@
     <string name="ui_permission_auto_description">Examiner automatiquement les demandes d’autorisation</string>
     <string name="ui_permission_read_description">Modifier des fichiers ou exécuter des commandes nécessite une autorisation</string>
     <string name="ui_permission_full_description">Accès complet à l’ordinateur (risque accru)</string>
+    <string name="ui_historical_task_error">"Erreur d’une tâche précédente"</string>
+    <string name="ui_minimize_question">"Réduire la question"</string>
+    <string name="ui_restore_question">"Rouvrir la question"</string>
 </resources>

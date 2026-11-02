@@ -80,7 +80,7 @@
     <string name="ui_restore_messages">"恢復訊息"</string>
     <string name="ui_got_it">"知道了"</string>
     <string name="ui_waiting_for_reasoning_summary">"正在等待思考摘要…"</string>
-    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"遠端未提供此推理項目的摘要。部分推理項目可能沒有可顯示的摘要。"</string>
+    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"暫無摘要"</string>
     <string name="ui_copy">"複製"</string>
     <string name="ui_reasoning">"思考過程"</string>
     <string name="ui_execution_details">"執行詳情"</string>
@@ -148,7 +148,7 @@
     <string name="ui_latest_stable_version">"\n最新穩定版："</string>
     <string name="ui_not_retrieved">"尚未獲取"</string>
     <string name="ui_remote_codex_version">"遠端 Codex 版本"</string>
-    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\n是否更新遠端 Codex？空閒且支援安全重啟時自動啟用新版；有任務運行時先安裝，任務結束後再點此處重新啟動。選擇暫不更新可繼續使用目前版本。"</string>
+    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\n是否更新遠端 Codex？空閒且支援安全重啟時自動啟用新版；有任務運行時先安裝，任務結束後再點此處重新啟動。"</string>
     <string name="ui_not_now">"暫不更新"</string>
     <string name="ui_updating_keep_the_connection_open">"\n\n正在更新，請保持連線。"</string>
     <string name="ui_the_new_version_is_installed_but_this_session_still_uses_the_old">"\n\n新版已安裝，目前會話仍執行舊版。你可以自行決定何時重啟。重啟會停止所有正在進行的遠端對話，然後短暫中斷並使用新版重新連線。"</string>
@@ -292,9 +292,6 @@
     <string name="ui_new_project_name">"新項目名稱"</string>
     <string name="ui_create_a_folder_in">"在下列目錄中新建資料夾：\n"</string>
     <string name="ui_create">"創建"</string>
-    <string name="ui_the_remote_asynchronous_question_has_been_saved_tap_send_to_retur">"遠端的非同步問題已保留。點擊發送後，答案會作為對話訊息回傳。"</string>
-    <string name="ui_choose_an_option_or_enter_an_answer_then_tap_send_to_continue">"等待你的回答後繼續；選擇選項或輸入內容，再點發送。"</string>
-    <string name="ui_this_is_a_non_blocking_remote_question_the_task_can_continue_inde">"這是遠端的非阻塞提問：等待回答期間，它可以繼續獨立工作。"</string>
     <string name="ui_enter_your_answer">"輸入回答"</string>
     <string name="ui_write_your_own_answer">"自己填寫"</string>
     <string name="ui_question_answered">"交互提問 · 已回答"</string>
@@ -317,7 +314,7 @@
     <string name="ui_choose_file_manager">"選擇檔案總管"</string>
     <string name="ui_choose_gallery_or_image_app">"選擇相簿或圖片 App"</string>
     <string name="ui_disable_persistence_and_reconnect">"關閉持久性會話後重連"</string>
-    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"關閉持久模式後會直接啟動 Codex。不保證斷線後工作繼續執行；遠端版本檢查／更新和部分問答歷史復原仍需 Python。不會自動安裝任何軟體。繼續嗎？"</string>
+    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"關閉持久模式後會直接啟動 Codex。不保證斷線後工作繼續執行；遠端版本檢查／更新和部分問答歷史復原仍需 Python。繼續嗎？"</string>
     <string name="ui_disable_and_reconnect">"關閉並重連"</string>
     <string name="ui_use_current_conversation">"沿用當前對話"</string>
     <string name="ui_send_a_message_to_update_permissions">"發送訊息以更新權限"</string>
@@ -482,12 +479,12 @@
     <string name="diagnostic_main_thread">"連線初始化失敗：網路操作在主執行緒上執行（NetworkOnMainThreadException）"</string>
     <string name="diagnostic_connection_failed">"連線失敗· "</string>
     <string name="diagnostic_connection_reason">"\n\n原因： "</string>
-    <string name="diagnostic_upstream_guidance">"\n\n與模型服務的遠端 Codex WebSocket 連線收到 HTTP 403。這是主機和模型服務之間的故障，而不是不正確的電話 SSH 密碼。在同一遠端使用者下，檢查 Codex 登入、帳戶存取以及代理或網路原則。僅憑日誌無法確定是誰負責的。 UNDICI 實驗警告本身並不是失敗。如果遠端進程已退出，用戶端將無法接收其進一步的輸出。"</string>
+    <string name="diagnostic_upstream_guidance">"\n\n遠端 Codex 連線模型服務時收到 HTTP 403。請在相同遠端帳號下檢查 Codex 登入狀態、帳戶存取權限及代理或網路原則。"</string>
     <string name="diagnostic_tcp_guidance">"\n\nSSH 身份驗證尚未啟動。檢查主機位址和連接埠。如果此手機上的另一個 SSH 用戶端可以存取相同主機，請檢查 Tailscale → 設定檔 → 基於應用程式的分割隧道，請確保不排除 RemoteGPT (app.remotessh)，並檢查手機是否封鎖此應用程式的網路存取。您也可以重新連接 Tailscale 並重試。"</string>
     <string name="diagnostic_ssh_guidance">"\n\n如果使用 Tailscale，請確認手機 VPN 已連線、主機上線且存取規則允許目標連接埠。如果 MagicDNS 解析失敗，請嘗試主機的 100.x 位址。對於普通 SSH 使用密碼或私鑰，對於 Tailscale SSH 使用無密碼驗證。如果需要重新驗證，請在重試之前在 Tailscale 應用程式中完成。"</string>
     <string name="diagnostic_exit_code">"\n遠端退出代碼： "</string>
     <string name="diagnostic_python_guidance">"\nSSH已連接，但找不到python3。為相同 SSH 使用者安裝 Python 3.8 或更高版本並將其新增至非互動式 PATH，或手動停用持久性會話並重新連線。"</string>
-    <string name="diagnostic_program_guidance">"\nSSH已連接，但遠端shell找不到啟動程式。這不是 IPv6 連線失敗。在同一遠端使用者下執行指令 -v codex 並輸入產生的絕對路徑作為啟動指令，例如 /opt/homebrew/bin/codex app-server。如果沒有返迴路徑，請先為該使用者安裝 Codex。"</string>
+    <string name="diagnostic_program_guidance">"\nSSH已連接，但遠端shell找不到啟動程式。在同一遠端使用者下執行指令 -v codex 並輸入產生的絕對路徑作為啟動指令，例如 /opt/homebrew/bin/codex app-server。如果沒有返迴路徑，請先為該使用者安裝 Codex。"</string>
     <string name="diagnostic_remote_output">"\n\n遠端診斷輸出（警告可能不是原因）：\n"</string>
     <string name="diagnostic_phase_initializing">"初始化遠端程式"</string>
     <string name="diagnostic_phase_ssh">"SSH 連線與驗證"</string>
@@ -558,4 +555,7 @@
     <string name="ui_permission_auto_description">自動審查提權請求</string>
     <string name="ui_permission_read_description">編輯檔案或執行命令需要核准</string>
     <string name="ui_permission_full_description">電腦完整存取權限（風險較高）</string>
+    <string name="ui_historical_task_error">"歷史任務錯誤"</string>
+    <string name="ui_minimize_question">"縮小提問"</string>
+    <string name="ui_restore_question">"恢復提問"</string>
 </resources>

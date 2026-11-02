@@ -104,14 +104,14 @@ final class ConnectionFailure {
   static String describe(Throwable error, String phase, int exitStatus, String stderr, boolean localized) {
     if (stderr != null) stderr = stderr.replaceAll("\u001B\\[[0-?]*[ -/]*[@-~]", "");
     String result = DiagnosticText.text(localized, R.string.diagnostic_connection_failed, "连接失败 · ") + DiagnosticText.phase(localized, phase) + DiagnosticText.text(localized, R.string.diagnostic_connection_reason, "\n\n原因：") + reason(error, localized);
-    if (upstreamForbidden(stderr)) result += DiagnosticText.text(localized, R.string.diagnostic_upstream_guidance, "\n\n远端 Codex 连接模型服务的 WebSocket 收到 HTTP 403 拒绝。此错误发生在远端到模型服务的链路，不是手机 SSH 密码错误。需在同一远端用户下检查 Codex 登录状态、账户访问权限和代理/网络策略；仅凭日志不能确定是哪一项。UNDICI 实验性警告本身不是失败原因。若远端程序已退出，客户端无法继续接收该进程的输出。");
+    if (upstreamForbidden(stderr)) result += DiagnosticText.text(localized, R.string.diagnostic_upstream_guidance, "\n\n远端 Codex 连接模型服务时收到 HTTP 403。请在相同远端账号下检查 Codex 登录状态、账户访问权限及代理或网络策略。");
     if (phase.contains("TCP") || reason(error).contains("ConnectException") || reason(error).contains("UnknownHostException"))
       result += DiagnosticText.text(localized, R.string.diagnostic_tcp_guidance, "\n\n尚未进入 SSH 身份认证。请核对目标地址和端口；若同手机其他 SSH 客户端能连接同一地址，检查 Tailscale → 头像 → 按应用分流，确保 Remote（app.remotessh）未被排除，并检查系统是否禁止本应用联网。也可重新连接 Tailscale 后重试。");
     else if (phase.contains("SSH")) result += DiagnosticText.text(localized, R.string.diagnostic_ssh_guidance, "\n\n如使用 Tailscale：确认手机 VPN 已连接、主机在线、访问规则允许目标端口。MagicDNS 解析失败可改填 100.x 地址；普通 SSH 用密码/私钥，Tailscale SSH 用免密码方式。若要求重新验证，请打开 Tailscale App 完成验证后重试。");
     if (exitStatus >= 0) result += DiagnosticText.text(localized, R.string.diagnostic_exit_code, "\n远端退出码：") + exitStatus;
     if (exitStatus == 127) result += stderr != null && stderr.contains("python3")
         ? DiagnosticText.text(localized, R.string.diagnostic_python_guidance, "\nSSH 已连接，但找不到 python3。请在同一 SSH 账号安装 Python 3.8 或以上并加入非交互 PATH，或手动关闭远端持久会话后重连。")
-        : DiagnosticText.text(localized, R.string.diagnostic_program_guidance, "\nSSH 已连接，但远端 shell 找不到启动程序；这不是 IPv6 连接失败。请在相同远端账号的终端执行 command -v codex，将输出的绝对路径填入启动命令（例如 /opt/homebrew/bin/codex app-server）。如果没有输出，需要先在该账号安装 Codex。");
+        : DiagnosticText.text(localized, R.string.diagnostic_program_guidance, "\nSSH 已连接，但远端 shell 找不到启动程序。请在相同远端账号的终端执行 command -v codex，将输出的绝对路径填入启动命令（例如 /opt/homebrew/bin/codex app-server）。如果没有输出，需要先在该账号安装 Codex。");
     if (stderr != null && !stderr.trim().isEmpty())
       result += DiagnosticText.text(localized, R.string.diagnostic_remote_output, "\n\n远端诊断输出（警告不一定是失败原因）：\n") + stderr.trim();
     return result;

@@ -80,7 +80,7 @@
     <string name="ui_restore_messages">"Сообщение о восстановлении"</string>
     <string name="ui_got_it">"Понятно"</string>
     <string name="ui_waiting_for_reasoning_summary">"Жду краткого изложения мыслей…"</string>
-    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"Сервер не предоставил сводку для этого этапа рассуждений. Для некоторых этапов сводка может быть недоступна."</string>
+    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"Сводка недоступна"</string>
     <string name="ui_copy">"Копировать"</string>
     <string name="ui_reasoning">"Рассуждения"</string>
     <string name="ui_execution_details">"Детали выполнения"</string>
@@ -148,7 +148,7 @@
     <string name="ui_latest_stable_version">"\nПоследняя стабильная версия: "</string>
     <string name="ui_not_retrieved">"Еще не получено"</string>
     <string name="ui_remote_codex_version">"Удаленная версия Кодекса"</string>
-    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\nОбновить удаленный Кодекс? Новая версия будет автоматически включаться при простое и поддерживать безопасный перезапуск; сначала установите его, когда выполняется задача, а затем нажмите здесь, чтобы перезапустить ее после завершения задачи. Выберите «Пока не обновлять», чтобы продолжить использовать текущую версию."</string>
+    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\nОбновить удаленный Кодекс? Новая версия будет автоматически включаться при простое и поддерживать безопасный перезапуск; сначала установите его, когда выполняется задача, а затем нажмите здесь, чтобы перезапустить ее после завершения задачи."</string>
     <string name="ui_not_now">"Еще не обновлено"</string>
     <string name="ui_updating_keep_the_connection_open">"\n\nОбновляется, пожалуйста, оставайтесь на связи."</string>
     <string name="ui_the_new_version_is_installed_but_this_session_still_uses_the_old">"\n\nНовая версия установлена, но в текущем сеансе все еще используется старая версия. Вам решать, когда перезапустить. Перезапуск остановит все текущие удаленные разговоры, затем ненадолго отключится и снова подключится, используя новую версию."</string>
@@ -292,9 +292,6 @@
     <string name="ui_new_project_name">"Новое название проекта"</string>
     <string name="ui_create_a_folder_in">"Создайте новую папку в следующем каталоге:\n"</string>
     <string name="ui_create">"Создать"</string>
-    <string name="ui_the_remote_asynchronous_question_has_been_saved_tap_send_to_retur">"Проблема асинхронности удаленного конца была сохранена. Как только вы нажмете «Отправить», ответ будет отправлен обратно в виде сообщения беседы."</string>
-    <string name="ui_choose_an_option_or_enter_an_answer_then_tap_send_to_continue">"Прежде чем продолжить, дождитесь вашего ответа; выберите вариант или введите содержимое, а затем нажмите «Отправить»."</string>
-    <string name="ui_this_is_a_non_blocking_remote_question_the_task_can_continue_inde">"Это неблокирующийся вопрос с удаленной стороны: он может продолжать работать самостоятельно, ожидая ответа."</string>
     <string name="ui_enter_your_answer">"Введите ответ"</string>
     <string name="ui_write_your_own_answer">"Заполните самостоятельно"</string>
     <string name="ui_question_answered">"Интерактивный вопрос · Ответ"</string>
@@ -317,7 +314,7 @@
     <string name="ui_choose_file_manager">"Выбор файлового менеджера"</string>
     <string name="ui_choose_gallery_or_image_app">"Выбор фотоальбома или приложения с изображениями"</string>
     <string name="ui_disable_persistence_and_reconnect">"Повторное подключение после закрытия постоянного сеанса"</string>
-    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"После отключения постоянного режима Codex будет запускаться напрямую. Продолжение задач после разрыва соединения не гарантируется. Проверка и обновление версии, а также часть функций восстановления истории вопросов по-прежнему требуют Python. Программы не будут устанавливаться автоматически. Продолжить?"</string>
+    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"После отключения постоянного режима Codex будет запускаться напрямую. Продолжение задач после разрыва соединения не гарантируется. Проверка и обновление версии, а также часть функций восстановления истории вопросов по-прежнему требуют Python. Продолжить?"</string>
     <string name="ui_disable_and_reconnect">"Закрыть и снова подключить"</string>
     <string name="ui_use_current_conversation">"Использовать текущий разговор"</string>
     <string name="ui_send_a_message_to_update_permissions">"Отправить сообщение для обновления разрешений"</string>
@@ -500,12 +497,12 @@
     <string name="diagnostic_main_thread">"Не удалось инициализировать соединение: сетевая операция выполнялась в основном потоке (NetworkOnMainThreadException)"</string>
     <string name="diagnostic_connection_failed">"Соединение не удалось · "</string>
     <string name="diagnostic_connection_reason">"\n\nПричина: "</string>
-    <string name="diagnostic_upstream_guidance">"\n\nУдаленное соединение Codex WebSocket со службой модели получило HTTP 403. Это сбой между хостом и службой модели, а не неправильный пароль SSH телефона. Под тем же удаленным пользователем проверьте вход в Кодекс, доступ к учетной записи, а также политику прокси или сети. Сам по себе журнал не может определить, кто несет ответственность. Экспериментальное предупреждение UNDICI само по себе не является провалом. Если удаленный процесс завершился, клиент не может получать от него дальнейшие выходные данные."</string>
+    <string name="diagnostic_upstream_guidance">"\n\nУдалённый Codex получил HTTP 403 от службы модели. Проверьте вход в Codex, доступ к учётной записи и настройки прокси или сети для того же удалённого пользователя."</string>
     <string name="diagnostic_tcp_guidance">"\n\nАутентификация SSH не началась. Проверьте адрес хоста и порт. Если другой SSH-клиент на этом телефоне может подключиться к тому же хосту, проверьте Tailscale → профиль → разделенное туннелирование на основе приложений, убедитесь, что RemoteGPT (app.remotessh) не исключен, и проверьте, блокирует ли телефон доступ к сети этого приложения. Вы также можете повторно подключить Tailscale и повторить попытку."</string>
     <string name="diagnostic_ssh_guidance">"\n\nПри использовании Tailscale убедитесь, что телефон VPN подключен, хост находится в сети, а правила доступа разрешают целевой порт. Если разрешение MagicDNS не удалось, попробуйте адрес хоста 100.x. Используйте пароль или закрытый ключ для обычного SSH и аутентификацию без пароля для Tailscale SSH. Если требуется повторная аутентификация, завершите ее в приложении Tailscale перед повторной попыткой."</string>
     <string name="diagnostic_exit_code">"\nКод удаленного выхода: "</string>
     <string name="diagnostic_python_guidance">"\nПодключился по SSH, но python3 не был найден. Установите Python 3.8 или новее для того же пользователя SSH и добавьте его в неинтерактивный PATH или вручную отключите постоянные сеансы и повторно подключитесь."</string>
-    <string name="diagnostic_program_guidance">"\nПодключился по SSH, но удаленная оболочка не смогла найти программу запуска. Это не сбой соединения IPv6. Запустите команду -v codex от того же удаленного пользователя и введите полученный абсолютный путь в качестве команды запуска, например /opt/homebrew/bin/codex app-server. Если путь не возвращен, сначала установите Codex для этого пользователя."</string>
+    <string name="diagnostic_program_guidance">"\nПодключился по SSH, но удаленная оболочка не смогла найти программу запуска. Запустите команду -v codex от того же удаленного пользователя и введите полученный абсолютный путь в качестве команды запуска, например /opt/homebrew/bin/codex app-server. Если путь не возвращен, сначала установите Codex для этого пользователя."</string>
     <string name="diagnostic_remote_output">"\n\nВывод удаленной диагностики (предупреждения не могут быть причиной):\n"</string>
     <string name="diagnostic_phase_initializing">"Инициализация удалённой программы"</string>
     <string name="diagnostic_phase_ssh">"SSH-соединение и аутентификация"</string>
@@ -576,4 +573,7 @@
     <string name="ui_permission_auto_description">Автоматически проверять запросы разрешений</string>
     <string name="ui_permission_read_description">Изменение файлов и команды требуют одобрения</string>
     <string name="ui_permission_full_description">Полный доступ к компьютеру (повышенный риск)</string>
+    <string name="ui_historical_task_error">"Ошибка предыдущей задачи"</string>
+    <string name="ui_minimize_question">"Свернуть вопрос"</string>
+    <string name="ui_restore_question">"Открыть вопрос"</string>
 </resources>

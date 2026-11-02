@@ -80,7 +80,7 @@
     <string name="ui_restore_messages">"リカバリメッセージ"</string>
     <string name="ui_got_it">"了解"</string>
     <string name="ui_waiting_for_reasoning_summary">"考えのまとめを待っています…"</string>
-    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"サーバーはこの推論項目の要約を提供していません。推論項目によっては表示できる要約がない場合があります。"</string>
+    <string name="ui_the_server_provided_no_summary_for_this_reasoning_item_some_reaso">"要約はありません"</string>
     <string name="ui_copy">"コピー"</string>
     <string name="ui_reasoning">"推論"</string>
     <string name="ui_execution_details">"実行の詳細"</string>
@@ -148,7 +148,7 @@
     <string name="ui_latest_stable_version">"\n最新の安定バージョン:"</string>
     <string name="ui_not_retrieved">"まだ入手できていない"</string>
     <string name="ui_remote_codex_version">"リモート コーデックスのバージョン"</string>
-    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\nリモート コーデックスを更新しますか?新しいバージョンはアイドル時に自動的に有効になり、安全な再起動をサポートします。タスクの実行中に最初にインストールし、タスクの完了後にここをクリックして再起動します。現在のバージョンを引き続き使用するには、「まだ更新しない」を選択します。"</string>
+    <string name="ui_update_remote_codex_the_new_version_is_activated_automatically_wh">"\n\nリモート コーデックスを更新しますか?新しいバージョンはアイドル時に自動的に有効になり、安全な再起動をサポートします。タスクの実行中に最初にインストールし、タスクの完了後にここをクリックして再起動します。"</string>
     <string name="ui_not_now">"暂不更新"</string>
     <string name="ui_updating_keep_the_connection_open">"\n\n更新中です。引き続き接続してください。"</string>
     <string name="ui_the_new_version_is_installed_but_this_session_still_uses_the_old">"\n\n新しいバージョンがインストールされましたが、現在のセッションではまだ古いバージョンが実行されています。いつ再開するかはあなた次第です。再起動すると、進行中のリモート会話が停止され、短時間切断され、新しいバージョンを使用して再接続されます。"</string>
@@ -292,9 +292,6 @@
     <string name="ui_new_project_name">"新しいプロジェクト名"</string>
     <string name="ui_create_a_folder_in">"次のディレクトリに新しいフォルダを作成します。\n"</string>
     <string name="ui_create">"クリエイト"</string>
-    <string name="ui_the_remote_asynchronous_question_has_been_saved_tap_send_to_retur">"リモートエンドの非同期の問題は依然として残っている。 [送信] をクリックすると、回答が会話メッセージとして返信されます。"</string>
-    <string name="ui_choose_an_option_or_enter_an_answer_then_tap_send_to_continue">"続行する前に、あなたの答えを待ってください。オプションを選択するか、内容を入力して、「送信」をクリックします。"</string>
-    <string name="ui_this_is_a_non_blocking_remote_question_the_task_can_continue_inde">"これは、リモートエンドからのノンブロッキング質問であり、回答を待っている間、独立して動作し続けることができる。"</string>
     <string name="ui_enter_your_answer">"答えを入力してください"</string>
     <string name="ui_write_your_own_answer">"自分で記入する"</string>
     <string name="ui_question_answered">"インタラクティブな質問・回答"</string>
@@ -317,7 +314,7 @@
     <string name="ui_choose_file_manager">"ファイルマネージャーの選択"</string>
     <string name="ui_choose_gallery_or_image_app">"フォトアルバムまたは写真アプリを選択"</string>
     <string name="ui_disable_persistence_and_reconnect">"永続セッションを閉じた後に再接続する"</string>
-    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"永続モードを無効にすると、Codex を直接起動します。切断後のタスク継続は保証されません。リモートのバージョン確認・更新と一部の質問履歴の復元には引き続き Python が必要です。ソフトウェアは自動インストールされません。続行しますか？"</string>
+    <string name="ui_codex_will_start_directly_tasks_may_not_continue_after_disconnect">"永続モードを無効にすると、Codex を直接起動します。切断後のタスク継続は保証されません。リモートのバージョン確認・更新と一部の質問履歴の復元には引き続き Python が必要です。続行しますか？"</string>
     <string name="ui_disable_and_reconnect">"閉じて再接続する"</string>
     <string name="ui_use_current_conversation">"現在の会話を使用する"</string>
     <string name="ui_send_a_message_to_update_permissions">"メッセージを送信して権限を更新する"</string>
@@ -482,12 +479,12 @@
     <string name="diagnostic_main_thread">"接続の初期化に失敗しました: ネットワーク操作がメインスレッドで実行されました (NetworkOnMainThreadException)"</string>
     <string name="diagnostic_connection_failed">"接続に失敗しました・ "</string>
     <string name="diagnostic_connection_reason">"\n\n理由: "</string>
-    <string name="diagnostic_upstream_guidance">"\n\nモデル サービスへのリモート Codex WebSocket 接続が HTTP 403 を受信しました。これはホストとモデル サービス間の障害であり、電話の SSH パスワードが間違っているわけではありません。同じリモート ユーザーで、Codex ログイン、アカウント アクセス、プロキシまたはネットワーク ポリシーを確認します。ログだけでは誰が原因であるかを特定することはできません。 UNDICIの実験的警告自体は失敗ではない。リモート プロセスが終了すると、クライアントはそれ以上の出力を受け取ることができません。"</string>
+    <string name="diagnostic_upstream_guidance">"\n\nリモートの Codex がモデルサービスから HTTP 403 を受信しました。同じリモートユーザーで Codex のログイン、アカウント権限、プロキシまたはネットワークのポリシーを確認してください。"</string>
     <string name="diagnostic_tcp_guidance">"\n\nSSH 認証が開始されていません。ホストアドレスとポートを確認してください。この電話機上の別の SSH クライアントが同じホストに到達できる場合は、Tailscale → プロファイル → アプリベースのスプリット トンネリングを確認し、RemoteGPT (app.remotessh) が除外されていないことを確認し、電話機がこのアプリのネットワーク アクセスをブロックしているかどうかを確認します。 Tailscale に再接続して再試行することもできます。"</string>
     <string name="diagnostic_ssh_guidance">"\n\nTailscale を使用している場合は、電話 VPN が接続されていること、ホストがオンラインであること、およびアクセス ルールがターゲット ポートを許可していることを確認します。 MagicDNS 解決に失敗した場合は、ホストの 100.x アドレスを試してください。通常の SSH にはパスワードまたは秘密キーを使用し、Tailscale SSH にはパスワードなしの認証を使用します。再認証が必要な場合は、再試行する前に Tailscale アプリで認証を完了してください。"</string>
     <string name="diagnostic_exit_code">"\nリモート終了コード: "</string>
     <string name="diagnostic_python_guidance">"\nSSH に接続しましたが、python3 が見つかりませんでした。同じ SSH ユーザーに対して Python 3.8 以降をインストールして非対話型 PATH に追加するか、永続セッションを手動で無効にして再接続します。"</string>
-    <string name="diagnostic_program_guidance">"\nSSH 接続しましたが、リモート シェルはスタートアップ プログラムを見つけることができませんでした。これは IPv6 接続の障害ではありません。同じリモート ユーザーでコマンド -v codex を実行し、結果の絶対パスを起動コマンドとして入力します (例: /opt/homebrew/bin/codex app-server)。パスが返されない場合は、まずそのユーザーの Codex をインストールします。"</string>
+    <string name="diagnostic_program_guidance">"\nSSH 接続しましたが、リモート シェルはスタートアップ プログラムを見つけることができませんでした。同じリモート ユーザーでコマンド -v codex を実行し、結果の絶対パスを起動コマンドとして入力します (例: /opt/homebrew/bin/codex app-server)。パスが返されない場合は、まずそのユーザーの Codex をインストールします。"</string>
     <string name="diagnostic_remote_output">"\n\nリモート診断出力 (警告が原因ではない可能性があります):\n"</string>
     <string name="diagnostic_phase_initializing">"リモートプログラムを初期化"</string>
     <string name="diagnostic_phase_ssh">"SSH 接続と認証"</string>
@@ -558,4 +555,7 @@
     <string name="ui_permission_auto_description">権限昇格の要求を自動審査</string>
     <string name="ui_permission_read_description">ファイル編集やコマンド実行には承認が必要</string>
     <string name="ui_permission_full_description">コンピューターへの完全アクセス（高リスク）</string>
+    <string name="ui_historical_task_error">"過去のタスクエラー"</string>
+    <string name="ui_minimize_question">"質問を最小化"</string>
+    <string name="ui_restore_question">"質問を再表示"</string>
 </resources>

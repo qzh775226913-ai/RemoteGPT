@@ -48,7 +48,7 @@ final class ConnectionPreflight {
   static void check(Profile profile, Probe probe) throws Exception {
     String output = probe.run(command(profile));
     if (!output.contains(MARKER + "\n") || !output.contains("CHECK_DONE"))
-      throw failure("CHECK_UNAVAILABLE", "SSH 已认证，但无法完成环境检查。请确认账号允许非交互命令执行，且可运行 sh；检查超时不会启动 Codex。");
+      throw failure("CHECK_UNAVAILABLE", "SSH 已认证，但无法完成环境检查。请确认账号允许非交互命令执行，且可运行 sh。");
     for (String line : output.split("\\r?\\n")) {
       switch (line) {
         case "PYTHON_MISSING": throw failure(line, "SSH 已认证，但非交互环境找不到 python3。请用同一 SSH 账号安装 Python 3.8 或以上并加入 PATH，或在连接信息中选择关闭持久会话后重连。关闭后断线续跑不保证，版本维护和部分问答恢复也不可用。");
@@ -71,7 +71,7 @@ final class ConnectionPreflight {
       throw failure("ACCOUNT_CHECK_FAILED", "App Server 已启动，但账户检查失败。请检查远端登录和服务版本；环境检查未调用模型。");
     }
     if (account.optBoolean("requiresOpenaiAuth") && account.isNull("account"))
-      throw failure("CODEX_LOGIN_REQUIRED", "App Server 已启动，但服务器报告需要 Codex 登录。请用同一 SSH 账号执行 codex login（无浏览器可用 codex login --device-auth），完成后重连。本 App 不会读取或显示登录凭据。");
+      throw failure("CODEX_LOGIN_REQUIRED", "App Server 已启动，但服务器报告需要 Codex 登录。请用同一 SSH 账号执行 codex login（无浏览器可用 codex login --device-auth），完成后重连。");
   }
 
   static boolean canDisablePersistence(String diagnostic) {

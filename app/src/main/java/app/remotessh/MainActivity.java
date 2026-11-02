@@ -22,6 +22,7 @@ public final class MainActivity extends Activity {
   private int bg, fg, muted, panel, line;
   private LinearLayout root, body, conversation, messages, empty, sidebar, composer, headerDetails, footer;
   private ConversationChromeController chrome;
+  private QuestionBubbleController questionBubble;
   private ConversationScrollView scroll;
   private ConversationFooterMotion footerMotion;
   private String renderedThread = "";
@@ -73,9 +74,6 @@ public final class MainActivity extends Activity {
   private LoadingSpinner resumeSpinner;
   private boolean visibleActivity;
   private String shownApproval = "";
-  private QuestionForm questionForm;
-  private Bundle restoredQuestion;
-  private String restoredQuestionToken = "";
   private boolean scheduled, firstRender = true, wide;
   private boolean latestScrollPending, messageUpdatesPaused;
   private final Runnable pinLatest = () -> {
@@ -149,8 +147,7 @@ public final class MainActivity extends Activity {
       pendingImageHost = saved.getString("imageHost", "");
       pendingImageThread = saved.getString("imageThread", "");
       pendingImageProject = saved.getString("imageProject", "");
-      restoredQuestion=saved.getBundle("questionAnswers");
-      restoredQuestionToken=saved.getString("questionToken", "");
+      questionBubble.restoreInstance(saved);
     }
   }
 
@@ -212,14 +209,13 @@ public final class MainActivity extends Activity {
     out.putString("imageHost", pendingImageHost);
     out.putString("imageThread", pendingImageThread);
     out.putString("imageProject", pendingImageProject);
-    if (questionForm!=null && !shownApproval.isEmpty()) {
-      out.putString("questionToken",shownApproval);out.putBundle("questionAnswers",questionForm.saveAnswers());
-    }
+    if(questionBubble!=null)questionBubble.saveInstance(out);
     super.onSaveInstanceState(out);
   }
 
   @Override
   protected void onDestroy() {
+    if(questionBubble!=null)questionBubble.dispose();
     if(resumeSpinner!=null)resumeSpinner.stop();
     if(chrome!=null)chrome.dispose();
     if(footerMotion!=null)footerMotion.dispose();
@@ -461,6 +457,7 @@ public final class MainActivity extends Activity {
     controls.addView(send, new LinearLayout.LayoutParams(dp(44), dp(44)));
     chrome=new ConversationChromeController(this,headerDetails,composer,input,
         fg,muted,panel,this::sizeComposer,footerMotion::begin,footerMotion::end);
+    questionBubble=new QuestionBubbleController(this,app,ui,viewport,(View)composer.getParent());
     scroll.setOnReadingTap(()->chrome.setCompact(false));
     input.addTextChangedListener(
         new TextWatcher() {
@@ -1177,7 +1174,7 @@ public final class MainActivity extends Activity {
   }
 
   private void showDetails(ChatItem item) {
-    ToolDetailDialog.show(this,ui,wide,item,()->currentItems.get(item.id),this::copy);
+    ToolDetailDialog.show(this,ui,wide,item,()->ToolDetailDialog.latest(currentItems,item.id),this::copy);
   }
 
   private Dialog sheet(String heading, View content) { return ui.sheet(heading, content, wide); }
@@ -1621,15 +1618,11 @@ public final class MainActivity extends Activity {
       approvalDialog.dismiss();
       approvalDialog = null;
       shownApproval = "";
-      questionForm = null;
     }
+    if(questionBubble.present(req,id))return;
     if (req == null || approvalDialog != null || app.isAnswering(req)) return;
     shownApproval = id;
     JSONObject p = Json.object(req, "params");
-    if (ConversationJournal.question(req)) {
-      showQuestions(req, p);
-      return;
-    }
     String description =
         p.optString("reason", UiText.get(R.string.ui_the_server_requests_the_following_action))
             + "\n\n"
@@ -1675,37 +1668,4 @@ public final class MainActivity extends Activity {
     }
   }
 
-  private void showQuestions(JSONObject req, JSONObject p) {
-    QuestionForm form = new QuestionForm(this,p,fg,muted,panel);
-    questionForm=form;
-    if (shownApproval.equals(restoredQuestionToken)) form.restoreAnswers(restoredQuestion);
-    restoredQuestion=null;restoredQuestionToken="";
-    ScrollView sc = new ScrollView(this);
-    sc.addView(form);
-    approvalDialog =
-        new AlertDialog.Builder(this)
-            .setTitle(UiText.get(R.string.ui_additional_information))
-            .setView(sc)
-            .setCancelable(false)
-            .setNegativeButton(
-                ConversationJournal.savedQuestion(req) ? UiText.get(R.string.ui_skip_answer) : UiText.get(R.string.ui_stop_task),
-                (d, w) -> {
-                  app.cancelQuestion(req);
-                  approvalDialog = null;
-                  shownApproval = "";
-                })
-            .setPositiveButton(UiText.get(R.string.ui_send), null)
-            .show();
-    AlertDialog dialog=(AlertDialog) approvalDialog;
-    android.widget.Button sendAnswer=dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-    form.onChanged(()->sendAnswer.setEnabled(form.ready()));
-    sendAnswer.setOnClickListener(v->{
-      if(!form.ready() || app.isAnswering(req))return;
-      app.answer(req,form.result());
-      if(app.isAnswering(req)) {
-        restoredQuestion=form.saveAnswers();restoredQuestionToken=shownApproval;
-        dialog.dismiss();approvalDialog=null;shownApproval="";questionForm=null;
-      }
-    });
-  }
 }

@@ -14,6 +14,7 @@ final class ConversationState {
   String journalPath = "";
   ConversationJournal journal = new ConversationJournal();
   InteractionHistory interactions = new InteractionHistory();
+  QuestionUiState questionUi = new QuestionUiState();
   long savedInteractionRevision;
   String serviceTier = "", inheritedServiceTier = "", effectiveServiceTier = "", effectiveModel = "";
   boolean inheritedTierKnown, tierOverrideApplied;
@@ -33,7 +34,7 @@ final class ConversationState {
     effectiveModel=a.effectiveModel; inheritedTierKnown=a.inheritedTierKnown; tierOverrideApplied=a.tierOverrideApplied;
     permission=a.permissionMode; busy=a.busy; steering=a.steering; readOnly=a.readOnly; remoteRunning=a.remoteRunning; replaying=a.replaying; stopping=a.stopping;
     effectivePermission=a.effectivePermissionMode;journalPath=a.journalPath;journal=a.journal;
-    interactions=a.interactions;savedInteractionRevision=a.savedInteractionRevision;
+    interactions=a.interactions;questionUi=a.questionUi;savedInteractionRevision=a.savedInteractionRevision;
     items.clear(); items.addAll(a.items); approvals.clear(); approvals.addAll(a.approvals);
     images.clear(); images.addAll(a.draftImages); previews.clear(); previews.putAll(a.draftImagePreviews);
     files.clear();files.addAll(a.draftFiles);
@@ -48,7 +49,7 @@ final class ConversationState {
     a.effectiveModel=effectiveModel; a.inheritedTierKnown=inheritedTierKnown; a.tierOverrideApplied=tierOverrideApplied;
     a.permissionMode=permission; a.busy=busy; a.steering=steering; a.readOnly=readOnly; a.remoteRunning=remoteRunning; a.replaying=replaying; a.stopping=stopping;
     a.effectivePermissionMode=effectivePermission;a.journalPath=journalPath;a.journal=journal;
-    a.interactions=interactions;a.savedInteractionRevision=savedInteractionRevision;
+    a.interactions=interactions;a.questionUi=questionUi;a.savedInteractionRevision=savedInteractionRevision;
     a.items.clear(); a.items.addAll(items); a.approvals.clear(); a.approvals.addAll(approvals);
     a.draftImages.clear(); a.draftImages.addAll(images); a.draftImagePreviews.clear(); a.draftImagePreviews.putAll(previews);
     a.draftFiles.clear();a.draftFiles.addAll(files);

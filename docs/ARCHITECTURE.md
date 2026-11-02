@@ -8,10 +8,10 @@
 | --- | --- |
 | 界面生命周期 | `MainActivity` 管理页面、消息渲染、系统选择器和 Activity 回调；`BubbleActivity` 管理绑定会话的气泡页面 |
 | 独立窗口 | `ProfileEditor` 管理连接草稿／凭据表单／私钥导入；`ModelPicker` 管理模型／强度／速度选择及监听器；`DialogUi` 保持聊天窗口的原有样式与触摸行为 |
-| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 负责折叠摘要的跨字体光学居中和横向阅读手势；`ToolActivityPresenter` 按同一回合和正文边界组合思考与相邻事件并标记运行状态，`DiffSummary` 从服务器 diff 计数，`ToolActivityGroupView` 在气泡内绘制二级折叠，`RollingChangeNumbers` 仅在实际数值改变时对旧值／新值做有界队列和缓动滚动，`ToolInlineDetailView` 按思考正文、命令和文件 diff 分别排版，`ToolDetailDialog` 展示完整彩色详情；`ConversationChromeController` 使用独立容器叠放收起提示与正常输入区，按阅读方向动画改变容器尺寸，提示和放大按钮不参与正常输入区测量；`ComposerSurface` 以复用的渐变着色器绘制细边及内凹明暗，不改变内容内边距；`ComposerRenderCache` 在 Activity 内按连接／对话及实际内容跳过无变化的附件与待发栏重建，失败后不提交快照；`ConversationFooterMotion` 在阅读历史期间通过跳转按钮位移跟随输入区，动画结束后再调整消息区底部留白；`ConversationOverlayLayout` 固定接续按钮的跨状态尺寸；`ConversationScrollView` 按屏幕坐标的真实手势和惯性方向筛选滚动，过滤回弹、布局和自动定位位移，并在排除按钮、链接和滑动后将阅读区域单击交给控制器展开；消息、问答、图像预览和缩略图各有独立组件 |
+| 导航／展示组件 | `RemoteBrowser`、`DirectoryPicker`、`RemoteScreens`；`CompactSummaryTextView` 负责折叠摘要的跨字体光学居中和横向阅读手势；`ToolActivityPresenter` 按同一回合和正文边界组合思考与相邻事件并标记运行状态，`DiffSummary` 从服务器 diff 计数，`ToolActivityGroupView` 在气泡内绘制二级折叠，`RollingChangeNumbers` 仅在实际数值改变时对旧值／新值做有界队列和缓动滚动，`ToolInlineDetailView` 直接按思考正文、通知、命令和文件 diff 分别排版完整内容，`ToolDetailDialog` 以全屏内容区展示同一原始内容，移除时释放更新回调；`ConversationChromeController` 使用独立容器叠放收起提示与正常输入区，按阅读方向动画改变容器尺寸，提示和放大按钮不参与正常输入区测量；`ComposerSurface` 以复用的渐变着色器绘制细边及内凹明暗，不改变内容内边距；`ComposerRenderCache` 在 Activity 内按连接／对话及实际内容跳过无变化的附件与待发栏重建，失败后不提交快照；`ConversationFooterMotion` 在阅读历史期间通过跳转按钮位移跟随输入区，动画结束后再调整消息区底部留白；`ConversationOverlayLayout` 固定接续按钮的跨状态尺寸；`ConversationScrollView` 按屏幕坐标的真实手势和惯性方向筛选滚动，过滤回弹、布局和自动定位位移，并在排除按钮、链接和滑动后将阅读区域单击交给控制器展开；消息、问答、图像预览和缩略图各有独立组件 |
 | 公式排版 | `MathMarkup` 扫描正文显式公式标记并保护代码／货币；`MathRenderer` 在单 worker 中执行有界本地 TeX 排版与缓存；`MathSpan` 保持原文并提供行内基线；`MathContentView` 拥有正文块的异步 generation、可滚动独立公式和 detach／reattach 清理，不接触会话选择 |
 | 应用协调 | `RemoteApp` 维持连接、初始化、恢复、事件路由和当前选中状态的兼容接口；它不再实现窗口表单、完整发送流程或附件传输流程 |
-| 会话容器 | `ConversationStore` 是会话缓存和临时背景分发的唯一所有者；`ConversationState` 保存每条会话的消息、草稿、权限／速度和运行状态 |
+| 会话容器 | `ConversationStore` 是会话缓存和临时背景分发的唯一所有者；`ConversationState` 保存每条会话的消息、草稿、权限／速度、运行状态及待答表单的非秘密草稿和最小化状态 |
 | 轮次／队列 | `TurnController` 管理创建／发送／引导轮次、一条待发消息及其附件、可自动发送标记；请求仍走统一回调路由 |
 | 附件 | `AttachmentController` 管理批量上传、媒体读取、连接变化取消和主线程结果提交；`MediaFiles`／`FileAttachment` 定义格式、路径与限额 |
 | 消息图片 | `MessageImageTile` 拥有可见缩略图、读取任务与有界重试；同服务器／会话的连接 generation 变化时释放旧任务并重新绑定，主线程核对作用域后才显示结果。消息区暂停更新仍刷新图片连接状态；`ThumbnailLoader`／`ThumbnailCache` 分别提供任务调度和共享有界缓存；`ImageDialog` 拥有本次预览的对话图片快照、当前位置、加载 generation 与原图释放；`ZoomImageView` 负责适配／缩放拖动与边缘翻页手势 |
@@ -22,6 +22,7 @@
 | 传输／协议 | `SshTransport` 管理 SSH、SFTP 和辅助通道；`RpcClient` 管理 JSON-RPC framing、请求匹配和事件分发，不操作 Android View |
 | 连接诊断 | `ConnectionPreflight` 生成无凭据输出的环境探测并解析分类失败、检查公开账户状态；`ConnectionSetupUi` 拥有用户显式关闭持久模式的确认窗口。探测有超时／输出上限，关闭或连接 generation 变化使后续初始化无效 |
 | 强制权限审批 | `ForcedApprovalController` 调度已显式授权的命令／文件审批，按会话和连接 generation 隔离、去重和失败恢复；State 内的 Burst 用单调时钟记录实时唯一权限请求、保留最近 3 个时间点，并在第 4 个到达时判断 30 秒窗口资格。授权与窗口均由现有 `ConversationState.capture/apply` 捕获该 State，不保存到偏好；重放不计数，成功应用新权限结束授权时清空窗口。`PermissionPicker` 拥有权限列表／警告窗口并释放监听器，只在已确认启用期间显示强制允许项；下一轮请求捕获权限选择与授权 revision，成功响应只能结束它实际应用的授权 |
+| 结构化提问 | `QuestionForm` 显示可选择的题目与选项并过滤秘密答案快照；`QuestionBubbleController` 拥有窗口、输入框定位和连接／会话／请求校验，`QuestionBubbleMotion` 仅使用有界内存快照动画并在结束或取消后释放。`QuestionUiState` 经 ConversationState capture/apply 与 ConversationStore 主线程分发按会话隔离 |
 | 配置／数据 | `Vault`／`Profile` 保存连接；模型、额度、权限、版本、线程快照与问答日志由对应类解析 |
 | 后台／通知 | `ConnectionService` 维持前台服务与唤醒锁；`LiveStatusNotifications` 及 `LiveActionReceiver` 处理会话通知、请求身份和点击路由 |
 | 远端资产 | `remote_session.py` 托管 Codex 进程、SQLite 事件及重放；`conversation_state.py` 有界读取问答日志；`remote_maintenance.py` 检查／更新／明确重启 |

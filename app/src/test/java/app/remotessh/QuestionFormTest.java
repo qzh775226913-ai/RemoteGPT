@@ -30,4 +30,44 @@ public class QuestionFormTest {
     assertFalse(form.saveAnswers().containsKey("secret"));
     QuestionForm restored=form(questions);restored.restoreAnswers(form.saveAnswers());assertFalse(restored.ready());assertEquals("/work",find(restored,EditText.class).getText().toString());
   }
+  @Test public void questionAndOptionTextCanBeSelectedWithoutDisablingTheChoice() {
+    JSONArray questions=new JSONArray().put(Json.obj("id","q","question","Choose a path",
+        "options",new JSONArray().put(Json.obj("label","Path A","description","Full description"))));
+    QuestionForm form=form(questions);TextView title=(TextView)form.getChildAt(0);
+    RadioButton option=(RadioButton)find(form,RadioGroup.class).getChildAt(0);
+    assertTrue(title.isTextSelectable());assertTrue(option.isTextSelectable());
+    assertTrue(option.getText().toString().contains("Full description"));
+    option.performClick();assertTrue(option.isChecked());assertTrue(form.ready());
+  }
+
+  @Test public void selectableOptionStillRespondsToTouch() {
+    JSONArray questions=new JSONArray().put(Json.obj("id","q","question","Choose",
+        "options",new JSONArray().put(Json.obj("label","Path A","description","Details"))));
+    QuestionForm form=form(questions);RadioButton option=(RadioButton)find(form,RadioGroup.class).getChildAt(0);
+    option.measure(View.MeasureSpec.makeMeasureSpec(400,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(100,View.MeasureSpec.EXACTLY));
+    option.layout(0,0,400,100);
+    MotionEvent down=MotionEvent.obtain(0,0,MotionEvent.ACTION_DOWN,20,40,0);
+    MotionEvent up=MotionEvent.obtain(0,80,MotionEvent.ACTION_UP,20,40,0);
+    option.dispatchTouchEvent(down);option.dispatchTouchEvent(up);down.recycle();up.recycle();
+    assertTrue("tapping a selectable option should still choose it",option.isChecked());assertTrue(form.ready());
+  }
+
+  @Test public void longPressDoesNotSelectAnOptionAndSelectedTextCanBeCopied() {
+    org.robolectric.android.controller.ActivityController<android.app.Activity> owner=Robolectric.buildActivity(android.app.Activity.class).setup();
+    try {
+      android.app.Activity activity=owner.get();
+      QuestionForm form=new QuestionForm(activity,Json.obj("questions",new JSONArray().put(Json.obj("id","q","question","Choose",
+          "options",new JSONArray().put(Json.obj("label","Path A","description","Details"))))),0xffeeeeee,0xffaaaaaa,0xff303030);
+      activity.setContentView(form);RadioButton option=(RadioButton)find(form,RadioGroup.class).getChildAt(0);
+      option.measure(View.MeasureSpec.makeMeasureSpec(400,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(100,View.MeasureSpec.EXACTLY));option.layout(0,0,400,100);
+      MotionEvent down=MotionEvent.obtain(0,0,MotionEvent.ACTION_DOWN,20,40,0);
+      MotionEvent up=MotionEvent.obtain(0,800,MotionEvent.ACTION_UP,20,40,0);
+      option.dispatchTouchEvent(down);option.dispatchTouchEvent(up);down.recycle();up.recycle();assertFalse(option.isChecked());
+      assertTrue(option.getText() instanceof android.text.Spannable);
+      android.text.Selection.setSelection((android.text.Spannable)option.getText(),0,6);
+      assertTrue(option.onTextContextMenuItem(android.R.id.copy));
+      android.content.ClipboardManager clipboard=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+      assertEquals("Path A",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+    } finally {owner.pause().stop().destroy();}
+  }
 }

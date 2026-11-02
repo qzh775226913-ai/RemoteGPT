@@ -112,14 +112,14 @@ final class ToolActivityGroupView extends LinearLayout {
     disclosure.addView(row,new LayoutParams(-1,rowHeight));
     if(expanded.contains(child.id)){
       ToolInlineDetailView detail=new ToolInlineDetailView(getContext(),ui,child);
-      LayoutParams codeParams=new LayoutParams(-1,-2);codeParams.setMargins(ui.dp(30),ui.dp(3),ui.dp(4),0);
+      LayoutParams codeParams=new LayoutParams(-1,-2);codeParams.setMargins(ui.dp(2),ui.dp(2),ui.dp(2),0);
       disclosure.addView(detail,codeParams);
       TextView full=ui.text(UiText.get(child.type.equals("reasoning")?
           R.string.ui_reasoning:R.string.ui_execution_details)+"  ↗",12,ui.muted);
       full.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
       full.setPadding(0,ui.dp(3),ui.dp(7),ui.dp(3));
       ui.clickable(full,()->openDetail.accept(child));
-      LayoutParams fullParams=new LayoutParams(-1,-2);fullParams.setMargins(ui.dp(30),ui.dp(2),ui.dp(4),ui.dp(5));
+      LayoutParams fullParams=new LayoutParams(-1,-2);fullParams.setMargins(ui.dp(2),0,ui.dp(2),ui.dp(3));
       disclosure.addView(full,fullParams);
     }
     content.addView(disclosure,new LayoutParams(-1,-2));
