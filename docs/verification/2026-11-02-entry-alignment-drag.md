@@ -13,3 +13,10 @@
 - 增加空白主页返回边界时，主动中止了下一轮仍在运行的完整验收以便纳入修复；该轮不计为最终验收。
 
 - 最终验收首次重跑在 Python 隔离进程测试中失败：测试仅等待 `server.pid`，但模拟服务随后才写入 `daemon.pid` 和 `socket`，有启动竞态。现等待模拟服务实际就绪后再断言，原有真实隔离进程组终止验证不变；定向测试通过后重新运行完整验收。
+
+## 最终验收与制品
+
+- 在提交 `6962c34` 上使用开发环境执行 `.venv/bin/python -u tools/verify.py --offline`：Android 578 项，0 失败／错误／跳过；Python 54 项通过，结构、图标、数学字形、合成 SSH/SFTP 夹具和 APK 构建均通过。Lint 0 Error/Fatal、30 条 Warning，与 build 85 基线一致。
+- APK 包名 `app.remotessh`、versionName `1.1.1`、versionCode 86、最低 Android 8；APK v2 签名校验通过，证书 SHA-256 `43ef05b33d4e9505eff7370a3a830af59dbc0b256c9925a12f76273e353f020a`，与 build 85 一致。
+- 制品 `dist/tailnet-1.1.1-build86/RemoteGPT-1.1.1-build86-Android-universal-debug.apk`，4,870,514 字节，SHA-256 `5592976c153fe11b62cf61f5e272a398f73ded2224f84f767e31c3ce1d764db5`。复用既有局域网和 Tailnet 下载服务并保留旧包；本机从两个地址分别完整下载均返回 HTTP 200，字节比较与 SHA-256 一致。
+- 验收没有使用真实 Codex 凭据、调用模型或重启生产任务；尚未在用户手机上复测真实触摸手感、设备帧率、字体或实际网络下载。
