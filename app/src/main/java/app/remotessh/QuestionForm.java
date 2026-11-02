@@ -18,6 +18,7 @@ final class QuestionForm extends LinearLayout {
     private float downX,downY;
     private boolean tap;
     SelectableRadioButton(Context context){super(context);}
+    @Override public boolean performClick(){return super.performClick();}
     @Override public boolean onTouchEvent(MotionEvent event){
       switch(event.getActionMasked()){
         case MotionEvent.ACTION_DOWN:downX=event.getX();downY=event.getY();tap=true;break;
