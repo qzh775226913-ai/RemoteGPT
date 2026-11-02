@@ -8,7 +8,7 @@ A native Android app to remotely control OpenAI Codex over SSH. Manage coding se
 
 Current version: **1.0.67 / versionCode 69**. Android 8+.
 
-Development test build: **1.1.1 / versionCode 84**; the download above remains the GitHub stable release.
+Development test build: **1.1.1 / versionCode 85**; the download above remains the GitHub stable release.
 
 ## Screens
 
