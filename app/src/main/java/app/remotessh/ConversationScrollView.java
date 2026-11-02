@@ -16,7 +16,7 @@ import android.widget.TextView;
 public final class ConversationScrollView extends ScrollView {
   private boolean following = true, layingOut, pinning;
   private View horizontalGesture;
-  private boolean handlingUserScroll, flinging, userScrollCallback;
+  private boolean handlingUserScroll, flinging, userScrollCallback, flingReachedLatest;
   private int touchDirection,flingDirection;
   private float lastRawY;
   private long lastFlingMotion;
@@ -29,14 +29,14 @@ public final class ConversationScrollView extends ScrollView {
     super(context);touchSlop=ViewConfiguration.get(context).getScaledTouchSlop();
   }
   public boolean isFollowing() { return following; }
-  public void follow() { following = true; requestLayout(); }
-  public void read() { following = false; }
+  public void follow() { stopFling(); following = true; requestLayout(); }
+  public void read() { following = false; flingReachedLatest=false; }
   boolean userScrolling() {return userScrollCallback;}
   void setOnReadingTap(Runnable action){readingTap=action;}
   @Override public boolean dispatchTouchEvent(MotionEvent event) {
     int action=event.getActionMasked();
     if(action==MotionEvent.ACTION_DOWN){
-      flinging=false;touchDirection=0;lastRawY=event.getRawY();tapX=event.getX();tapY=event.getY();tapTime=event.getEventTime();
+      flinging=false;flingReachedLatest=false;touchDirection=0;lastRawY=event.getRawY();tapX=event.getX();tapY=event.getY();tapTime=event.getEventTime();
       tapCandidate=readingTap!=null && !interactiveAt(this,tapX,tapY);
     } else if(action==MotionEvent.ACTION_MOVE){
       touchDirection=Float.compare(lastRawY,event.getRawY());lastRawY=event.getRawY();
@@ -87,14 +87,34 @@ public final class ConversationScrollView extends ScrollView {
   }
   @Override public void fling(int velocityY) {
     flinging=true;flingDirection=Integer.signum(velocityY);
+    flingReachedLatest=flingDirection>0 && following && nearBottom();
     lastFlingMotion=android.os.SystemClock.uptimeMillis();super.fling(velocityY);
+  }
+
+  private void stopFling(){
+    if(!flinging || getChildCount()==0){flinging=false;flingReachedLatest=false;return;}
+    // ScrollView has no public abort API. A down/cancel pair uses its normal touch path
+    // to abort the platform scroller without sending a click to message children.
+    long now=android.os.SystemClock.uptimeMillis();float x=getWidth()/2f,y=getHeight()/2f;
+    MotionEvent down=MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,x,y,0);
+    MotionEvent cancel=MotionEvent.obtain(now,now,MotionEvent.ACTION_CANCEL,x,y,0);
+    boolean previous=pinning;pinning=true;
+    try{
+      super.onTouchEvent(down);scrollTo(getScrollX(),getScrollY());super.onTouchEvent(cancel);
+      super.onInterceptTouchEvent(cancel);stopNestedScroll();
+    }finally{
+      pinning=previous;down.recycle();cancel.recycle();flinging=false;flingReachedLatest=false;flingDirection=0;
+    }
   }
   @Override public void computeScroll() {
     int before=getScrollY();boolean previous=handlingUserScroll;
     handlingUserScroll=flinging;
     try{super.computeScroll();}finally{handlingUserScroll=previous;}
     if(getScrollY()!=before)lastFlingMotion=android.os.SystemClock.uptimeMillis();
-    else if(android.os.SystemClock.uptimeMillis()-lastFlingMotion>100)flinging=false;
+    else if(android.os.SystemClock.uptimeMillis()-lastFlingMotion>100){
+      boolean reached=flingReachedLatest;flinging=false;flingReachedLatest=false;
+      if(reached && following)pin();
+    }
   }
   void holdHorizontalGesture(View owner) { horizontalGesture = owner; }
   void releaseHorizontalGesture(View owner) {
@@ -124,7 +144,9 @@ public final class ConversationScrollView extends ScrollView {
     pinning = false;
   }
   @Override protected void onScrollChanged(int x, int y, int oldX, int oldY) {
-    if (!layingOut && !pinning) following = nearBottom();
+    boolean atLatest=nearBottom();
+    if(flinging && flingDirection>0 && atLatest)flingReachedLatest=true;
+    if (!layingOut && !pinning) following = atLatest || (flinging && flingDirection>0 && flingReachedLatest);
     boolean previous=userScrollCallback;
     int direction=flinging?flingDirection:touchDirection;
     userScrollCallback=handlingUserScroll && !layingOut && !pinning && direction!=0 &&

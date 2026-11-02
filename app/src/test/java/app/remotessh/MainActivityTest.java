@@ -1715,6 +1715,53 @@ public class MainActivityTest {
     scroll.onScrollChanged(0,150,0,130);
     assertEquals(java.util.Arrays.asList(true,false,false,false),observed);
   }
+
+  @Test public void bounceAfterReachingLatestDoesNotLoseFollowing() {
+    ConversationScrollView scroll=new ConversationScrollView(activity);
+    View timeline=new View(activity);timeline.setMinimumHeight(3000);scroll.addView(timeline,new ScrollView.LayoutParams(-1,3000));
+    ((ViewGroup)content()).addView(scroll,new FrameLayout.LayoutParams(-1,400));layoutContent();
+    scroll.follow();scroll.pin();int bottom=scroll.getScrollY();assertTrue(bottom>200);
+    scroll.fling(10000);
+    org.robolectric.util.ReflectionHelpers.setField(scroll,"handlingUserScroll",true);
+    scroll.scrollTo(0,bottom-80);
+    assertTrue("the spring-back of a fling toward latest must not abandon following",scroll.isFollowing());
+    org.robolectric.util.ReflectionHelpers.setField(scroll,"handlingUserScroll",false);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(160));
+    assertTrue("the final position must settle at the newest message",scroll.nearBottom());
+  }
+
+  @Test public void oneJumpStopsOlderFlingAndKeepsLatestMessageAboveComposer() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="jump-fling";
+    app.draftText="first line\nsecond line\nthird line";app.draftFiles.add(new FileAttachment("notes.txt","/remote/notes.txt",12));
+    for(int i=0;i<80;i++)app.items.add(new ChatItem("message-"+i,"agentMessage","Message "+i+"\nMore content"));
+    app.changed();shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(150));layoutContent();
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("scroll");field.setAccessible(true);
+    ConversationScrollView scroll=(ConversationScrollView)field.get(activity);
+    field=MainActivity.class.getDeclaredField("chrome");field.setAccessible(true);
+    ConversationChromeController chrome=(ConversationChromeController)field.get(activity);
+    chrome.setCompact(true);shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    scroll.scrollTo(0,Math.max(0,scroll.getScrollY()-800));assertFalse(scroll.isFollowing());
+    app.items.add(new ChatItem("latest","agentMessage","The actual last message"));app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+    field=MainActivity.class.getDeclaredField("jump");field.setAccessible(true);View jump=(View)field.get(activity);
+    assertEquals(View.VISIBLE,jump.getVisibility());scroll.fling(-10000);jump.performClick();
+    for(int i=0;i<45;i++){
+      shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(16));scroll.computeScroll();layoutContent();
+    }
+    assertTrue("one tap should remain at the newest message after the old fling",scroll.isFollowing());
+    assertTrue("the latest message must be reached",scroll.nearBottom());
+    field=MainActivity.class.getDeclaredField("messages");field.setAccessible(true);LinearLayout messages=(LinearLayout)field.get(activity);
+    View last=messages.getChildAt(messages.getChildCount()-1);assertNotNull(find(last,"The actual last message"));
+    field=MainActivity.class.getDeclaredField("footer");field.setAccessible(true);View footer=(View)field.get(activity);
+    int[] lastPos=new int[2],footerPos=new int[2];last.getLocationOnScreen(lastPos);footer.getLocationOnScreen(footerPos);
+    assertTrue("the final message must be above the input bubble",lastPos[1]+last.getHeight()<=footerPos[1]);
+    int latest=scroll.getScrollY();long now=android.os.SystemClock.uptimeMillis();
+    dispatchTouch(scroll,now,now,MotionEvent.ACTION_DOWN,20,150);
+    dispatchTouch(scroll,now,now+20,MotionEvent.ACTION_MOVE,20,520);
+    dispatchTouch(scroll,now,now+40,MotionEvent.ACTION_UP,20,520);
+    assertTrue("a new reading gesture must work after jumping",scroll.getScrollY()<latest);
+    assertFalse(scroll.isFollowing());
+  }
   @Test public void quickFlingToLatestExpandsChromeWithoutOscillation() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="fling";
     for(int i=0;i<60;i++)app.items.add(new ChatItem("line-"+i,"agentMessage","Message "+i+"\nSecond line"));
@@ -1740,7 +1787,15 @@ public class MainActivityTest {
       previous=host.getWidth();
     }
     assertTrue("the fling reaches the latest messages",scroll.nearBottom());
-    assertEquals(View.VISIBLE,composer.getVisibility());captureLaidOutView(content(),"fling-at-latest");
+    assertTrue("the bounced fling must keep following the latest message",scroll.isFollowing());
+    assertEquals(View.VISIBLE,composer.getVisibility());
+    field=MainActivity.class.getDeclaredField("footer");field.setAccessible(true);View footer=(View)field.get(activity);
+    assertEquals("the settled composer needs its own timeline space",footer.getHeight()+Math.round(8*activity.getResources().getDisplayMetrics().density),scroll.getPaddingBottom());
+    field=MainActivity.class.getDeclaredField("messages");field.setAccessible(true);LinearLayout messages=(LinearLayout)field.get(activity);
+    View last=messages.getChildAt(messages.getChildCount()-1);int[] lastPos=new int[2],footerPos=new int[2];
+    last.getLocationOnScreen(lastPos);footer.getLocationOnScreen(footerPos);
+    assertTrue("the newest message must not sit behind the composer",lastPos[1]+last.getHeight()<=footerPos[1]);
+    captureLaidOutView(content(),"fling-at-latest");
   }
   @Test public void composerExpansionNeverOvershootsAndKeepsAttachmentVisibility() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="motion";
