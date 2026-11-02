@@ -8,7 +8,7 @@ Use a native Android interface to work with remote Codex over SSH. Codex executi
 
 Current version: **1.0.67 / versionCode 69**. Android 8+.
 
-Development test build: **1.1.1 / versionCode 85**; the download above remains the GitHub stable release.
+Development test build: **1.1.1 / versionCode 86**; the download above remains the GitHub stable release.
 
 ## Screens
 
