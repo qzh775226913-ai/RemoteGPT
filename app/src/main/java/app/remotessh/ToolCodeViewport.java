@@ -11,6 +11,7 @@ import android.widget.OverScroller;
 import android.widget.TextView;
 
 /** A selectable code surface with finger-anchored pinch and two-axis dragging. */
+@android.annotation.SuppressLint("ViewConstructor") // Constructed in code with its selectable text child.
 final class ToolCodeViewport extends FrameLayout {
   private static final float MIN_SCALE=.65f,MAX_SCALE=4f;
   private final TextView code;

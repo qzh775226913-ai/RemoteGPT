@@ -65,6 +65,18 @@ public class MediaSourceTest {
     assertEquals("",multiple.get("/work/photo.png"));assertFalse(multiple.get("/work/other.png").isEmpty());
   }
 
+  @Test public void inlineFallbackKeepsPathIdentityAcrossGroupingAndRejectsAmbiguity(){
+    UiText.initialize(RuntimeEnvironment.getApplication());
+    String png="iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB";
+    ChatItem generated=ChatItem.from(Json.obj("id","generated","type","imageGeneration","savedPath","/work/photo.png","result",png));generated.turnId="turn";
+    ChatItem command=new ChatItem("cmd","commandExecution","ls");command.turnId="turn";
+    List<ChatItem> shown=ToolActivityPresenter.present(Arrays.asList(command,generated),"");
+    assertEquals("data:image/png;base64,"+png,MediaFiles.imageFallbacks(shown,"/work").get("/work/photo.png"));
+    assertEquals(Collections.singletonList("/work/photo.png"),MediaFiles.imageGallery(Arrays.asList(generated),"/work"));
+    ChatItem duplicate=new ChatItem("other","imageView","");duplicate.images.add("file:///work/photo.png");
+    assertFalse(MediaFiles.imageFallbacks(Arrays.asList(generated,duplicate),"/work").containsKey("/work/photo.png"));
+  }
+
   @Test public void groupedImageCacheUsesTheSameIdentityAsTheVisibleTile(){
     UiText.initialize(RuntimeEnvironment.getApplication());Profile profile=new Profile();profile.host="host";
     ChatItem command=new ChatItem("cmd","commandExecution","ls");command.turnId="turn";

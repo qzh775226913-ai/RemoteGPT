@@ -86,6 +86,16 @@ public class MessageImageTileTest {
     app.profile.host="another-host";assertNull(tile.cachedPreview());assertFalse(cached.isRecycled());
   }
 
+  @Test public void lateInlineDataCanRecoverAMissingGeneratedImage() throws Exception {
+    read((source,out,active)->{
+      if(source.equals("/image.png"))throw new com.jcraft.jsch.SftpException(com.jcraft.jsch.ChannelSftp.SSH_FX_NO_SUCH_FILE,"missing");
+      assertEquals("data:image/png;base64,fixture",source);out.write(png);
+    });
+    tile.load();await(()->!tile.loading);assertFalse(tile.loaded);
+    tile.setInlineFallback("data:image/png;base64,fixture");await(()->tile.loaded);
+    assertNotNull(tile.preview.getDrawable());
+  }
+
   @Test public void previouslyViewedImageSurvivesTheRemoteFileBeingRemoved() throws Exception {
     AtomicInteger reads=new AtomicInteger();read((source,out,active)->{reads.incrementAndGet();out.write(png);});
     tile.load();await(()->tile.loaded);assertNotNull(tile.preview.getDrawable());

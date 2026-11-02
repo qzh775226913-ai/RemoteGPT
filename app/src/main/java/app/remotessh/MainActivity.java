@@ -553,7 +553,7 @@ public final class MainActivity extends Activity {
   private static boolean sameContent(ChatItem a,ChatItem b) {
     return b!=null && a.text.equals(b.text) && a.detail.equals(b.detail) && a.status.equals(b.status)
         && a.phase.equals(b.phase) && a.type.equals(b.type) && a.images.equals(b.images)
-        && sameChildren(a,b)
+        && a.imageFallbacks.equals(b.imageFallbacks) && sameChildren(a,b)
         && Objects.equals(a.interaction==null?null:a.interaction.toString(),b.interaction==null?null:b.interaction.toString());
   }
 
@@ -632,7 +632,7 @@ public final class MainActivity extends Activity {
         snapshot.detail = source.detail; snapshot.status = source.status;
         snapshot.phase=source.phase;snapshot.turnId=source.turnId;
         if(source.interaction!=null)try{snapshot.interaction=new JSONObject(source.interaction.toString());}catch(JSONException ignored){}
-        snapshot.images.addAll(source.images);
+        snapshot.images.addAll(source.images);snapshot.imageFallbacks.putAll(source.imageFallbacks);
         snapshot.changes=source.changes;snapshot.commandActions=source.commandActions;
         snapshot.children.addAll(source.children);
         visibleItems.add(snapshot);
@@ -1089,11 +1089,13 @@ public final class MainActivity extends Activity {
   private void showImage(String source,android.graphics.Bitmap preview,List<String> gallery) {
     if(imageDialog!=null)imageDialog.dismiss();
     int generation=app.connectionGeneration();String host=app.profile==null?"":app.profile.id,thread=app.threadId;
-    Map<String,String> scopes=MediaFiles.imageScopes(ToolActivityPresenter.present(app.displayItems(),app.turnId),
-        app.currentProject(),app.profile,thread);ImageDiskCache disk=app.thumbnails.disk(this);
+    List<ChatItem> displayed=ToolActivityPresenter.present(app.displayItems(),app.turnId);
+    Map<String,String> scopes=MediaFiles.imageScopes(displayed,app.currentProject(),app.profile,thread);
+    Map<String,String> fallbacks=MediaFiles.imageFallbacks(displayed,app.currentProject());
+    ImageDiskCache disk=app.thumbnails.disk(this);
     imageDialog=new ImageDialog(this,isDark(),source,preview,gallery,this::imagePreview,
         (path,out,active)->ImageSourceReader.read((name,destination,valid)->app.readMedia(name,destination,MediaFiles.IMAGE_LIMIT,valid),
-            disk,scopes.getOrDefault(path,""),path,out,MediaFiles.IMAGE_LIMIT,active),
+            disk,scopes.getOrDefault(path,""),path,fallbacks.getOrDefault(path,""),out,MediaFiles.IMAGE_LIMIT,active),
         ()->!isDestroyed() && generation==app.connectionGeneration() && host.equals(app.profile==null?"":app.profile.id)
             && (Looper.myLooper()!=Looper.getMainLooper() || thread.equals(app.threadId)),
         path->saveMedia(path,scopes.getOrDefault(path,"")));
@@ -1103,7 +1105,11 @@ public final class MainActivity extends Activity {
     LinearLayout row = mediaRows.get(item.id);
     List<String> sources = MediaFiles.images(item);
     if (row == null) return;
-    if (sources.equals(mediaSources.get(item.id)) && mediaTiles.stream().noneMatch(tile->tile.itemId.equals(item.id) && !tile.sameContext())) return;
+    Map<String,String> fallbacks=MediaFiles.imageFallbacks(Collections.singletonList(item),app.currentProject());
+    if (sources.equals(mediaSources.get(item.id)) && mediaTiles.stream().noneMatch(tile->tile.itemId.equals(item.id) && !tile.sameContext())) {
+      for(MessageImageTile tile:mediaTiles)if(tile.itemId.equals(item.id))tile.setInlineFallback(fallbacks.get(tile.source));
+      return;
+    }
     mediaSources.put(item.id, sources);
     mediaTiles.removeIf(tile->{if(!tile.itemId.equals(item.id))return false;tile.release();return true;});
     row.removeAllViews();
@@ -1114,7 +1120,8 @@ public final class MainActivity extends Activity {
       try{if(!source.startsWith("data:") && !source.startsWith("https://"))source=MediaFiles.remotePath(source,app.currentProject());}catch(Exception ignored){}
       if(index%2==0 || sources.size()==1){grid=row();row.addView(grid,new LinearLayout.LayoutParams(-1,-2));}
       MessageImageTile tile=new MessageImageTile(this,app,ui,thumbnailWorker,item.id,source,row,sources.size()>1,()->mediaRows.get(item.id)==row,this::openConversationImage);
-      if(cacheScopes.getOrDefault(source,"").isEmpty())tile.disableDiskCache();mediaTiles.add(tile);grid.addView(tile.tile);index++;
+      if(cacheScopes.getOrDefault(source,"").isEmpty())tile.disableDiskCache();
+      tile.setInlineFallback(fallbacks.get(source));mediaTiles.add(tile);grid.addView(tile.tile);index++;
     }
     scheduleMedia();
   }
@@ -1126,6 +1133,12 @@ public final class MainActivity extends Activity {
     } else saveMedia(source);
   }
 
+  private String imageFallbackForScope(String source,String scope){
+    if(scope.isEmpty())return "";
+    List<ChatItem> displayed=ToolActivityPresenter.present(app.displayItems(),app.turnId);
+    if(!scope.equals(MediaFiles.imageScopes(displayed,app.currentProject(),app.profile,app.threadId).get(source)))return "";
+    return MediaFiles.imageFallbacks(displayed,app.currentProject()).getOrDefault(source,"");
+  }
   private void saveMedia(String source) {saveMedia(source,"");}
   private void saveMedia(String source,String scope) {
     try {
@@ -1530,13 +1543,14 @@ public final class MainActivity extends Activity {
       if (result == RESULT_OK && data != null && data.getData() != null && !source.isEmpty()) {
         android.net.Uri destination = data.getData();
         ImageDiskCache disk=app.thumbnails.disk(this);int generation=app.connectionGeneration();
+        String inline=imageFallbackForScope(source,scope);
         toast(UiText.get(R.string.ui_saving_file));
         mediaWorker.execute(() -> {
           try (OutputStream out = getContentResolver().openOutputStream(destination, "wt")) {
             if (out == null) throw new IOException("无法写入所选位置");
             if (app.profile == null || !host.equals(app.profile.id)) throw new IOException("连接已切换，请重新下载");
             ImageSourceReader.read((name,dest,active)->app.readMedia(name,dest,MediaFiles.DOWNLOAD_LIMIT,active),
-                disk,scope,source,out,MediaFiles.DOWNLOAD_LIMIT,()->generation==app.connectionGeneration());
+                disk,scope,source,inline,out,MediaFiles.DOWNLOAD_LIMIT,()->generation==app.connectionGeneration());
             app.main.post(() -> toast(UiText.get(R.string.ui_file_saved)));
           } catch (Exception e) {
             try { android.provider.DocumentsContract.deleteDocument(getContentResolver(), destination); } catch (Exception ignored) { }

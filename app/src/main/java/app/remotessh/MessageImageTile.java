@@ -24,6 +24,7 @@ final class MessageImageTile {
   private final BooleanSupplier owner;
   private final String host, thread, cacheHost;
   private String imageScope;
+  private volatile String inlineFallback="";
   private volatile int generation;
   volatile boolean visible;
   boolean loading, loaded;
@@ -63,6 +64,12 @@ final class MessageImageTile {
   }
 
   void disableDiskCache(){imageScope="";}
+  void setInlineFallback(String value){
+    String next=value==null?"":value;if(next.equals(inlineFallback))return;inlineFallback=next;
+    if(!next.isEmpty() && visible && !loading && !loaded){
+      app.main.removeCallbacks(retry);retryAt=0;attempts=0;load();
+    }
+  }
 
   private String contextKey() {
     return app.profile==null?"":app.profile.id+":"+app.profile.host+":"+app.profile.port+":"+app.profile.user+":"+app.threadId+":"+itemId;
@@ -97,7 +104,7 @@ final class MessageImageTile {
         if(bitmap==null) {
           ByteArrayOutputStream bytes=new ByteArrayOutputStream();
           ImageDiskCache disk=app.thumbnails.disk(activity);
-          ImageSourceReader.read(reader,disk,imageScope,source,bytes,MediaFiles.IMAGE_LIMIT,active);
+          ImageSourceReader.read(reader,disk,imageScope,source,inlineFallback,bytes,MediaFiles.IMAGE_LIMIT,active);
           MediaFiles.check(active);byte[] original=bytes.toByteArray();bitmap=MediaFiles.decode(original,640);
           disk.put(imageScope,source,original,active);
           if(!active.getAsBoolean()){bitmap.recycle();MediaFiles.check(active);}

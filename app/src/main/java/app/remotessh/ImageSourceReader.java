@@ -10,6 +10,10 @@ final class ImageSourceReader {
   private ImageSourceReader(){}
   static void read(ImageDialog.Reader remote,ImageDiskCache cache,String scope,String source,
       OutputStream out,long limit,BooleanSupplier active) throws Exception {
+    read(remote,cache,scope,source,"",out,limit,active);
+  }
+  static void read(ImageDialog.Reader remote,ImageDiskCache cache,String scope,String source,String fallback,
+      OutputStream out,long limit,BooleanSupplier active) throws Exception {
     final long[] written={0};
     OutputStream tracked=new OutputStream(){
       @Override public void write(int value) throws java.io.IOException {out.write(value);written[0]++;}
@@ -19,7 +23,9 @@ final class ImageSourceReader {
     };
     try{remote.read(source,tracked,active);}
     catch(Exception failure){
-      if(written[0]!=0 || !missing(failure) || !cache.read(scope,source,out,limit,active))throw failure;
+      if(written[0]!=0 || !missing(failure))throw failure;
+      if(fallback!=null && !fallback.isEmpty()){remote.read(fallback,out,active);return;}
+      if(!cache.read(scope,source,out,limit,active))throw failure;
     }
   }
   private static boolean missing(Throwable failure){

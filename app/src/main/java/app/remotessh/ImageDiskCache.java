@@ -35,7 +35,8 @@ final class ImageDiskCache {
   }
   synchronized void put(String scope,String source,byte[] bytes,BooleanSupplier active){
     File target=file(scope,source);
-    if(target==null || target.isFile() || bytes.length==0 || bytes.length>budget || !active.getAsBoolean())return;
+    if(target==null || bytes.length==0 || bytes.length>budget || !active.getAsBoolean())return;
+    if(target.isFile()){target.setLastModified(System.currentTimeMillis());return;}
     File temp=null;
     try{
       if(!directory.isDirectory() && !directory.mkdirs())return;

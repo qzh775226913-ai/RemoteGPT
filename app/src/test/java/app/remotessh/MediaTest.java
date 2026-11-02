@@ -54,10 +54,12 @@ public class MediaTest {
     String png="iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB";
     JSONObject event=Json.obj("id","generated","type","imageGeneration","savedPath","/gone/photo.png","result",png);
     ChatItem item=ChatItem.from(event);
-    assertEquals("data:image/png;base64,"+png,item.images.get(0));
+    assertEquals("/gone/photo.png",item.images.get(0));
+    assertEquals("data:image/png;base64,"+png,item.imageFallbacks.get("/gone/photo.png"));
     ThreadSnapshot snapshot=new ThreadSnapshot(Json.obj("thread",Json.obj("turns",new JSONArray()
         .put(Json.obj("id","turn","items",new JSONArray().put(event))))));
     assertNull(snapshot.failure);assertEquals(item.images,snapshot.turns.get(0).get(0).images);
+    assertEquals(item.imageFallbacks,snapshot.turns.get(0).get(0).imageFallbacks);
     ChatItem pathOnly=ChatItem.from(Json.obj("type","imageGeneration","savedPath","/gone/photo.png"));
     assertEquals("/gone/photo.png",pathOnly.images.get(0));
   }

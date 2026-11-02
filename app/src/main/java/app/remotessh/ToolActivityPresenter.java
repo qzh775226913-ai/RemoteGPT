@@ -53,7 +53,7 @@ final class ToolActivityPresenter {
     String thoughtPreview="";
     StringBuilder version=new StringBuilder();
     for(ChatItem child:children){
-      group.images.addAll(child.images);
+      group.images.addAll(child.images);group.imageFallbacks.putAll(child.imageFallbacks);
       version.append(child.id).append(child.status).append(child.text).append(child.detail.hashCode());
       if(child.type.equals("reasoning") && thoughtPreview.isEmpty() && !child.detail.trim().isEmpty())
         thoughtPreview=reasoningPreview(child);

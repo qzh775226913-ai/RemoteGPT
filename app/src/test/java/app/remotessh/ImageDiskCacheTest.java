@@ -45,6 +45,17 @@ public class ImageDiskCacheTest {
     catch(SftpException expected){assertArrayEquals(new byte[]{12},partial.toByteArray());}
   }
 
+  @Test public void embeddedImageIsUsedForAMissingPathWithoutChangingItsIdentity() throws Exception {
+    ImageDiskCache cache=new ImageDiskCache(Files.createTempDirectory("image-cache-test").toFile(),100);
+    cache.put("scope",PATH,new byte[]{9,9},()->true);ByteArrayOutputStream out=new ByteArrayOutputStream();
+    ImageDialog.Reader remote=(source,dest,active)->{
+      if(source.equals(PATH))throw new SftpException(ChannelSftp.SSH_FX_NO_SUCH_FILE,"missing");
+      assertEquals("data:image/png;base64,source",source);dest.write(ORIGINAL);
+    };
+    ImageSourceReader.read(remote,cache,"scope",PATH,"data:image/png;base64,source",out,100,()->true);
+    assertArrayEquals(ORIGINAL,out.toByteArray());
+  }
+
   @Test public void cacheIsBoundedAndCancelledWritesDoNotAppear() throws Exception {
     ImageDiskCache cache=new ImageDiskCache(Files.createTempDirectory("image-cache-test").toFile(),10);
     cache.put("scope","/old",ORIGINAL,()->true);Thread.sleep(5);

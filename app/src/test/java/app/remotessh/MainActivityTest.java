@@ -1288,6 +1288,21 @@ public class MainActivityTest {
     assertEquals(44, request.requestCode);
   }
 
+  @Test public void savingGeneratedImageKeepsLargeInlineDataOutOfWindowState() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="image-state";
+    String inline="iVBORw0KGgo"+"A".repeat(1024*1024);
+    ChatItem image=ChatItem.from(Json.obj("id","generated","type","imageGeneration","savedPath","/work/photo.png","result",inline));
+    image.turnId="turn";app.items.add(image);app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));layoutContent();
+    ImageView preview=(ImageView)find(content(),"消息图片，点击查看大图");assertNotNull(preview);preview.performClick();
+    android.app.AlertDialog dialog=(android.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
+    dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+    shadowOf(android.os.Looper.getMainLooper()).idle();
+    android.os.Bundle saved=new android.os.Bundle();controller.saveInstanceState(saved);
+    assertEquals("/work/photo.png",saved.getString("download"));
+    assertTrue("saved state must contain only a short cache identity",saved.getString("downloadScope","").length()<100);
+  }
+
   @Test public void answeredAsyncDeliveryShowsOnlyQuestionCardAfterRecreation() throws Exception {
     RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="chat";
     org.json.JSONObject req=InteractionHistoryTest.question("echo","t1");app.interactions.question(req);

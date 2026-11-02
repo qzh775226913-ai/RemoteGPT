@@ -96,6 +96,22 @@ public class ConversationStoreTest {
     assertEquals("selected draft", app.draftText);
   }
 
+  @Test public void generatedImageFallbackStaysWithItsConversationAcrossReplayAndFailure(){
+    ChatItem selected=ChatItem.from(Json.obj("id","same","type","imageGeneration","savedPath","/photo.png","result","iVBORw0KGgoAAAANSUhEUg"));
+    app.items.add(selected);app.changed();
+    try{
+      app.inConversation("background",()->{
+        assertTrue(app.items.isEmpty());
+        ChatItem other=ChatItem.from(Json.obj("id","same","type","imageGeneration","savedPath","/photo.png","result","/9j/other"));
+        app.items.add(other);app.replaying=true;throw new IllegalStateException("fixture");
+      });fail();
+    }catch(IllegalStateException expected){assertEquals("fixture",expected.getMessage());}
+    assertSame(selected,app.items.get(0));assertTrue(selected.imageFallbacks.get("/photo.png").startsWith("data:image/png;"));
+    app.inConversation("background",()->{
+      assertTrue(app.items.get(0).imageFallbacks.get("/photo.png").startsWith("data:image/jpeg;"));assertTrue(app.replaying);
+    });
+  }
+
   @Test public void questionStateIsIsolatedAndRestoredAfterReplayAndException() {
     app.questionUi.token="selected";app.questionUi.minimized=true;
     app.questionUi.answers=new android.os.Bundle();app.questionUi.answers.putString("q","A");

@@ -128,6 +128,19 @@ final class MediaFiles {
     while (matcher.find() && result.size() < 12) if (!result.contains(matcher.group(2))) result.add(matcher.group(2));
     return result;
   }
+  static Map<String,String> imageFallbacks(List<ChatItem> items,String cwd){
+    Map<String,String> fallbacks=new LinkedHashMap<>();Set<String> seen=new HashSet<>();
+    for(ChatItem item:items)for(String original:images(item)){
+      if(original==null || original.isEmpty())continue;
+      String source=original;
+      try{if(!source.startsWith("data:") && !source.startsWith("https://"))source=remotePath(source,cwd);}
+      catch(IllegalArgumentException ignored){}
+      if(!seen.add(source)){fallbacks.remove(source);continue;}
+      String fallback=item.imageFallbacks.get(original);
+      if(fallback!=null && !fallback.isEmpty())fallbacks.put(source,fallback);
+    }
+    return fallbacks;
+  }
   static Map<String,String> imageScopes(List<ChatItem> items,String cwd,Profile profile,String thread) {
     Map<String,String> scopes=new LinkedHashMap<>();
     for(ChatItem item:items)for(String original:images(item)){
