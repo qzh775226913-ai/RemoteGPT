@@ -659,6 +659,37 @@ public class MainActivityTest {
     assertFalse(input.hasFocus());
   }
 
+  @Test @Config(sdk={26,35}) public void newConversationHomeKeepsComposerOpenWhileScrolling() throws Exception {
+    RemoteApp app=(RemoteApp)activity.getApplication();app.profile=new Profile();app.connected=true;app.threadId="";app.items.clear();app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(100));layoutContent();
+    java.lang.reflect.Field field=MainActivity.class.getDeclaredField("empty");field.setAccessible(true);LinearLayout empty=(LinearLayout)field.get(activity);
+    assertEquals(View.VISIBLE,empty.getVisibility());View filler=new View(activity);filler.setMinimumHeight(1600);empty.addView(filler);layoutContent();
+    field=MainActivity.class.getDeclaredField("scroll");field.setAccessible(true);ConversationScrollView scroll=(ConversationScrollView)field.get(activity);
+    field=MainActivity.class.getDeclaredField("composer");field.setAccessible(true);LinearLayout composer=(LinearLayout)field.get(activity);View host=(View)composer.getParent();
+    scroll.follow();scroll.pin();layoutContent();int width=host.getWidth(),height=host.getHeight(),bottom=scroll.getScrollY();assertTrue(bottom>250);
+    long now=android.os.SystemClock.uptimeMillis();
+    dispatchTouch(scroll,now,now,MotionEvent.ACTION_DOWN,20,300);dispatchTouch(scroll,now,now+30,MotionEvent.ACTION_MOVE,20,520);
+    dispatchTouch(scroll,now,now+60,MotionEvent.ACTION_UP,20,520);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    assertTrue("the home content must actually scroll",scroll.getScrollY()<bottom);
+    assertEquals(View.VISIBLE,composer.getVisibility());assertEquals(width,host.getWidth());assertEquals(height,host.getHeight());
+    now+=500;dispatchTouch(scroll,now,now,MotionEvent.ACTION_DOWN,20,520);dispatchTouch(scroll,now,now+30,MotionEvent.ACTION_MOVE,20,300);
+    dispatchTouch(scroll,now,now+60,MotionEvent.ACTION_UP,20,300);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    assertEquals(View.VISIBLE,composer.getVisibility());assertEquals(width,host.getWidth());assertEquals(height,host.getHeight());
+    ((FrameLayout)composer.getChildAt(1)).getChildAt(2).performClick();layoutContent();int enlarged=host.getHeight();assertTrue(enlarged>height);
+    scroll.follow();scroll.pin();now+=500;dispatchTouch(scroll,now,now,MotionEvent.ACTION_DOWN,20,300);
+    dispatchTouch(scroll,now,now+30,MotionEvent.ACTION_MOVE,20,520);dispatchTouch(scroll,now,now+60,MotionEvent.ACTION_UP,20,520);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    assertEquals("explicit eight-line expansion remains available on the home screen",enlarged,host.getHeight());assertEquals(View.VISIBLE,composer.getVisibility());
+    app.threadId="started";for(int i=0;i<40;i++)app.items.add(new ChatItem("message-"+i,"agentMessage","Message "+i));app.changed();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(300));layoutContent();scroll.follow();scroll.pin();
+    now+=500;dispatchTouch(scroll,now,now,MotionEvent.ACTION_DOWN,20,300);
+    dispatchTouch(scroll,now,now+30,MotionEvent.ACTION_MOVE,20,520);dispatchTouch(scroll,now,now+60,MotionEvent.ACTION_UP,20,520);
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400));layoutContent();
+    assertEquals("once conversation messages exist, scrolling can shrink the composer",View.GONE,composer.getVisibility());
+  }
+
   @Test public void openingHistorySettlesComposerBeforeInputIsTapped() throws Exception {
     RemoteApp app = (RemoteApp) activity.getApplication();
     app.profile = new Profile(); app.connected = true; app.threadId = "previous-thread";
@@ -1434,7 +1465,9 @@ public class MainActivityTest {
     assertTrue(((TextView)files.getChildAt(0)).getText().toString().contains("+2 −1"));
     shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(1200));
     android.text.Spanned settled=(android.text.Spanned)((TextView)files.getChildAt(0)).getText();
-    assertEquals(0,settled.getSpans(0,settled.length(),android.text.style.ReplacementSpan.class).length);
+    int statsStart=settled.toString().indexOf("+2");assertTrue(statsStart>=0);
+    assertEquals("the numbers stop rolling even though the static arrow is an inline icon",0,
+        settled.getSpans(statsStart,statsStart+"+2 −1".length(),android.text.style.ReplacementSpan.class).length);
     capture("nested-tool-actions-and-final-diff");
     fileRow.performClick();
     LinearLayout expandedFile=(LinearLayout)((LinearLayout)files.getChildAt(1)).getChildAt(0);

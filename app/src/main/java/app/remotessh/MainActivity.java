@@ -400,7 +400,7 @@ public final class MainActivity extends Activity {
         (v, x, y, ox, oy) -> {
           jump.setVisibility(scroll.isFollowing() ? View.GONE : View.VISIBLE);
           if (scroll.isFollowing() && messageUpdatesPaused) scheduleRender();
-          if(chrome!=null)chrome.onScroll(y,oy,scroll.userScrolling(),scroll.nearBottom());
+          if(chrome!=null)chrome.onScroll(y,oy,scroll.userScrolling(),scroll.nearBottom(),app.threadId.isEmpty() && app.items.isEmpty());
           if(footerMotion!=null)footerMotion.scrollChanged();
           scheduleMedia();
         });

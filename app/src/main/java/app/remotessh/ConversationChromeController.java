@@ -23,7 +23,7 @@ final class ConversationChromeController {
   private final FrameLayout inputLayer, composerHost;
   private final Runnable resizeInput,endMotion;
   private final java.util.function.IntConsumer beginMotion;
-  private boolean compact, large;
+  private boolean compact,composerCompact,large;
   private int accumulated, direction;
   private ValueAnimator headerAnimator, composerAnimator;
   private final int regularWidth;
@@ -87,33 +87,33 @@ final class ConversationChromeController {
   boolean large() {return large;}
   void restore() {large=false;enlarge.icon="expand";
     enlarge.setContentDescription(UiText.get(R.string.ui_expand_composer));enlarge.invalidate();resizeInput.run();
-    if(compact)setCompact(false);}
+    if(compact || composerCompact)setCompact(false);}
 
   void dispose(){
     if(headerAnimator!=null){ValueAnimator old=headerAnimator;headerAnimator=null;old.cancel();}
     if(composerAnimator!=null){ValueAnimator old=composerAnimator;composerAnimator=null;old.cancel();}
   }
 
-  void onScroll(int y,int oldY,boolean userScroll,boolean atLatest) {
+  void onScroll(int y,int oldY,boolean userScroll,boolean atLatest,boolean home) {
     if(!userScroll || editingWithKeyboard())return;
     int delta=y-oldY;
     if(delta==0)return;
-    if(atLatest && delta>0){accumulated=0;direction=0;setCompact(false);return;}
+    if(atLatest && delta>0){accumulated=0;direction=0;setCompact(false,home);return;}
     int sign=delta<0?1:-1;
     if(sign!=direction){direction=sign;accumulated=0;}
     accumulated+=Math.min(Math.abs(delta),dp(60));
-    if(accumulated>=dp(sign>0?32:40)) {setCompact(sign>0);accumulated=0;}
+    if(accumulated>=dp(sign>0?32:40)) {setCompact(sign>0,home);accumulated=0;}
   }
 
-  void setCompact(boolean value) {
-    if(compact==value)return;
-    compact=value;
-    animateHeader(value);
-    animateComposer(value);
+  void setCompact(boolean value) {setCompact(value,false);}
+  private void setCompact(boolean value,boolean home) {
+    if(compact!=value){compact=value;animateHeader(value);}
+    boolean shrinkComposer=value && !home;
+    if(composerCompact!=shrinkComposer){composerCompact=shrinkComposer;animateComposer(shrinkComposer);}
   }
 
   void contentChanged() {
-    if(!compact && composerAnimator!=null && composerAnimator.isRunning() &&
+    if(!composerCompact && composerAnimator!=null && composerAnimator.isRunning() &&
         measureContent(normalWidth())!=composerTargetHeight)animateComposer(false);
   }
 
