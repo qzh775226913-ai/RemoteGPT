@@ -6,7 +6,6 @@
     <string name="ui_connect_to_your_computer_via_ssh">"透過 SSH 連結你的電腦"</string>
     <string name="ui_the_current_conversation_is_running">"目前對話正在運行"</string>
     <string name="ui_conversation_menu">"對話選單"</string>
-    <string name="ui_read_only_history_write_access_not_acquired">"唯讀歷史 · 尚未取得寫入權限"</string>
     <string name="ui_refresh">"刷新"</string>
     <string name="ui_resume">"接續"</string>
     <string name="ui_new_conversation">"新對話"</string>
@@ -263,7 +262,6 @@
     <string name="ui_select_a_computer_to_view_projects_and_conversations">"選擇一台電腦，查看項目和對話"</string>
     <string name="ui_chat">"聊天"</string>
     <string name="ui_connect_to_this_computer_before_opening_the_project">"連接此電腦後再開啟項目"</string>
-    <string name="ui_connect_280">"連接 "</string>
     <string name="ui_select_a_remote_folder_or_create_a_project">"選擇遠端資料夾，或新建一個專案。"</string>
     <string name="ui_choose_path_new_project">"選擇路徑 / 新建項目"</string>
     <string name="ui_recent">"最近"</string>
@@ -271,7 +269,6 @@
     <string name="ui_conversation_is_running">"對話正在運行"</string>
     <string name="ui_restoring_the_conversation_it_will_open_automatically">"正在恢復會話，完成後自動開啟"</string>
     <string name="ui_no_conversations">"暫無對話"</string>
-    <string name="ui_no_more_conversations">"沒有更多線程"</string>
     <string name="ui_remote_directory_picker">"遠端目錄選擇器"</string>
     <string name="ui_choose_project_path">"選擇專案路徑"</string>
     <string name="ui_parent_directory">"上一級"</string>
@@ -494,16 +491,13 @@
     <string name="ui_compact_unavailable">請選擇已連線且閒置的對話，再壓縮上下文。</string>
     <string name="ui_connect_to_view_remote_capabilities">連線伺服器後可查看遠端功能。</string>
     <string name="ui_context_cached_tokens">快取輸入：%1$s 個 token</string>
-    <string name="ui_context_estimate_note">圓環使用伺服器最近一次回報的用量。這是估算值，不是帳戶額度。</string>
     <string name="ui_context_information">上下文資訊</string>
     <string name="ui_context_input_tokens">輸入：%1$s 個 token</string>
     <string name="ui_context_last_tokens">最近回報用量：%1$s 個 token</string>
     <string name="ui_context_output_tokens">輸出：%1$s 個 token</string>
     <string name="ui_context_reasoning_tokens">推理輸出：%1$s 個 token</string>
     <string name="ui_context_ring_description">對話選單 · 上下文已使用 %1$s</string>
-    <string name="ui_context_total_tokens">對話累計：%1$s 個 token</string>
     <string name="ui_context_unavailable">伺服器尚未回報此對話的上下文視窗和 token 用量。</string>
-    <string name="ui_context_used_percent">上下文已使用：%1$s</string>
     <string name="ui_context_window_tokens">模型上下文視窗：%1$s 個 token</string>
     <string name="ui_conversation_information">對話資訊</string>
     <string name="ui_detail_effort">推理強度：%1$s</string>

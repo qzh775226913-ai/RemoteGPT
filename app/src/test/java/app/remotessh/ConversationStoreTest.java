@@ -96,6 +96,28 @@ public class ConversationStoreTest {
     assertEquals("selected draft", app.draftText);
   }
 
+  @Test public void workerThreadCannotReadConversationCacheOrDispatchScope() throws Exception {
+    Runnable[] reads = {
+      () -> app.conversationStore.get("selected"),
+      () -> app.conversationStore.contains("selected"),
+      () -> app.conversationStore.values(),
+      () -> app.conversationStore.isScoped()
+    };
+    for (Runnable read : reads) {
+      AtomicReference<Throwable> failure = new AtomicReference<>();
+      Thread worker = new Thread(() -> {
+        try { read.run(); }
+        catch (Throwable error) { failure.set(error); }
+      });
+      worker.start(); worker.join(2000);
+      assertFalse(worker.isAlive());
+      assertTrue("Every cache read must reject worker access", failure.get() instanceof IllegalStateException);
+    }
+    assertEquals("selected", app.threadId);
+    assertEquals("selected draft", app.draftText);
+    assertFalse(app.conversationStore.isScoped());
+  }
+
   @Test public void generatedImageFallbackStaysWithItsConversationAcrossReplayAndFailure(){
     ChatItem selected=ChatItem.from(Json.obj("id","same","type","imageGeneration","savedPath","/photo.png","result","iVBORw0KGgoAAAANSUhEUg"));
     app.items.add(selected);app.changed();

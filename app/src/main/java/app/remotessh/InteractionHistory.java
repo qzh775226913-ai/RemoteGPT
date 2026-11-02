@@ -82,7 +82,6 @@ final class InteractionHistory {
       } else if(type.equals("user_answer")){JSONObject match=matchTextAnswer(r.optString("text"),archivePastTurns);if(match!=null)update(entries.get(match.optString("id")),"answered",Json.object(match,"answers"));}
     }
   }
-  JSONObject matchTextAnswer(String text) {return matchTextAnswer(text,null);}
   private JSONObject matchTextAnswer(String text,Set<String> precedingTurns) {
     return matchTextAnswer(text,precedingTurns,entry->true);
   }
@@ -107,7 +106,6 @@ final class InteractionHistory {
     }
     return null;
   }
-  void recordTextAnswer(String text) {JSONObject match=matchTextAnswer(text);if(match!=null)update(entries.get(match.optString("id")),"answered",Json.object(match,"answers"));}
   List<ChatItem> present(List<ChatItem> messages) {
     Map<Integer,List<ChatItem>> insertions=new HashMap<>();
     Map<String,Integer> ends=new HashMap<>(),finals=new HashMap<>();

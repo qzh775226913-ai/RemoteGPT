@@ -6,7 +6,6 @@
     <string name="ui_connect_to_your_computer_via_ssh">"Stellen Sie über SSH eine Verbindung zu Ihrem Computer her"</string>
     <string name="ui_the_current_conversation_is_running">"Das aktuelle Gespräch läuft"</string>
     <string name="ui_conversation_menu">"Dialogmenü"</string>
-    <string name="ui_read_only_history_write_access_not_acquired">"Schreibgeschützter Verlauf. Die Schreibberechtigung wurde noch nicht eingeholt"</string>
     <string name="ui_refresh">"Aktualisieren"</string>
     <string name="ui_resume">"Fortsetzen"</string>
     <string name="ui_new_conversation">"Neue Unterhaltung"</string>
@@ -263,7 +262,6 @@
     <string name="ui_select_a_computer_to_view_projects_and_conversations">"Wählen Sie einen Computer aus, um Projekte und Gespräche anzuzeigen"</string>
     <string name="ui_chat">"Chatten"</string>
     <string name="ui_connect_to_this_computer_before_opening_the_project">"Öffnen Sie das Projekt, nachdem Sie eine Verbindung zu diesem Computer hergestellt haben"</string>
-    <string name="ui_connect_280">"Verbindung "</string>
     <string name="ui_select_a_remote_folder_or_create_a_project">"Wählen Sie den Remote-Ordner aus oder erstellen Sie ein neues Projekt."</string>
     <string name="ui_choose_path_new_project">"Pfad/neues Projekt auswählen"</string>
     <string name="ui_recent">"Kürzlich"</string>
@@ -271,7 +269,6 @@
     <string name="ui_conversation_is_running">"Gespräch läuft"</string>
     <string name="ui_restoring_the_conversation_it_will_open_automatically">"Die Sitzung wird wiederhergestellt und nach Abschluss automatisch geöffnet."</string>
     <string name="ui_no_conversations">"Noch kein Dialog"</string>
-    <string name="ui_no_more_conversations">"Keine Threads mehr"</string>
     <string name="ui_remote_directory_picker">"Remote-Verzeichnisauswahl"</string>
     <string name="ui_choose_project_path">"Projektpfad auswählen"</string>
     <string name="ui_parent_directory">"Vorheriges Level"</string>
@@ -500,16 +497,13 @@
     <string name="ui_compact_unavailable">Wähle eine verbundene, inaktive Unterhaltung aus, um ihren Kontext zu komprimieren.</string>
     <string name="ui_connect_to_view_remote_capabilities">Verbinde dich, um Remote-Funktionen zu sehen.</string>
     <string name="ui_context_cached_tokens">Zwischengespeicherte Eingabe: %1$s Token</string>
-    <string name="ui_context_estimate_note">Der Ring zeigt die zuletzt vom Server gemeldete Nutzung als Schätzung, nicht das Kontingent des Kontos.</string>
     <string name="ui_context_information">Kontextinformationen</string>
     <string name="ui_context_input_tokens">Eingabe: %1$s Token</string>
     <string name="ui_context_last_tokens">Zuletzt gemeldete Nutzung: %1$s Token</string>
     <string name="ui_context_output_tokens">Ausgabe: %1$s Token</string>
     <string name="ui_context_reasoning_tokens">Reasoning-Ausgabe: %1$s Token</string>
     <string name="ui_context_ring_description">Gesprächsmenü · Kontextnutzung: %1$s</string>
-    <string name="ui_context_total_tokens">Gespräch gesamt: %1$s Token</string>
     <string name="ui_context_unavailable">Der Server hat für dieses Gespräch noch kein Kontextfenster und keine Token-Nutzung gemeldet.</string>
-    <string name="ui_context_used_percent">Kontextnutzung: %1$s</string>
     <string name="ui_context_window_tokens">Kontextfenster des Modells: %1$s Token</string>
     <string name="ui_conversation_information">Gesprächsinformationen</string>
     <string name="ui_detail_effort">Reasoning-Stufe: %1$s</string>

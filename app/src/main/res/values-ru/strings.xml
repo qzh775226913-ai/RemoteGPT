@@ -6,7 +6,6 @@
     <string name="ui_connect_to_your_computer_via_ssh">"Подключитесь к компьютеру через SSH."</string>
     <string name="ui_the_current_conversation_is_running">"Текущий разговор идет"</string>
     <string name="ui_conversation_menu">"Диалоговое меню"</string>
-    <string name="ui_read_only_history_write_access_not_acquired">"История только для чтения · Разрешение на запись еще не получено"</string>
     <string name="ui_refresh">"Обновить"</string>
     <string name="ui_resume">"Возобновить"</string>
     <string name="ui_new_conversation">"Новый диалог"</string>
@@ -263,7 +262,6 @@
     <string name="ui_select_a_computer_to_view_projects_and_conversations">"Выбор компьютера для просмотра проектов и разговоров"</string>
     <string name="ui_chat">"Чат"</string>
     <string name="ui_connect_to_this_computer_before_opening_the_project">"Открыть проект после подключения к этому компьютеру"</string>
-    <string name="ui_connect_280">"Соединение "</string>
     <string name="ui_select_a_remote_folder_or_create_a_project">"Выберите удаленную папку или создайте новый проект."</string>
     <string name="ui_choose_path_new_project">"Выбор пути/нового проекта"</string>
     <string name="ui_recent">"Недавно"</string>
@@ -271,7 +269,6 @@
     <string name="ui_conversation_is_running">"Диалог идет"</string>
     <string name="ui_restoring_the_conversation_it_will_open_automatically">"Сеанс восстанавливается и будет открыт автоматически после завершения."</string>
     <string name="ui_no_conversations">"Диалогов пока нет"</string>
-    <string name="ui_no_more_conversations">"Больше никаких тем"</string>
     <string name="ui_remote_directory_picker">"Селектор удаленного каталога"</string>
     <string name="ui_choose_project_path">"Выбор пути проекта"</string>
     <string name="ui_parent_directory">"Предыдущий уровень"</string>
@@ -512,16 +509,13 @@
     <string name="ui_compact_unavailable">Выберите подключённый диалог без активной задачи, чтобы сжать его контекст.</string>
     <string name="ui_connect_to_view_remote_capabilities">Подключитесь для просмотра удалённых возможностей.</string>
     <string name="ui_context_cached_tokens">Кэшированный ввод: %1$s токенов</string>
-    <string name="ui_context_estimate_note">Кольцо показывает оценку по последним данным сервера, а не квоту аккаунта.</string>
     <string name="ui_context_information">Сведения о контексте</string>
     <string name="ui_context_input_tokens">Ввод: %1$s токенов</string>
     <string name="ui_context_last_tokens">Последний расход: %1$s токенов</string>
     <string name="ui_context_output_tokens">Вывод: %1$s токенов</string>
     <string name="ui_context_reasoning_tokens">Вывод рассуждений: %1$s токенов</string>
     <string name="ui_context_ring_description">Меню диалога · контекст использован на %1$s</string>
-    <string name="ui_context_total_tokens">Всего за диалог: %1$s токенов</string>
     <string name="ui_context_unavailable">Сервер ещё не сообщил размер контекста и расход токенов для этого диалога.</string>
-    <string name="ui_context_used_percent">Контекст использован на %1$s</string>
     <string name="ui_context_window_tokens">Окно контекста модели: %1$s токенов</string>
     <string name="ui_conversation_information">Сведения о диалоге</string>
     <string name="ui_detail_effort">Уровень рассуждения: %1$s</string>

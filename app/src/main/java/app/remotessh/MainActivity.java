@@ -196,7 +196,7 @@ public final class MainActivity extends Activity {
     super.onStop();
     visibleActivity=false;
     app.observer = null;
-    app.setForeground(false, pendingImageGeneration >= 0);
+    app.setForeground(false);
     app.main.removeCallbacks(ticker);
     if(resumeSpinner!=null)resumeSpinner.stop();
   }

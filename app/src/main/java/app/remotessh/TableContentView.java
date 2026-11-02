@@ -40,7 +40,6 @@ final class TableContentView extends LinearLayout {
   String key(){return data==null?"":data.key;}
   String raw(){return data==null?"":data.raw;}
   int offset(){return scroll.getScrollX();}
-  void restoreOffset(int value){scroll.restoreX=value;requestLayout();}
   void setTable(TableMarkup.Table next) {
     if(data!=null && data.raw.equals(next.raw))return;
     int previous=scroll.getScrollX();boolean append=data!=null && next.raw.startsWith(data.raw);

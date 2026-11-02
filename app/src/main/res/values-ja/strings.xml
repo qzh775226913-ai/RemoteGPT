@@ -6,7 +6,6 @@
     <string name="ui_connect_to_your_computer_via_ssh">"SSH 経由でコンピュータに接続する"</string>
     <string name="ui_the_current_conversation_is_running">"現在の会話が実行中です"</string>
     <string name="ui_conversation_menu">"ダイアログメニュー"</string>
-    <string name="ui_read_only_history_write_access_not_acquired">"読み取り専用履歴・書き込み許可がまだ取得されていません"</string>
     <string name="ui_refresh">"リフレッシュ"</string>
     <string name="ui_resume">"再開"</string>
     <string name="ui_new_conversation">"新しい会話"</string>
@@ -263,7 +262,6 @@
     <string name="ui_select_a_computer_to_view_projects_and_conversations">"プロジェクトや会話を表示するにはコンピュータを選択してください"</string>
     <string name="ui_chat">"チャット"</string>
     <string name="ui_connect_to_this_computer_before_opening_the_project">"このコンピュータに接続した後、プロジェクトを開きます"</string>
-    <string name="ui_connect_280">"接続 "</string>
     <string name="ui_select_a_remote_folder_or_create_a_project">"リモートフォルダを選択するか、新しいプロジェクトを作成します。"</string>
     <string name="ui_choose_path_new_project">"パス/新しいプロジェクトの選択"</string>
     <string name="ui_recent">"最近"</string>
@@ -271,7 +269,6 @@
     <string name="ui_conversation_is_running">"対話は進行中です"</string>
     <string name="ui_restoring_the_conversation_it_will_open_automatically">"セッションは復元中であり、完了後に自動的に開かれます。"</string>
     <string name="ui_no_conversations">"ダイアログはまだありません"</string>
-    <string name="ui_no_more_conversations">"スレッドはもうありません"</string>
     <string name="ui_remote_directory_picker">"リモートディレクトリセレクタ"</string>
     <string name="ui_choose_project_path">"プロジェクトパスの選択"</string>
     <string name="ui_parent_directory">"前のレベル"</string>
@@ -494,16 +491,13 @@
     <string name="ui_compact_unavailable">接続中で処理が終わっている会話を選択してください。</string>
     <string name="ui_connect_to_view_remote_capabilities">接続するとリモート機能を確認できます。</string>
     <string name="ui_context_cached_tokens">キャッシュ入力：%1$s トークン</string>
-    <string name="ui_context_estimate_note">リングはサーバーが最後に報告した使用量の概算です。アカウントの利用枠ではありません。</string>
     <string name="ui_context_information">コンテキスト情報</string>
     <string name="ui_context_input_tokens">入力：%1$s トークン</string>
     <string name="ui_context_last_tokens">直近の使用量：%1$s トークン</string>
     <string name="ui_context_output_tokens">出力：%1$s トークン</string>
     <string name="ui_context_reasoning_tokens">推論出力：%1$s トークン</string>
     <string name="ui_context_ring_description">会話メニュー・コンテキスト使用率 %1$s</string>
-    <string name="ui_context_total_tokens">会話の累計：%1$s トークン</string>
     <string name="ui_context_unavailable">この会話のコンテキスト枠と使用量はまだ報告されていません。</string>
-    <string name="ui_context_used_percent">コンテキスト使用率：%1$s</string>
     <string name="ui_context_window_tokens">モデルのコンテキスト枠：%1$s トークン</string>
     <string name="ui_conversation_information">会話情報</string>
     <string name="ui_detail_effort">推論の強さ：%1$s</string>

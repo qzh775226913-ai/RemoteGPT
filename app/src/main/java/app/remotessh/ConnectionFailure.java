@@ -82,11 +82,7 @@ final class ConnectionFailure {
   static String reason(Throwable error) { return reason(error, false); }
 
   static String reason(Throwable error, boolean localized) {
-    while ((error instanceof java.util.concurrent.CompletionException
-            || error instanceof java.util.concurrent.ExecutionException)
-        && error.getCause() != null) {
-      error = error.getCause();
-    }
+    error = unwrap(error);
     String name = error.getClass().getSimpleName();
     String message = error.getMessage();
     if (name.equals("NetworkOnMainThreadException"))

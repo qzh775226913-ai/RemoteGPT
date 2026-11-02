@@ -211,10 +211,6 @@ public final class RemoteApp extends Application {
   }
 
   public void setForeground(boolean visible) {
-    setForeground(visible, false);
-  }
-
-  void setForeground(boolean visible, boolean keepConversation) {
     foreground = visible;
     // Keep the selected writer across backgrounding; an async question may arrive later.
     main.removeCallbacks(reconnectTask);
@@ -251,7 +247,7 @@ public final class RemoteApp extends Application {
     select(id);
     if (loaded) { changed(); return; }
     busy = true; loadingThread = id; loadingResuming=false;loadingStage="正在获取对话历史…";changed();
-    readThread(id, true);
+    readThread(id);
   }
 
   JSONObject visibleApproval() {
@@ -755,18 +751,6 @@ public final class RemoteApp extends Application {
     });
   }
 
-  boolean remoteHasWork() {
-    if (busy || attaching || replaying || !restoringThread.isEmpty() || !loadingThread.isEmpty()
-        || !restoreQueue.isEmpty() || !approvals.isEmpty()) return true;
-    for (ConversationState state : conversationStore.values())
-      if (state.busy || state.remoteRunning || !state.approvals.isEmpty()) return true;
-    for (int i = 0; i < threads.length(); i++) {
-      JSONObject thread = threads.optJSONObject(i);
-      if (thread != null && threadRunning(thread)) return true;
-    }
-    return false;
-  }
-
   public void restartRemoteVersion(RemoteVersion expected) {
     if (expected != remoteVersion || !connected || profile == null || restartingRemote) return;
     restartingRemote = true;
@@ -1101,7 +1085,7 @@ public final class RemoteApp extends Application {
                                   return;
                                 } else if (method.equals("thread/resume") && isWriterConflict(e)) {
                                   if(params.optString("threadId").equals(loadingThread)){loadingResuming=false;loadingStage="正在获取对话历史…";changed();}
-                                  readThread(params.optString("threadId"), true);
+                                  readThread(params.optString("threadId"));
                                   return;
                                 } else if (method.startsWith("turn/")
                                     || method.equals("thread/start")
@@ -1204,25 +1188,11 @@ public final class RemoteApp extends Application {
         && cause.getMessage().toLowerCase(Locale.ROOT).contains("already has an active writer");
   }
 
-  private void readThread(String id, boolean readOnly) {
+  private void readThread(String id) {
     request(
         "thread/read",
         Json.obj("threadId", id, "includeTurns", true),
-        r -> {
-          if (!readOnly && Json.object(Json.object(r, "thread"), "status").optString("type").equals("notLoaded")) {
-            loadedThreads.remove(id);
-            busy = false;
-            resume(id);
-          } else applyThread(r, id, readOnly);
-        });
-  }
-
-  public void refreshReadOnly() {
-    if (connected && readOnly && !busy) {
-      busy = true;loadingThread=threadId;loadingResuming=false;loadingStage="正在刷新对话历史…";
-      changed();
-      readThread(threadId, true);
-    }
+        r -> applyThread(r, id, true));
   }
 
   private static String nonempty(JSONObject object, String key) {

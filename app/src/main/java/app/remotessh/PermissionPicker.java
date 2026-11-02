@@ -2,13 +2,11 @@ package app.remotessh;
 
 import android.app.*;
 import android.graphics.Color;
-import android.view.Gravity;
 import android.widget.*;
 import org.json.JSONObject;
 
 /** Owns the permission sheet and the explicit temporary-approval confirmation. */
 final class PermissionPicker {
-  static final String WARNING = "新的审批权限生效前，客户端将会自动允许全部审批请求，继续吗？";
   private final Activity activity;
   private final RemoteApp app;
   private final DialogUi ui;

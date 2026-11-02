@@ -7,7 +7,6 @@
     <string name="ui_connect_to_your_computer_via_ssh">"Connect to your computer via SSH"</string>
     <string name="ui_the_current_conversation_is_running">"The current conversation is running"</string>
     <string name="ui_conversation_menu">"Conversation menu"</string>
-    <string name="ui_read_only_history_write_access_not_acquired">"Read-only history · Write access not acquired"</string>
     <string name="ui_refresh">"Refresh"</string>
     <string name="ui_resume">"Resume"</string>
     <string name="ui_new_conversation">"New conversation"</string>
@@ -264,7 +263,6 @@
     <string name="ui_select_a_computer_to_view_projects_and_conversations">"Select a computer to view projects and conversations"</string>
     <string name="ui_chat">"Chat"</string>
     <string name="ui_connect_to_this_computer_before_opening_the_project">"Connect to this computer before opening the project"</string>
-    <string name="ui_connect_280">"Connect "</string>
     <string name="ui_select_a_remote_folder_or_create_a_project">"Select a remote folder or create a project."</string>
     <string name="ui_choose_path_new_project">"Choose path / New project"</string>
     <string name="ui_recent">"Recent"</string>
@@ -272,7 +270,6 @@
     <string name="ui_conversation_is_running">"Conversation is running"</string>
     <string name="ui_restoring_the_conversation_it_will_open_automatically">"Restoring the conversation; it will open automatically"</string>
     <string name="ui_no_conversations">"No conversations"</string>
-    <string name="ui_no_more_conversations">"No more conversations"</string>
     <string name="ui_remote_directory_picker">"Remote directory picker"</string>
     <string name="ui_choose_project_path">"Choose project path"</string>
     <string name="ui_parent_directory">"Parent directory"</string>
@@ -510,16 +507,13 @@
     <string name="ui_compact_unavailable">Select a connected, idle conversation to compress its context.</string>
     <string name="ui_connect_to_view_remote_capabilities">Connect to a server to view remote capabilities.</string>
     <string name="ui_context_cached_tokens">Cached input: %1$s tokens</string>
-    <string name="ui_context_estimate_note">The ring uses the last usage reported by the server. It is an estimate, not account quota.</string>
     <string name="ui_context_information">Context information</string>
     <string name="ui_context_input_tokens">Input: %1$s tokens</string>
     <string name="ui_context_last_tokens">Latest reported use: %1$s tokens</string>
     <string name="ui_context_output_tokens">Output: %1$s tokens</string>
     <string name="ui_context_reasoning_tokens">Reasoning output: %1$s tokens</string>
     <string name="ui_context_ring_description">Conversation menu · context %1$s used</string>
-    <string name="ui_context_total_tokens">Conversation total: %1$s tokens</string>
     <string name="ui_context_unavailable">The server has not reported a context window and token usage for this conversation yet.</string>
-    <string name="ui_context_used_percent">Context used: %1$s</string>
     <string name="ui_context_window_tokens">Model context window: %1$s tokens</string>
     <string name="ui_conversation_information">Conversation information</string>
     <string name="ui_detail_effort">Reasoning effort: %1$s</string>

@@ -1,7 +1,6 @@
 package app.remotessh;
 
 import java.util.*;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 /** Counts changed lines from server-provided unified diffs, never from local git state. */

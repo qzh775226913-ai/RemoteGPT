@@ -6,7 +6,6 @@
     <string name="ui_connect_to_your_computer_via_ssh">"SSH를 통해 컴퓨터에 연결"</string>
     <string name="ui_the_current_conversation_is_running">"현재 대화가 실행 중입니다."</string>
     <string name="ui_conversation_menu">"대화 메뉴"</string>
-    <string name="ui_read_only_history_write_access_not_acquired">"읽기 전용 기록 · 쓰기 권한을 얻지 못했습니다"</string>
     <string name="ui_refresh">"새로 고치다"</string>
     <string name="ui_resume">"재개"</string>
     <string name="ui_new_conversation">"새 대화"</string>
@@ -263,7 +262,6 @@
     <string name="ui_select_a_computer_to_view_projects_and_conversations">"프로젝트와 대화를 보려면 컴퓨터를 선택하세요."</string>
     <string name="ui_chat">"채팅"</string>
     <string name="ui_connect_to_this_computer_before_opening_the_project">"프로젝트를 열기 전에 이 컴퓨터에 연결하세요"</string>
-    <string name="ui_connect_280">"연결하다 "</string>
     <string name="ui_select_a_remote_folder_or_create_a_project">"원격 폴더를 선택하거나 프로젝트를 생성하세요."</string>
     <string name="ui_choose_path_new_project">"경로 선택 / 새 프로젝트"</string>
     <string name="ui_recent">"최근의"</string>
@@ -271,7 +269,6 @@
     <string name="ui_conversation_is_running">"대화가 진행 중입니다"</string>
     <string name="ui_restoring_the_conversation_it_will_open_automatically">"대화를 복원하는 중입니다. 자동으로 열릴 거예요"</string>
     <string name="ui_no_conversations">"대화 없음"</string>
-    <string name="ui_no_more_conversations">"더 이상 대화가 없습니다."</string>
     <string name="ui_remote_directory_picker">"원격 디렉터리 선택기"</string>
     <string name="ui_choose_project_path">"프로젝트 경로 선택"</string>
     <string name="ui_parent_directory">"상위 디렉터리"</string>
@@ -494,16 +491,13 @@
     <string name="ui_compact_unavailable">연결된 유휴 대화를 선택한 후 컨텍스트를 압축하세요.</string>
     <string name="ui_connect_to_view_remote_capabilities">서버에 연결하면 원격 기능을 볼 수 있습니다.</string>
     <string name="ui_context_cached_tokens">캐시된 입력: %1$s 토큰</string>
-    <string name="ui_context_estimate_note">원형 표시기는 서버가 마지막으로 보고한 사용량의 추정치입니다. 계정 한도가 아닙니다.</string>
     <string name="ui_context_information">컨텍스트 정보</string>
     <string name="ui_context_input_tokens">입력: %1$s 토큰</string>
     <string name="ui_context_last_tokens">최근 보고된 사용량: %1$s 토큰</string>
     <string name="ui_context_output_tokens">출력: %1$s 토큰</string>
     <string name="ui_context_reasoning_tokens">추론 출력: %1$s 토큰</string>
     <string name="ui_context_ring_description">대화 메뉴 · 컨텍스트 사용량 %1$s</string>
-    <string name="ui_context_total_tokens">대화 누적: %1$s 토큰</string>
     <string name="ui_context_unavailable">서버에서 이 대화의 컨텍스트 창과 토큰 사용량을 아직 보고하지 않았습니다.</string>
-    <string name="ui_context_used_percent">컨텍스트 사용량: %1$s</string>
     <string name="ui_context_window_tokens">모델 컨텍스트 창: %1$s 토큰</string>
     <string name="ui_conversation_information">대화 정보</string>
     <string name="ui_detail_effort">추론 강도: %1$s</string>

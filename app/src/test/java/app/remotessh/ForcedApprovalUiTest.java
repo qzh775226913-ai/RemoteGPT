@@ -100,7 +100,7 @@ public class ForcedApprovalUiTest {
     int red = force.getCurrentTextColor(); assertTrue(Color.red(red) > Color.green(red));
     capture(approval.getWindow().getDecorView(), "force-approval-prompt");
     AlertDialog warning = warning(approval);
-    assertNotNull(find(warning.getWindow().getDecorView(), PermissionPicker.WARNING));
+    assertNotNull(find(warning.getWindow().getDecorView(), "新的审批权限生效前，客户端将会自动允许全部审批请求，继续吗？"));
     assertFalse(app.forcedApprovals.active()); assertEquals(0, sent.size());
     capture(warning.getWindow().getDecorView(), "force-approval-warning");
     warning.getButton(AlertDialog.BUTTON_NEGATIVE).performClick(); idle();

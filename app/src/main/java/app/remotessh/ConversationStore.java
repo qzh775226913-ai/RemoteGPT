@@ -85,7 +85,7 @@ final class ConversationStore {
     return true;
   }
 
-  boolean isScoped() { return scopeDepth > 0; }
+  boolean isScoped() { requireMainThread(); return scopeDepth > 0; }
 
   List<String> ids() {
     checkpoint();
@@ -101,8 +101,8 @@ final class ConversationStore {
     return result;
   }
 
-  ConversationState get(String id) { return states.get(id); }
-  boolean contains(String id) { return states.containsKey(id); }
-  Collection<ConversationState> values() { return Collections.unmodifiableCollection(states.values()); }
+  ConversationState get(String id) { requireMainThread(); return states.get(id); }
+  boolean contains(String id) { requireMainThread(); return states.containsKey(id); }
+  Collection<ConversationState> values() { requireMainThread(); return Collections.unmodifiableCollection(states.values()); }
   void clear() { requireMainThread(); states.clear(); }
 }

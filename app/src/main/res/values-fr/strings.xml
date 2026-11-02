@@ -6,7 +6,6 @@
     <string name="ui_connect_to_your_computer_via_ssh">"Connectez-vous à votre ordinateur via SSH"</string>
     <string name="ui_the_current_conversation_is_running">"La conversation en cours est en cours"</string>
     <string name="ui_conversation_menu">"Menu de dialogue"</string>
-    <string name="ui_read_only_history_write_access_not_acquired">"Historique en lecture seule · L\'autorisation d\'écriture n\'a pas encore été obtenue"</string>
     <string name="ui_refresh">"Actualiser"</string>
     <string name="ui_resume">"Reprendre"</string>
     <string name="ui_new_conversation">"Nouvelle conversation"</string>
@@ -263,7 +262,6 @@
     <string name="ui_select_a_computer_to_view_projects_and_conversations">"Sélectionnez un ordinateur pour visualiser les projets et les conversations"</string>
     <string name="ui_chat">"Bavarder"</string>
     <string name="ui_connect_to_this_computer_before_opening_the_project">"Ouvrir le projet après s\'être connecté à cet ordinateur"</string>
-    <string name="ui_connect_280">"Connexion "</string>
     <string name="ui_select_a_remote_folder_or_create_a_project">"Sélectionnez le dossier distant ou créez un nouveau projet."</string>
     <string name="ui_choose_path_new_project">"Sélectionner le chemin/nouveau projet"</string>
     <string name="ui_recent">"Récemment"</string>
@@ -271,7 +269,6 @@
     <string name="ui_conversation_is_running">"Le dialogue est en cours"</string>
     <string name="ui_restoring_the_conversation_it_will_open_automatically">"La session est en cours de restauration et sera ouverte automatiquement une fois terminée."</string>
     <string name="ui_no_conversations">"Pas encore de dialogue"</string>
-    <string name="ui_no_more_conversations">"Plus de fils de discussion"</string>
     <string name="ui_remote_directory_picker">"Sélecteur de répertoire distant"</string>
     <string name="ui_choose_project_path">"Sélectionner le chemin du projet"</string>
     <string name="ui_parent_directory">"Niveau précédent"</string>
@@ -506,16 +503,13 @@
     <string name="ui_compact_unavailable">Sélectionnez une conversation connectée et inactive pour compacter son contexte.</string>
     <string name="ui_connect_to_view_remote_capabilities">Connectez-vous pour voir les fonctions distantes.</string>
     <string name="ui_context_cached_tokens">Entrée en cache : %1$s jetons</string>
-    <string name="ui_context_estimate_note">L’anneau utilise la dernière consommation signalée par le serveur. C’est une estimation, pas le quota du compte.</string>
     <string name="ui_context_information">Informations sur le contexte</string>
     <string name="ui_context_input_tokens">Entrée : %1$s jetons</string>
     <string name="ui_context_last_tokens">Dernière consommation signalée : %1$s jetons</string>
     <string name="ui_context_output_tokens">Sortie : %1$s jetons</string>
     <string name="ui_context_reasoning_tokens">Sortie du raisonnement : %1$s jetons</string>
     <string name="ui_context_ring_description">Menu de conversation · contexte utilisé : %1$s</string>
-    <string name="ui_context_total_tokens">Total de la conversation : %1$s jetons</string>
     <string name="ui_context_unavailable">Le serveur n’a pas encore signalé la fenêtre de contexte et la consommation de jetons de cette conversation.</string>
-    <string name="ui_context_used_percent">Contexte utilisé : %1$s</string>
     <string name="ui_context_window_tokens">Fenêtre de contexte du modèle : %1$s jetons</string>
     <string name="ui_conversation_information">Informations sur la conversation</string>
     <string name="ui_detail_effort">Niveau de raisonnement : %1$s</string>
