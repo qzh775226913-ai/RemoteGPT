@@ -143,7 +143,7 @@ final class MessageBodyView extends LinearLayout {
       button.setOnClickListener(v -> copy.accept(block.text)); header.addView(button); box.addView(header);
       TextView code=text(block.text,14,fg); code.setTypeface(Typeface.MONOSPACE); code.setTextIsSelectable(true);
       code.setHorizontallyScrolling(true); code.setContentDescription(UiText.get(R.string.ui_copyable_content_block) + index);
-      HorizontalScrollView horizontal=new HorizontalScrollView(getContext()); horizontal.setFillViewport(true);
+      HorizontalScrollView horizontal=new EmbeddedHorizontalScrollView(getContext()); horizontal.setFillViewport(true);
       horizontal.addView(code,new HorizontalScrollView.LayoutParams(-2,-2)); box.addView(horizontal,new LayoutParams(-1,-2));
     }
     boolean previous=false;

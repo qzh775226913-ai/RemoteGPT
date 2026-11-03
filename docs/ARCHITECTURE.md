@@ -20,7 +20,7 @@
 | 模型与权限 | `ModelCatalog` 原子合并完整分页；`ModelOptions`、`ModelSettings`、`ServiceTierOptions` 解析远端能力；连接级 `ModelRefreshScheduler` 定时刷新；`ForcedApprovalController` 调度已明确授权的权限审批 |
 | 独立窗口 | `ProfileEditor` 拥有连接草稿和私钥导入；`ModelPicker`／`PermissionPicker` 拥有各自窗口与监听器；`DialogUi` 提供统一窗口、点击反馈和有界说明区 |
 | 导航与上下文 | `RemoteBrowser`／`DirectoryPicker`／`RemoteScreens` 组合导航；`ConversationHub`、`CapabilityDirectoryDialog`、`McpServerDetail` 拥有详情与只读能力查询；`ContextUsage` 经会话快照隔离，`ContextCompactionController` 管理待发压缩，`ContextMenuPanel` 拥有确认窗口 |
-| 输入区与滚动 | `ConversationChromeController` 管理顶部／输入区目标状态；`ConversationFooterMotion` 协调动画空间和位移；`ConversationScrollView` 管理手势、惯性与跟随；`ConversationOverlayLayout` 固定接续按钮尺寸；`ComposerSurface` 绘制表面，`ComposerRenderCache` 跳过无变化的控件重建 |
+| 输入区与滚动 | `ConversationChromeController` 管理顶部／输入区目标状态；`ConversationFooterMotion` 协调动画空间和位移；`ConversationScrollView` 管理手势、惯性与跟随；`EmbeddedHorizontalScrollView` 统一代码／表格的方向交接与触摸焦点保护；`ConversationOverlayLayout` 固定接续按钮尺寸；`ComposerSurface` 绘制表面，`ComposerRenderCache` 跳过无变化的控件重建 |
 | 消息与执行详情 | `ChatItem` 保留原文和轮次；`InteractionHistory` 合并问答呈现；`ToolActivityPresenter` 分组，`DiffSummary` 统计实际 diff；`ToolActivityGroupView`、`ToolInlineDetailView`、`ToolDetailDialog` 呈现详情；`ToolCodeViewport` 管理代码缩放，`RollingChangeNumbers` 只动画变化的数字，结束或 detach 后把已完成的数字 span 换成静态着色文字；`ToolActivityGroupView` 即使离屏也提交落定文字，保留图标和详情子树 |
 | 结构化问题 | `QuestionForm` 显示表单并过滤秘密快照；`QuestionBubbleController` 拥有窗口、作用域校验和输入框定位；`QuestionBubbleMotion` 拥有有界动画快照并释放 |
 | 正文、公式与表格 | `MessageBodyView` 拆分代码／正文；`Markdown`、`MathMarkup`、`TableMarkup` 解析；`MathRenderer` 在有界独立 worker 排版，`MathContentView` 管理异步 generation；`TableContentView` 复用单元格与整表横向滚动；`MathDrawable`／`MathGlyphs` 隔离引擎绘制与字体兼容 |
@@ -57,7 +57,7 @@ SSH 和文件 I/O 在 worker；回到主线程后核对 generation，必要时�
 
 ## 绘制、媒体与语言边界
 
-正文先拆出代码，再解析显式公式和表格；无公式正文沿用原路径。TeX 使用固定版本 `ru.noties:jlatexmath-android:0.2.0` 和本地 Canvas／字体，无 WebView 或外部资源。View 自有 generation 丢弃迟到排版；`MathDrawable` 隔离文字／线框 Paint，`MathGlyphs` 由生成器提取原字体 U+00AD 轮廓。表格单个 HorizontalScrollView 滚动整表，横滑期间抑制父容器的焦点纵向位移，结束／取消／detach 释放；行统一绘制边线，避免交点和共享边重复叠加。
+正文先拆出代码，再解析显式公式和表格；无公式正文沿用原路径。TeX 使用固定版本 `ru.noties:jlatexmath-android:0.2.0` 和本地 Canvas／字体，无 WebView 或外部资源。View 自有 generation 丢弃迟到排版；`MathDrawable` 隔离文字／线框 Paint，`MathGlyphs` 由生成器提取原字体 U+00AD 轮廓。正文代码块、展开工具代码和表格复用 `EmbeddedHorizontalScrollView`；父消息页在拦截前按屏幕坐标确定主方向，纵滑及时取消内层触摸与旧横向惯性。触摸期间抑制整块文字的焦点纵向位移，结束／取消／detach 释放；随后视口尺寸变化也不重新对齐正在阅读的已聚焦卡片，显式定位仍可用。表格单个容器滚动整表；行统一绘制边线，避免交点和共享边重复叠加。
 
 顶部／输入区动画不能把布局补偿当作用户方向或惯性到底。FooterMotion 在开始时预留最大输入区高度，用位移跟随，结束恢复准确留白；ScrollView 用真实手势坐标处理方向、取消旧惯性和新触摸解锁。ComposerRenderCache 只在成功渲染后提交内容快照，不跨会话复用操作绑定。
 

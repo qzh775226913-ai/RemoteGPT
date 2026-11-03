@@ -82,6 +82,7 @@
       "QuestionBubbleMotion",
       "QuestionHistoryView",
       "MessageBodyView",
+      "EmbeddedHorizontalScrollView",
       "ConversationScrollView",
       "ModelListScrollView",
       "ImageDialog",

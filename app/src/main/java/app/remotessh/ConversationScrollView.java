@@ -14,8 +14,8 @@ import android.widget.TextView;
 
 /** Follow only while the reader is at the latest message, including delayed layout. */
 public final class ConversationScrollView extends ScrollView {
-  private boolean following = true, layingOut, pinning;
-  private View horizontalGesture;
+  private boolean following = true, layingOut, pinning, resizingContent;
+  private EmbeddedHorizontalScrollView contentGesture;
   private boolean handlingUserScroll, flinging, userScrollCallback, flingReachedLatest;
   private int touchDirection,flingDirection,flingLatestLimit;
   private float lastRawY;
@@ -49,6 +49,7 @@ public final class ConversationScrollView extends ScrollView {
         event.getEventTime()-tapTime<ViewConfiguration.getLongPressTimeout() &&
         Math.abs(event.getRawX()-tapX)<=touchSlop && Math.abs(event.getRawY()-tapY)<=touchSlop &&
         !interactiveAt(this,event.getX(),event.getY());
+    if(action==MotionEvent.ACTION_MOVE && contentGesture!=null)contentGesture.prepareGesture(event);
     boolean handled=super.dispatchTouchEvent(event);
     if(action==MotionEvent.ACTION_UP || action==MotionEvent.ACTION_CANCEL || action==MotionEvent.ACTION_DOWN && !handled){tapCandidate=false;touchActive=false;}
     if(tap && readingTap!=null)readingTap.run();
@@ -137,14 +138,23 @@ public final class ConversationScrollView extends ScrollView {
       if(reached && following)pin();
     }
   }
-  void holdHorizontalGesture(View owner) { horizontalGesture = owner; }
-  void releaseHorizontalGesture(View owner) {
-    if (horizontalGesture == owner) horizontalGesture = null;
+  void holdContentGesture(EmbeddedHorizontalScrollView owner) { contentGesture = owner; }
+  void releaseContentGesture(EmbeddedHorizontalScrollView owner) {
+    if (contentGesture == owner) contentGesture = null;
   }
   @Override protected int computeScrollDeltaToGetChildRectOnScreen(Rect rect) {
-    // Selectable table text may request focus on UP. Preserve the reading Y for
-    // that horizontal gesture while still letting Android update focus normally.
-    return horizontalGesture != null ? 0 : super.computeScrollDeltaToGetChildRectOnScreen(rect);
+    // Selectable card text may request focus on UP and reveal its entire tall
+    // view. Keep the touched lines in place while Android updates focus normally.
+    return contentGesture != null || resizingContent ? 0 : super.computeScrollDeltaToGetChildRectOnScreen(rect);
+  }
+  @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){
+    // A later header / window resize tries to reveal the entire focused code
+    // view again, even after UP. Layout below already preserves the reading Y.
+    for(View focused=findFocus();!following && focused!=null && focused!=this;){
+      if(focused instanceof EmbeddedHorizontalScrollView){resizingContent=true;break;}
+      focused=focused.getParent() instanceof View?(View)focused.getParent():null;
+    }
+    try{super.onSizeChanged(w,h,oldw,oldh);}finally{resizingContent=false;}
   }
   @Override protected void onDetachedFromWindow(){touchActive=false;screenTopKnown=false;super.onDetachedFromWindow();}
   private int latestLimit(){

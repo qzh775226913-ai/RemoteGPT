@@ -37,7 +37,7 @@ final class ToolInlineDetailView extends LinearLayout {
     source.setLineSpacing(ui.dp(2),1);
     source.setText(ToolDetailDialog.highlight(raw,diff,ui.fg,ui.muted));
     source.setPadding(ui.dp(8),ui.dp(6),ui.dp(8),ui.dp(6));
-    HorizontalScrollView code=new HorizontalScrollView(context);
+    HorizontalScrollView code=new EmbeddedHorizontalScrollView(context);
     code.setHorizontalScrollBarEnabled(false);code.setFillViewport(true);
     code.setBackground(ui.rounded(ui.bg==Color.BLACK?0xff191919:0xfff3f4f6,10));
     code.addView(source,new HorizontalScrollView.LayoutParams(-2,-2));
