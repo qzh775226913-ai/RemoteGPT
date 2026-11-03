@@ -1,8 +1,8 @@
 # 使用说明
 
-适用版本：1.0.67。手机通过 SSH 操作远端 Codex，账户与模型服务在服务器上配置。
+适用版本：1.1.1。手机通过 SSH 操作远端 Codex，账户与模型服务在服务器上配置。
 
-[English guide](USAGE.en.md) · [下载 APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.67/RemoteGPT-1.0.67-Android-universal-debug.apk)
+[English guide](USAGE.en.md) · [下载 APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.1.1/RemoteGPT-1.1.1-Android-universal-debug.apk)
 
 软件使用与再分发条件见 [项目许可](../LICENSE)。
 
@@ -76,7 +76,7 @@ python3 -c 'import sys, sqlite3, fcntl, socket; assert sys.version_info >= (3, 8
 
 - 多个会话分别保存草稿、附件和权限选择；执行中可以补充输入，或排队下一条消息。
 - 每条消息最多 4 张图片（每张 20 MiB）和 8 个普通文件（每个 100 MiB）。图片格式取决于手机解码能力。
-- 权限菜单提供沿用远端、按需审批、只读和完全访问；**更改后需发送消息，下一轮才生效**。“只读”仍可能读取文件或使用允许的工具，不代表免费聊天。
+- 权限菜单提供沿用远端、按需审批、自动审查、只读和完全访问；**更改后需发送消息，下一轮才生效**。“只读”仍可能读取文件或使用允许的工具，不代表免费聊天。
 
 同一对话前 30 秒内已有 3 次不同的实时命令／文件权限审批时，第 4 次及后续符合条件的审批弹窗才提供红字“全部允许(强制)”。确认警告后，该对话临时自动允许权限请求，并显示红色闪电；方案选择和补充信息仍正常提问。
 

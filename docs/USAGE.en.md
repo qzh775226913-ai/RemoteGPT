@@ -1,6 +1,6 @@
 # First connection guide
 
-For RemoteGPT 1.0.67. [中文说明](USAGE.md) · [Download APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.0.67/RemoteGPT-1.0.67-Android-universal-debug.apk)
+For RemoteGPT 1.1.1. [中文说明](USAGE.md) · [Download APK](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.1.1/RemoteGPT-1.1.1-Android-universal-debug.apk)
 
 RemoteGPT provides an Android graphical interface for Codex running on a host you can access over SSH. Configure the Codex account and model service on that host first. The app does not perform remote Codex account login for you.
 
@@ -35,7 +35,7 @@ Remote-system compatibility:
 
 Download the APK from the project release page and install it on Android 8 or newer. If Android prompts you, allow installation from the browser or file manager used for this installation; you can revoke that permission afterward.
 
-Open the remote-control menu and select “添加连接” (Add connection).
+Open the remote-control menu and select “Add connection”.
 
 | Field | Value |
 | --- | --- |
