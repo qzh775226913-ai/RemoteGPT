@@ -4,11 +4,9 @@
 
 在 Android 手机上通过图形界面操作远端 Codex。Codex 运行和账户登录保留在服务器，手机通过 SSH 连接。
 
-**[下载 APK · 1.1.1](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.1.1/RemoteGPT-1.1.1-Android-universal-debug.apk)** · [更新记录](CHANGELOG.md) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
+**[下载 APK · 1.1.2](https://github.com/qzh775226913-ai/RemoteGPT/releases/download/v1.1.2/RemoteGPT-1.1.2-Android-universal-debug.apk)** · [更新记录](CHANGELOG.md) · [问题反馈](https://github.com/qzh775226913-ai/RemoteGPT/issues)
 
-稳定发布版本：**1.1.1 / versionCode 90**。支持 Android 8+。
-
-开发测试版本：**1.1.2-dev / versionCode 91**。修复嵌入代码卡片滚动，待实机复测；上方下载仍为稳定发布版。
+稳定发布版本：**1.1.2 / versionCode 92**。支持 Android 8+。
 
 
 ## 界面
